@@ -26,6 +26,7 @@
   - 酷狗音乐
   - 酷我音乐
   - 喜马拉雅
+  
 - 🎨 主要功能
 
   - 音乐搜索
@@ -34,6 +35,32 @@
   - 音质选择(最高支持999k)
   - 歌词显示(支持双语歌词)
   - 专辑封面显示
+  - 收藏功能（红心标记喜爱的歌曲）
+  - 收藏歌单导入/导出（支持跨平台歌曲匹配）
+  - 播放历史记录
+  - 美化的UI界面
+
+## 新增功能
+
+- 💖 **收藏功能**
+  - 一键收藏喜爱的歌曲
+  - 在播放控制栏直接添加/移除收藏
+  - 查看和管理所有收藏的歌曲
+
+- 📤 **收藏导入/导出**
+  - 导出收藏列表为JSON文件
+  - 导入之前导出的收藏文件
+  - 跨平台智能匹配歌曲（即使从不同音乐平台导入也能自动匹配对应歌曲）
+
+- 📜 **历史记录**
+  - 自动记录播放过的歌曲
+  - 按时间排序显示历史记录
+  - 一键清空历史记录
+
+- 🎨 **UI优化**
+  - 美化的导航栏和品牌标识
+  - 响应式卡片布局
+  - 直观的按钮和图标
 
 ## 项目部署
  生产环境需配置一个环境编辑，`REACT_APP_API_BASE` 后端API地址，由于跨域问题不可以直接使用，一般填写反代 `https://music-api.gdstudio.xyz/api.php` 后地址，可使用nginx、caddy 等web服务反代，也可是cloudflare worker反代，我这边提供了worker反向代理的代码，见 [worker.js](worker.js)
@@ -64,13 +91,15 @@ services:
 - React Player
 - React Icons
 - React Toastify
+- Localforage (本地数据存储)
+- Moment.js (日期格式化)
 
 ## 本地开发
 
 1. 克隆项目
 
 ```bash
-git clone https://github.com/lovebai/cl-music.git
+git clone https://github.com/voici5986/cl_music_X.git
 ```
 
 2. 安装依赖
@@ -104,6 +133,14 @@ cl-music/
     ├── src/                 # 源代码
     │   ├── App.js          # 主应用组件
     │   ├── index.js        # 入口文件
+    │   ├── components/     # 可复用组件
+    │   │   ├── HeartButton.js # 收藏按钮组件
+    │   │   └── Navigation.js  # 导航组件
+    │   ├── pages/          # 页面组件 
+    │   │   ├── Favorites.js  # 收藏页面
+    │   │   └── History.js    # 历史记录页面
+    │   ├── services/       # 服务
+    │   │   └── storage.js    # 本地存储服务
     │   └── setupProxy.js   # 开发代理配置
     └── package.json        # 项目配置文件
 ```

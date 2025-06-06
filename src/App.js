@@ -19,23 +19,23 @@ const Github = () => {
   return (
     <a
       href="https://github.com/voici5986/cl_music_X"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="github-corner"
-      aria-label="View source on GitHub"
-    >
-      <FaGithub
-        size={32}
-        className="text-dark"
-        style={{
-          position: 'fixed',
-          top: '20px',
-          right: '20px',
-          zIndex: 1000,
-          transition: 'transform 0.3s ease'
-        }}
-      />
-    </a>
+        target="_blank"
+        rel="noopener noreferrer"
+        className="github-corner"
+        aria-label="View source on GitHub"
+      >
+        <FaGithub
+          size={32}
+          className="text-dark"
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            zIndex: 1000,
+            transition: 'transform 0.3s ease'
+          }}
+        />
+      </a>
   )
 }
 
@@ -62,7 +62,7 @@ const App = () => {
   const [currentLyricIndex, setCurrentLyricIndex] = useState(-1);
   const [lyricExpanded, setLyricExpanded] = useState(false);
   const lyricsContainerRef = useRef(null);
-  
+
   // 修改播放器控制相关状态
   const [currentPlaylist, setCurrentPlaylist] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
@@ -85,7 +85,7 @@ const App = () => {
   const parseLyric = (text) => {
     const lines = text.split('\n');
     const pattern = /\[(\d+):(\d+\.\d+)\]/;
-
+    
     return lines.map(line => {
       const match = line.match(pattern);
       if (match) {
@@ -115,15 +115,15 @@ const App = () => {
           pages: 1
         }
       });
-      // 获取结果后处理封面
-      const resultsWithCover = await Promise.all(
-        response.data.map(async track => ({
-          ...track,
-          picUrl: await fetchCover(track.source, track.pic_id)
-        }))
-      );
-
-      setResults(resultsWithCover);
+            // 获取结果后处理封面
+        const resultsWithCover = await Promise.all(
+          response.data.map(async track => ({
+            ...track,
+            picUrl: await fetchCover(track.source, track.pic_id)
+          }))
+        );
+        
+        setResults(resultsWithCover);
     } catch (error) {
       console.error('Search error:', error);
       toast.error('搜索失败，请稍后重试', {
@@ -133,37 +133,37 @@ const App = () => {
     }
     setLoading(false);
   };
+  
+const fetchCover = async (source, picId, size = 300) => {
+  const cacheKey = `${source}-${picId}-${size}`;
+  
+  // 检查缓存
+  if (coverCache[cacheKey]) return coverCache[cacheKey];
 
-  const fetchCover = async (source, picId, size = 300) => {
-    const cacheKey = `${source}-${picId}-${size}`;
-
-    // 检查缓存
-    if (coverCache[cacheKey]) return coverCache[cacheKey];
-
-    try {
-      const response = await axios.get(`${API_BASE}`, {
-        params: {
-          types: 'pic',
-          source: source,
-          id: picId,
-          size: size
-        }
-      });
-
-      const url = response.data.url.replace(/\\/g, '');
-
-      // 更新缓存
-      setCoverCache(prev => ({
-        ...prev,
-        [cacheKey]: url
-      }));
-
-      return url;
-    } catch (error) {
-      console.error('封面获取失败:', error);
-      return 'default_cover.jpg';
-    }
-  };
+  try {
+    const response = await axios.get(`${API_BASE}`, {
+      params: {
+        types: 'pic',
+        source: source,
+        id: picId,
+        size: size
+      }
+    });
+    
+    const url = response.data.url.replace(/\\/g, '');
+    
+    // 更新缓存
+    setCoverCache(prev => ({
+      ...prev,
+      [cacheKey]: url
+    }));
+    
+    return url;
+  } catch (error) {
+    console.error('封面获取失败:', error);
+    return 'default_cover.jpg'; 
+  }
+};
 
   const handlePlay = useCallback(async (track) => {
     if (currentTrack?.id === track.id) {
@@ -244,10 +244,10 @@ const App = () => {
         })
       ]);
       console.log(urlResponse.data.size);
-
+  
       const rawLyric = lyricResponse.data.lyric || '';
       const tLyric = lyricResponse.data.tlyric || '';
-
+      
       setLyricData({
         rawLyric,
         tLyric,
@@ -268,7 +268,7 @@ const App = () => {
 
       const url = response.data?.url?.replace(/\\/g, '');
       if (!url) throw new Error('无效的音频链接');
-
+  
       // 确保状态更新顺序
       setCurrentTrack(track);
       setPlayerUrl(url);
@@ -411,7 +411,7 @@ const App = () => {
 
   const useThrottle = (callback, delay) => {
     const lastCall = useRef(0);
-
+    
     return useCallback((...args) => {
       const now = new Date().getTime();
       if (now - lastCall.current >= delay) {
@@ -441,7 +441,7 @@ const App = () => {
     
     // 更新歌词显示
     const lyrics = lyricData.parsedLyric;
-
+    
     let newIndex = -1;
     for (let i = lyrics.length - 1; i >= 0; i--) {
       if (currentTime >= lyrics[i].time) {
@@ -449,7 +449,7 @@ const App = () => {
         break;
       }
     }
-
+  
     if (newIndex !== currentLyricIndex) {
       setCurrentLyricIndex(newIndex);
     }
@@ -465,7 +465,7 @@ const App = () => {
           br: quality
         }
       });
-
+      
       const downloadUrl = response.data.url.replace(/\\/g, '');
       const link = document.createElement('a');
       link.href = downloadUrl;
@@ -493,7 +493,7 @@ const App = () => {
         .split('/')
         .pop()
         .split(/[#?]/)[0]; // 移除可能的哈希和查询参数
-
+      
       // 使用正则表达式提取后缀
       const extensionMatch = fileName.match(/\.([a-z0-9]+)$/i);
       return extensionMatch ? extensionMatch[1] : 'audio';
@@ -502,132 +502,132 @@ const App = () => {
     }
   };
 
-  // 添加滚动效果
-  useEffect(() => {
-    if (lyricExpanded && currentLyricIndex >= 0 && lyricsContainerRef.current) {
-      const activeLines = lyricsContainerRef.current.getElementsByClassName('active');
-      if (activeLines.length > 0) {
-        activeLines[0].scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-          inline: 'nearest'
-        });
-      }
+// 添加滚动效果
+useEffect(() => {
+  if (lyricExpanded && currentLyricIndex >= 0 && lyricsContainerRef.current) {
+    const activeLines = lyricsContainerRef.current.getElementsByClassName('active');
+    if (activeLines.length > 0) {
+      activeLines[0].scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest'
+      });
     }
-  }, [currentLyricIndex, lyricExpanded]);
+  }
+}, [currentLyricIndex, lyricExpanded]);
 
   // 渲染主页/搜索页的内容
   const renderHomePage = () => {
-    return (
+  return (
       <>
-        <Form onSubmit={handleSearch} className="mb-4">
-          <Row className="g-2">
-            <Col md={5}>
-              <Form.Control
-                type="search"
-                placeholder="输入歌曲名、歌手或专辑"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </Col>
+      <Form onSubmit={handleSearch} className="mb-4">
+        <Row className="g-2">
+          <Col md={5}>
+            <Form.Control
+              type="search"
+              placeholder="输入歌曲名、歌手或专辑"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </Col>
 
-            <Col md={3}>
-              <Form.Select
-                value={source}
-                onChange={(e) => setSource(e.target.value)}
-              >
-                {sources.map(src => (
-                  <option key={src} value={src}>{src.toUpperCase()}</option>
+          <Col md={3}>
+            <Form.Select 
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+            >
+              {sources.map(src => (
+                <option key={src} value={src}>{src.toUpperCase()}</option>
+              ))}
+            </Form.Select>
+          </Col>
+          
+          <Col md={2}>
+            <Dropdown>
+              <Dropdown.Toggle variant="outline-secondary">
+                音质: {quality}k
+              </Dropdown.Toggle>
+              <Dropdown.Menu>
+                {qualities.map(q => (
+                  <Dropdown.Item key={q} onClick={() => setQuality(q)}>
+                    {q}k
+                  </Dropdown.Item>
                 ))}
-              </Form.Select>
-            </Col>
+              </Dropdown.Menu>
+            </Dropdown>
+          </Col>
+          
+          <Col md={2}>
+            <Button variant="primary" type="submit" className="w-100">
+              搜索
+            </Button>
+          </Col>
+        </Row>
+      </Form>
 
-            <Col md={2}>
-              <Dropdown>
-                <Dropdown.Toggle variant="outline-secondary">
-                  音质: {quality}k
-                </Dropdown.Toggle>
-                <Dropdown.Menu>
-                  {qualities.map(q => (
-                    <Dropdown.Item key={q} onClick={() => setQuality(q)}>
-                      {q}k
-                    </Dropdown.Item>
-                  ))}
-                </Dropdown.Menu>
-              </Dropdown>
-            </Col>
+      {loading && (
+        <div className="text-center my-4">
+          <Spinner animation="border" />
+        </div>
+      )}
 
-            <Col md={2}>
-              <Button variant="primary" type="submit" className="w-100">
-                搜索
-              </Button>
-            </Col>
-          </Row>
-        </Form>
-
-        {loading && (
-          <div className="text-center my-4">
-            <Spinner animation="border" />
-          </div>
-        )}
-
-        <Row className="g-4">
-          {results.map((track) => (
+      <Row className="g-4">
+        {results.map((track) => (
             <Col key={track.id} xs={12} sm={6} md={4} lg={3}>
               <Card className="h-100">
-                <Card.Body>
-                  <div className="d-flex align-items-center">
-                    <img
-                      src={track.picUrl || 'default_cover.jpg'}
-                      alt="专辑封面"
-                      className="me-3 rounded"
-                      style={{
-                        width: '60px',
-                        height: '60px',
-                        objectFit: 'cover',
-                        backgroundColor: '#f5f5f5'
-                      }}
-                      onError={(e) => {
-                        e.target.src = 'default_cover.png';
-                      }}
-                    />
+              <Card.Body>
+                <div className="d-flex align-items-center">
+                <img
+                    src={track.picUrl || 'default_cover.jpg'}
+                    alt="专辑封面"
+                    className="me-3 rounded"
+                    style={{ 
+                      width: '60px', 
+                      height: '60px',
+                      objectFit: 'cover',
+                      backgroundColor: '#f5f5f5' 
+                    }}
+                    onError={(e) => {
+                      e.target.src = 'default_cover.png';
+                    }}
+                  />
                     <div className="text-truncate">
                       <h6 className="mb-1 text-truncate">{track.name}</h6>
                       <small className="text-muted d-block text-truncate">{track.artist}</small>
                       <small className="text-muted d-block text-truncate">{track.album}</small>
-                    </div>
                   </div>
-
-                  <div className="mt-2 d-flex justify-content-end">
-                    <Button
-                      variant="outline-primary"
-                      size="sm"
+                </div>
+                
+                <div className="mt-2 d-flex justify-content-end">
+                <Button 
+                  variant="outline-primary" 
+                  size="sm"
                       className="me-1"
-                      onClick={() => handlePlay(track)}
-                      disabled={loading || (currentTrack?.id === track.id && !playerUrl)}
-                    >
-                      {loading && currentTrack?.id === track.id ? (
-                        <Spinner animation="border" size="sm" />
-                      ) : currentTrack?.id === track.id ? (
-                        isPlaying ? <FaPause /> : <FaPlay />
-                      ) : (
-                        <FaPlay />
-                      )}
-                    </Button>
+                  onClick={() => handlePlay(track)}
+                  disabled={loading || (currentTrack?.id === track.id && !playerUrl)}
+                >
+                  {loading && currentTrack?.id === track.id ? (
+                    <Spinner animation="border" size="sm" />
+                  ) : currentTrack?.id === track.id ? (
+                    isPlaying ? <FaPause /> : <FaPlay />
+                  ) : (
+                    <FaPlay />
+                  )}
+                </Button>
                     <HeartButton track={track} className="me-1" />
-                    <Button
-                      variant="outline-success"
-                      size="sm"
-                      onClick={() => handleDownload(track)}
-                    >
-                      <FaDownload />
-                    </Button>
-                  </div>
-                </Card.Body>
-              </Card>
-            </Col>
-          ))}
-        </Row>
+                  <Button 
+                    variant="outline-success" 
+                    size="sm"
+                    onClick={() => handleDownload(track)}
+                  >
+                    <FaDownload />
+                  </Button>
+                </div>
+              </Card.Body>
+            </Card>
+          </Col>
+        ))}
+      </Row>
       </>
     );
   };
@@ -660,35 +660,35 @@ const App = () => {
   const renderAudioPlayer = () => {
     return (
       <div className="fixed-bottom bg-light p-3 border-top"
-        style={{
-          height: lyricExpanded ? '300px' : 'auto',
-          boxShadow: '0 -2px 10px rgba(0,0,0,0.1)',
-          zIndex: 1000
-        }}
+      style={{
+        height: lyricExpanded ? '300px' : 'auto',
+        boxShadow: '0 -2px 10px rgba(0,0,0,0.1)',
+        zIndex: 1000
+      }}
       >
         <Row className="align-items-center">
           {/* 左侧：专辑封面和歌曲信息 */}
           <Col md={3}>
             <div className="d-flex">
-              {currentTrack && (
-                <div className="d-flex align-items-center">
-                  <img
-                    src={coverCache[`${currentTrack.source}-${currentTrack.pic_id}-300`] || 'default_cover.png'}
-                    alt="当前播放"
-                    style={{ width: '50px', height: '50px' }}
-                    className="me-2 rounded"
-                  />
-                  <div>
-                    <h6 className="mb-0">{currentTrack.name}</h6>
-                    <small className="text-muted">{currentTrack.artist}</small>
-                  </div>
+            {currentTrack && (
+              <div className="d-flex align-items-center">
+                <img 
+                  src={coverCache[`${currentTrack.source}-${currentTrack.pic_id}-300`] || 'default_cover.png'}
+                  alt="当前播放"
+                  style={{ width: '50px', height: '50px' }}
+                  className="me-2 rounded"
+                />
+                <div>
+                  <h6 className="mb-0">{currentTrack.name}</h6>
+                  <small className="text-muted">{currentTrack.artist}</small>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
           </Col>
-
+          
           {/* 中间：进度条和播放控制区域 */}
-          <Col md={6}>
+      <Col md={6}>
             {/* 进度条 */}
             <div className="d-flex align-items-center justify-content-between mb-1">
               <small className="text-muted">{formatTime(playedSeconds)}</small>
@@ -701,8 +701,8 @@ const App = () => {
                   const position = (e.clientX - progressBar.getBoundingClientRect().left) / progressBar.offsetWidth;
                   playerRef.current.seekTo(position);
                 }
-              }}
-            >
+        }}
+      >
               <div 
                 className="progress-bar bg-danger" 
                 style={{ width: `${playProgress}%` }}
@@ -790,7 +790,7 @@ const App = () => {
               >
                 {lyricData.parsedLyric[currentLyricIndex] ? 
                   lyricData.parsedLyric[currentLyricIndex].text : '暂无歌词'}
-              </div>
+                </div>
               
               <Button
                 variant="link"
@@ -803,50 +803,50 @@ const App = () => {
             </div>
           </Col>
         </Row>
-        
+          
         {/* 展开的歌词区域 */}
-        {lyricExpanded && (
+          {lyricExpanded && (
           <Row className="mt-3">
             <Col>
-              <div 
-                className="full-lyrics"
-                ref={lyricsContainerRef}
+            <div 
+            className="full-lyrics" 
+            ref={lyricsContainerRef}
                 style={{
                   maxHeight: '250px',
                   overflowY: 'auto',
                   textAlign: 'center'
                 }}
-                onScroll={(e) => {
-                  // 记录用户滚动行为
-                  sessionStorage.setItem('userScrolled', true);
-                }}
-              >
-                {lyricData.parsedLyric.map((line, index) => (
-                  <div
-                    key={index}
-                    className={`lyric-line ${index === currentLyricIndex ? 'active' : ''}`}
-                    data-time={line.time}
+            onScroll={(e) => {
+              // 记录用户滚动行为
+              sessionStorage.setItem('userScrolled', true);
+            }}
+            >
+            {lyricData.parsedLyric.map((line, index) => (
+              <div
+                key={index}
+                className={`lyric-line ${index === currentLyricIndex ? 'active' : ''}`}
+                data-time={line.time}
                     style={{
                       padding: '4px 0',
                       color: index === currentLyricIndex ? '#dc3545' : '#6c757d',
                       fontWeight: index === currentLyricIndex ? 'bold' : 'normal',
                       transition: 'all 0.3s'
                     }}
-                  >
-                    <div>{line.text}</div>
-                    {lyricData.tLyric && (
+              >
+                  <div>{line.text}</div>
+                  {lyricData.tLyric && (
                       <div className="translated-lyric" style={{ fontSize: '0.9em' }}>
-                        {parseLyric(lyricData.tLyric)[index]?.text}
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {lyricData.parsedLyric.length === 0 && (
-                  <div className="text-center text-muted py-3">暂无歌词</div>
-                )}
-              </div>
-            </Col>
-          </Row>
+                      {parseLyric(lyricData.tLyric)[index]?.text}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {lyricData.parsedLyric.length === 0 && (
+                <div className="text-center text-muted py-3">暂无歌词</div>
+              )}
+                </div>
+          </Col>
+        </Row>
         )}
       </div>
     );
@@ -864,7 +864,7 @@ const App = () => {
         }}
       >
         {renderContent()}
-      </Container>
+    </Container>
       <Github />
       {currentTrack && renderAudioPlayer()}
       <div className="overlay-background" style={{ display: isPlaying ? 'block' : 'none' }} />
