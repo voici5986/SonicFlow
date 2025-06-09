@@ -569,33 +569,37 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
 
   return (
     <Container className="my-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1>我的收藏</h1>
-        <div>
+      <div className="d-md-flex justify-content-between align-items-center mb-4">
+        <h1 className="mb-3 mb-md-0">我的收藏</h1>
+        <div className="d-flex flex-wrap justify-content-center justify-content-md-end">
           <Button 
             variant="outline-danger" 
             size="sm"
-            className="me-2"
+            className="me-2 mb-2 mb-md-0 d-flex align-items-center"
+            style={{ height: '38px' }}
             onClick={handleBulkDownload}
             disabled={favorites.length === 0}
           >
-            <FaCloudDownloadAlt className="me-1" /> 下载全部
+            <FaCloudDownloadAlt className="me-1" /> <span>下载全部</span>
           </Button>
           <Button 
             variant="outline-success" 
             size="sm"
-            className="me-2"
+            className="me-2 mb-2 mb-md-0 d-flex align-items-center"
+            style={{ height: '38px' }}
             onClick={handleExport}
             disabled={favorites.length === 0}
           >
-            <FaFileExport className="me-1" /> 导出收藏
+            <FaFileExport className="me-1" /> <span>导出收藏</span>
           </Button>
           <Button 
             variant="outline-primary" 
             size="sm"
+            className="d-flex align-items-center"
+            style={{ height: '38px' }}
             onClick={() => setShowImportModal(true)}
           >
-            <FaFileImport className="me-1" /> 导入收藏
+            <FaFileImport className="me-1" /> <span>导入收藏</span>
           </Button>
         </div>
       </div>
