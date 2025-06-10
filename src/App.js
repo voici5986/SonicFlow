@@ -970,11 +970,9 @@ useEffect(() => {
   };
 
   // 使用媒体查询检测屏幕大小
-  const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
-
   useEffect(() => {
     const handleResize = () => {
-      setIsMobileView(window.innerWidth < 768);
+      // 屏幕大小改变时的处理逻辑
     };
 
     window.addEventListener('resize', handleResize);

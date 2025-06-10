@@ -33,32 +33,6 @@ const Navigation = ({ activeTab, onTabChange }) => {
     letterSpacing: '1px'
   };
 
-  // 导航栏样式
-  const navbarStyle = {
-    borderBottom: '1px solid rgba(0,0,0,0.06)',
-    background: 'transparent',
-    marginBottom: '1rem',
-  };
-
-  // 导航项样式
-  const navItemStyle = {
-    borderBottom: '2px solid transparent',
-    transition: 'border-bottom 0.2s ease'
-  };
-
-  // 激活的导航项样式
-  const activeNavItemStyle = {
-    ...navItemStyle,
-    borderBottom: '2px solid #6a11cb',
-    fontWeight: '500',
-  };
-
-  // 导航收缩时的样式
-  const collapseStyle = {
-    background: 'transparent',
-    padding: '10px 0'
-  };
-
   return (
     <Navbar expand="lg" expanded={expanded} onToggle={setExpanded} className="nav-animated">
       <Container fluid style={{ paddingRight: '60px' }}>
