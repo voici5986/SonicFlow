@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Nav, Navbar, Container } from 'react-bootstrap';
 import { FaHome, FaHeart, FaHistory } from 'react-icons/fa';
+import '../styles/NavigationFix.css';
 
 const Navigation = ({ activeTab, onTabChange }) => {
   // 添加展开状态控制
@@ -32,39 +33,56 @@ const Navigation = ({ activeTab, onTabChange }) => {
     letterSpacing: '1px'
   };
 
-  // 折叠菜单样式
+  // 导航栏样式
+  const navbarStyle = {
+    borderBottom: '1px solid rgba(0,0,0,0.06)',
+    background: 'transparent',
+    marginBottom: '1rem',
+  };
+
+  // 导航项样式
+  const navItemStyle = {
+    borderBottom: '2px solid transparent',
+    transition: 'border-bottom 0.2s ease'
+  };
+
+  // 激活的导航项样式
+  const activeNavItemStyle = {
+    ...navItemStyle,
+    borderBottom: '2px solid #6a11cb',
+    fontWeight: '500',
+  };
+
+  // 导航收缩时的样式
   const collapseStyle = {
-    backgroundColor: '#ffffff',
-    borderRadius: '0 0 10px 10px',
-    boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
-    zIndex: 1050,
+    background: 'transparent',
     padding: '10px 0'
   };
 
   return (
-    <Navbar bg="light" expand="lg" className="mb-4" expanded={expanded} onToggle={setExpanded}>
+    <Navbar expand="lg" expanded={expanded} onToggle={setExpanded} className="nav-animated">
       <Container fluid style={{ paddingRight: '60px' }}>
         <Navbar.Brand className="d-flex align-items-center">
           <img
             src="/favicon.ico"
             width="30"
             height="30"
-            className="d-inline-block align-top me-2"
+            className="d-inline-block align-top me-2 logo-pulse"
             alt="Logo"
           />
           <span style={logoStyle}>SonicFlow</span>
         </Navbar.Brand>
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
-        <Navbar.Collapse id="basic-navbar-nav" className="justify-content-center" style={collapseStyle}>
+        <Navbar.Collapse id="basic-navbar-nav" className="justify-content-center">
           <Nav className="w-100 d-flex justify-content-center">
             {navItems.map(item => (
               <Nav.Link
                 key={item.id}
                 active={activeTab === item.id}
                 onClick={() => handleNavItemClick(item.id)}
-                className="d-flex align-items-center mx-2 mx-md-4"
+                className={`d-flex align-items-center mx-2 mx-md-4 nav-item ${activeTab === item.id ? 'active' : ''}`}
               >
-                <span className="me-1">{item.icon}</span> {item.title}
+                <span className="me-1 nav-icon">{item.icon}</span> {item.title}
               </Nav.Link>
             ))}
           </Nav>

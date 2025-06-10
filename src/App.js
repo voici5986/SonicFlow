@@ -5,13 +5,15 @@ import ReactPlayer from 'react-player';
 import { FaPlay, FaPause, FaDownload, FaMusic, FaChevronDown, FaChevronUp, FaGithub, 
          FaStepBackward, FaStepForward, FaRandom, FaRetweet } from 'react-icons/fa';
 import { toast } from 'react-toastify';
-
-// 导入新添加的组件和服务
-import Navigation from './components/Navigation';
+// import { RiRepeatOneLine } from 'react-icons/ri';
 import HeartButton from './components/HeartButton';
+import Navigation from './components/Navigation';
+import ProgressBar from './components/ProgressBar';
 import Favorites from './pages/Favorites';
 import History from './pages/History';
 import { addToHistory } from './services/storage';
+// 导入导航样式修复
+import './styles/NavigationFix.css';
 
 const API_BASE = process.env.REACT_APP_API_BASE || '/api';
 
@@ -47,7 +49,7 @@ const App = () => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [source, setSource] = useState('netease');
-  const [quality, setQuality] = useState('999');
+  const [quality, setQuality] = useState(999);
   const [loading, setLoading] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(null);
   const [playerUrl, setPlayerUrl] = useState('');
@@ -72,15 +74,18 @@ const App = () => {
   // 添加播放进度相关状态
   const [playProgress, setPlayProgress] = useState(0);
   const [playedSeconds, setPlayedSeconds] = useState(0);
-  const [totalSeconds, setTotalSeconds] = useState(0);
+    const [totalSeconds, setTotalSeconds] = useState(0);
+
+  // 下载相关状态
+  const [downloading, setDownloading] = useState(false);
+  const [currentDownloadingTrack, setCurrentDownloadingTrack] = useState(null);
 
   const sources = [
     'netease', 'joox', 'tencent', 'tidal', 'spotify',
-    'ytmusic', 'qobuz', 'deezer',
-    'migu', 'kugou', 'kuwo', 'ximalaya'
+    'korean', 'kuwo', 'migu', 'kugou', 'qq',
   ];
 
-  const qualities = ['128', '192', '320', '740', '999'];
+  const qualities = [128, 192, 320, 740, 999];
 
   const parseLyric = (text) => {
     const lines = text.split('\n');
@@ -423,10 +428,10 @@ const fetchCover = async (source, picId, size = 300) => {
 
   // 格式化时间显示
   const formatTime = (seconds) => {
-    if (isNaN(seconds) || seconds < 0) return '00:00';
+    if (isNaN(seconds)) return '0:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
   
   // 修改handleProgress处理进度更新
@@ -457,6 +462,9 @@ const fetchCover = async (source, picId, size = 300) => {
 
   const handleDownload = async (track) => {
     try {
+      setDownloading(true); // 添加下载状态
+      setCurrentDownloadingTrack(track);
+      
       const response = await axios.get(`${API_BASE}`, {
         params: {
           types: 'url',
@@ -466,21 +474,80 @@ const fetchCover = async (source, picId, size = 300) => {
         }
       });
       
+      // 通过后端获取音频数据来下载
       const downloadUrl = response.data.url.replace(/\\/g, '');
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      // link.download = `${track.name} - ${track.artist}.mp3`; //下载为mp3格式
+      
+      // 设置下载文件名
       const extension = getFileExtension(downloadUrl);
-      link.download = `${track.name} - ${track.artist}.${extension}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const fileName = `${track.name} - ${track.artist}.${extension}`;
+      
+      // 确定音质描述
+      let qualityDesc = "";
+      if (quality >= 999) {
+        qualityDesc = "无损音质";
+      } else if (quality >= 700) {
+        qualityDesc = "Hi-Res";
+      } else if (quality >= 320) {
+        qualityDesc = "高品质";
+      } else {
+        qualityDesc = `${quality}kbps`;
+      }
+      
+      toast.info(`正在准备下载${qualityDesc}音频: ${fileName}`, {
+        icon: '⏬',
+        duration: 2000
+      });
+      
+      // 直接下载
+      try {
+        // 使用fetch获取音频内容
+        const audioResponse = await fetch(downloadUrl);
+        const blob = await audioResponse.blob();
+        
+        // 创建blob URL
+        const blobUrl = window.URL.createObjectURL(blob);
+        
+        // 创建下载链接并点击
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = fileName; 
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        
+        // 清理
+        setTimeout(() => {
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(blobUrl);
+        }, 100);
+        
+        toast.success('下载成功！', {
+          icon: '✅',
+          duration: 3000
+        });
+      } catch (fetchError) {
+        console.error('Fetch error:', fetchError);
+        
+        // 备用下载方法
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.setAttribute('download', fileName);
+        link.setAttribute('target', '_blank');
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      
     } catch (error) {
       console.error('Download error:', error);
       toast.error('下载失败，请稍后重试', {
         icon: '❌',
-        className: 'custom-toast error-toast'
+        duration: 3000
       });
+    } finally {
+      setDownloading(false); // 重置下载状态
+      setCurrentDownloadingTrack(null);
     }
   };
 
@@ -545,12 +612,14 @@ useEffect(() => {
           <Col md={2}>
             <Dropdown>
               <Dropdown.Toggle variant="outline-secondary">
-                音质: {quality}k
+                音质: {quality === 999 ? '无损' : `${quality}k`}
               </Dropdown.Toggle>
               <Dropdown.Menu>
                 {qualities.map(q => (
                   <Dropdown.Item key={q} onClick={() => setQuality(q)}>
-                    {q}k
+                    {q === 999 ? '无损 FLAC' : 
+                     q === 740 ? 'Hi-Res 740k' : 
+                     `${q}k MP3`}
                   </Dropdown.Item>
                 ))}
               </Dropdown.Menu>
@@ -619,8 +688,12 @@ useEffect(() => {
                     variant="outline-success" 
                     size="sm"
                     onClick={() => handleDownload(track)}
+                    disabled={downloading && currentDownloadingTrack?.id === track.id}
                   >
-                    <FaDownload />
+                    {downloading && currentDownloadingTrack?.id === track.id ? 
+                      <Spinner animation="border" size="sm" /> : 
+                      <FaDownload />
+                    }
                   </Button>
                 </div>
               </Card.Body>
@@ -659,17 +732,10 @@ useEffect(() => {
   // 添加播放器渲染函数
   const renderAudioPlayer = () => {
     return (
-      <div className="fixed-bottom bg-light p-3 border-top"
-      style={{
-        height: lyricExpanded ? '300px' : 'auto',
-        boxShadow: '0 -2px 10px rgba(0,0,0,0.1)',
-        zIndex: 1000
-      }}
-      >
+      <div className="audio-player fixed-bottom bg-white p-2 shadow-lg">
         <Row className="align-items-center">
-          {/* 左侧：专辑封面和歌曲信息 */}
-          <Col md={3}>
-            <div className="d-flex">
+          {/* 左侧：歌曲信息 */}
+          <Col xs={12} md={3} className="d-flex align-items-center mb-2 mb-md-0">
             {currentTrack && (
               <div className="d-flex align-items-center">
                 <img 
@@ -679,34 +745,30 @@ useEffect(() => {
                   className="me-2 rounded"
                 />
                 <div>
-                  <h6 className="mb-0">{currentTrack.name}</h6>
-                  <small className="text-muted">{currentTrack.artist}</small>
+                  <h6 className="mb-0 text-truncate" style={{maxWidth: '150px'}}>{currentTrack.name}</h6>
+                  <small className="text-muted text-truncate" style={{maxWidth: '150px', display: 'block'}}>{currentTrack.artist}</small>
                 </div>
               </div>
             )}
-          </div>
           </Col>
           
-          {/* 中间：进度条和播放控制区域 */}
-      <Col md={6}>
-            {/* 进度条 */}
-            <div className="d-flex align-items-center justify-content-between mb-1">
-              <small className="text-muted">{formatTime(playedSeconds)}</small>
-              <small className="text-muted">{formatTime(totalSeconds)}</small>
-            </div>
-            <div className="progress mb-2" style={{ height: '4px', cursor: 'pointer' }}
-              onClick={(e) => {
-                if (playerRef.current && currentTrack) {
-                  const progressBar = e.currentTarget;
-                  const position = (e.clientX - progressBar.getBoundingClientRect().left) / progressBar.offsetWidth;
-                  playerRef.current.seekTo(position);
-                }
-        }}
-      >
-              <div 
-                className="progress-bar bg-danger" 
-                style={{ width: `${playProgress}%` }}
-              ></div>
+          {/* 中间：进度条和控制按钮 */}
+          <Col xs={12} md={6}> {/* 响应式布局调整 */}
+            <div className="progress-control-container">
+              {/* 时间显示 */}
+              <div className="d-flex align-items-center justify-content-between mb-1">
+                <small className="text-muted">{formatTime(playedSeconds)}</small>
+                <small className="text-muted">{formatTime(totalSeconds)}</small>
+              </div>
+              
+              {/* 使用新的进度条组件 */}
+              <ProgressBar 
+                currentTrack={currentTrack}
+                playProgress={playProgress}
+                totalSeconds={totalSeconds}
+                playerRef={playerRef}
+                formatTime={formatTime}
+              />
             </div>
             
             {/* 播放控制按钮 */}
@@ -715,39 +777,43 @@ useEffect(() => {
                 variant="link"
                 onClick={handlePrev}
                 disabled={!currentTrack || currentPlaylist.length <= 1}
-                className="mx-2"
+                className="mx-2 p-2" // 增加内边距
+                aria-label="上一首"
               >
-                <FaStepBackward />
+                <FaStepBackward size={22} />
               </Button>
               
               <Button
                 variant="link"
                 onClick={() => setIsPlaying(!isPlaying)}
                 disabled={!currentTrack || !playerUrl}
-                className="mx-2"
+                className="mx-2 p-1" // 增加内边距
+                aria-label={isPlaying ? "暂停" : "播放"}
               >
-                {!currentTrack ? (
-                  <FaMusic size={24} className="text-muted" />
-                ) : isPlaying ? (
-                  <FaPause size={24} className="text-danger" />
-                ) : (
-                  <FaPlay size={24} className="text-danger" />
-                )}
+                {!currentTrack ? 
+                  <FaMusic size={28} className="text-muted" /> 
+                 : isPlaying ? 
+                  <FaPause size={28} className="text-danger" />
+                 : 
+                  <FaPlay size={28} className="text-danger" />
+                }
               </Button>
               
               <Button
                 variant="link"
                 onClick={handleNext}
                 disabled={!currentTrack || currentPlaylist.length <= 1}
-                className="mx-2"
+                className="mx-2 p-2" // 增加内边距
+                aria-label="下一首"
               >
-                <FaStepForward />
+                <FaStepForward size={22} />
               </Button>
               
               <Button
                 variant="link"
                 onClick={handleTogglePlayMode}
-                className="mx-2 text-danger"
+                className="mx-2 p-2 text-danger" // 增加内边距
+                aria-label="播放模式"
               >
                 {getPlayModeIcon()}
               </Button>
@@ -755,9 +821,27 @@ useEffect(() => {
               {currentTrack && (
                 <HeartButton 
                   track={currentTrack} 
-                  size={20} 
+                  size={22} // 增加图标大小
                   variant="link"
+                  className="p-2" // 增加内边距
                 />
+              )}
+              
+              {/* 添加下载按钮 */}
+              {currentTrack && (
+                <Button
+                  variant="link"
+                  onClick={() => handleDownload(currentTrack)}
+                  className="mx-2 p-2 text-primary" // 与其他按钮保持一致的样式
+                  aria-label="下载"
+                  title="下载歌曲"
+                  disabled={downloading && currentDownloadingTrack?.id === currentTrack.id}
+                >
+                  {downloading && currentDownloadingTrack?.id === currentTrack.id ? 
+                    <Spinner animation="border" size="sm" /> : 
+                    <FaDownload size={22} />
+                  }
+                </Button>
               )}
             </div>
 
@@ -779,28 +863,58 @@ useEffect(() => {
           </Col>
 
           {/* 右侧：歌词显示 */}
-          <Col md={3}>
-            <div className="d-flex align-items-center justify-content-end">
-              {/* 当前播放歌词 */}
+          <Col xs={12} md={3} className="mt-2 mt-md-0"> {/* 响应式布局调整 */}
+            {/* 只在歌词未展开时显示预览 */}
+            {!lyricExpanded && (
               <div 
-                className="text-truncate mx-2" 
-                style={{ maxWidth: '80%', cursor: 'pointer' }}
+                className="lyrics-preview-container" 
+                style={{ cursor: 'pointer' }}
                 onClick={() => setLyricExpanded(!lyricExpanded)}
                 title={lyricExpanded ? '收起歌词' : '展开歌词'}
               >
-                {lyricData.parsedLyric[currentLyricIndex] ? 
-                  lyricData.parsedLyric[currentLyricIndex].text : '暂无歌词'}
+                {/* 当前播放歌词 */}
+                <div className="current-lyric-container">
+                  <div className="current-lyric text-truncate">
+                    {lyricData.parsedLyric[currentLyricIndex] ? 
+                      lyricData.parsedLyric[currentLyricIndex].text : '暂无歌词'}
+                  </div>
+                  
+                  {/* 下一句歌词 */}
+                  <div className="next-lyric text-truncate text-muted" style={{ fontSize: '0.9em' }}>
+                    {lyricData.parsedLyric[currentLyricIndex + 1] ? 
+                      lyricData.parsedLyric[currentLyricIndex + 1].text : ''}
+                  </div>
                 </div>
-              
-              <Button
-                variant="link"
-                onClick={() => setLyricExpanded(!lyricExpanded)}
-                className="p-0"
-                title={lyricExpanded ? '收起歌词' : '展开歌词'}
-              >
-                {lyricExpanded ? <FaChevronDown /> : <FaChevronUp />}
-              </Button>
-            </div>
+                
+                <Button
+                  variant="link"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLyricExpanded(!lyricExpanded);
+                  }}
+                  className="p-2 ms-2" 
+                  title={lyricExpanded ? '收起歌词' : '展开歌词'}
+                  aria-label={lyricExpanded ? '收起歌词' : '展开歌词'}
+                  style={{ flexShrink: 0 }}
+                >
+                  {lyricExpanded ? <FaChevronDown size={18} /> : <FaChevronUp size={18} />}
+                </Button>
+              </div>
+            )}
+            
+            {/* 在歌词已展开时只显示收起按钮 */}
+            {lyricExpanded && (
+              <div className="d-flex justify-content-end">
+                <Button
+                  variant="link"
+                  onClick={() => setLyricExpanded(false)}
+                  className="p-2" 
+                  title="收起歌词"
+                >
+                  <FaChevronDown size={18} />
+                </Button>
+              </div>
+            )}
           </Col>
         </Row>
           
@@ -814,7 +928,10 @@ useEffect(() => {
                 style={{
                   maxHeight: '250px',
                   overflowY: 'auto',
-                  textAlign: 'center'
+                  textAlign: 'center',
+                  backgroundColor: 'rgba(0,0,0,0.02)',
+                  borderRadius: '8px',
+                  padding: '10px 5px'
                 }}
             onScroll={(e) => {
               // 记录用户滚动行为
@@ -824,12 +941,12 @@ useEffect(() => {
             {lyricData.parsedLyric.map((line, index) => (
               <div
                 key={index}
-                className={`lyric-line ${index === currentLyricIndex ? 'active' : ''}`}
+                className={`lyric-line ${index === currentLyricIndex ? 'active' : ''} ${index === currentLyricIndex + 1 ? 'next-active' : ''}`}
                 data-time={line.time}
                     style={{
                       padding: '4px 0',
-                      color: index === currentLyricIndex ? '#dc3545' : '#6c757d',
-                      fontWeight: index === currentLyricIndex ? 'bold' : 'normal',
+                      color: index === currentLyricIndex ? '#333333' : (index === currentLyricIndex + 1 ? '#666666' : '#999999'),
+                      fontWeight: index === currentLyricIndex ? '500' : 'normal',
                       transition: 'all 0.3s'
                     }}
               >
@@ -852,21 +969,34 @@ useEffect(() => {
     );
   };
 
+  // 使用媒体查询检测屏幕大小
+  const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileView(window.innerWidth < 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
-    <div className="App">
+    <div className="app-container">
       <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
-      <Container 
-        fluid 
-        style={{ 
-          paddingRight: '60px',  // 添加右侧内边距，为Github图标留出空间
-          paddingBottom: lyricExpanded ? '320px' : '120px',
-          transition: 'padding 0.3s ease'
-        }}
-      >
-        {renderContent()}
-    </Container>
+      
+      <Container className="main-content py-4">
+        <div className="tab-content">
+          {renderContent()}
+        </div>
+      </Container>
+      
+      {currentTrack && (
+        <div className="audio-player fixed-bottom bg-white p-2 shadow-lg">
+          {renderAudioPlayer()}
+        </div>
+      )}
       <Github />
-      {currentTrack && renderAudioPlayer()}
       <div className="overlay-background" style={{ display: isPlaying ? 'block' : 'none' }} />
     </div>
   );

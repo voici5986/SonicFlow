@@ -361,8 +361,8 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
               }
             }
             
-            // 确保添加到新收藏列表
-            newFavorites.push(matchedTrack);
+            // 确保添加到新收藏列表开头（与toggleFavorite逻辑一致）
+            newFavorites.unshift(matchedTrack);
             importedCount++;
             
             // 更新状态为成功
@@ -462,15 +462,15 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
   const startBulkDownload = async () => {
     if (isDownloading || favorites.length === 0) return;
     
-    // 强制设置为标准音质，暂时禁用无损功能
-    const actualQuality = '320'; // 忽略用户的无损选择，始终使用320kbps
+    // 使用用户选择的音质
+    const actualQuality = downloadQuality;
     
     setIsDownloading(true);
     let successCount = 0;
     const newStatus = [...downloadStatus];
     
-    // 始终显示为高音质
-    const qualityName = '高音质';
+    // 根据音质设置显示名称
+    const qualityName = actualQuality === '999' ? '无损音质' : '高音质';
     
     for (let i = 0; i < favorites.length; i++) {
       try {
@@ -489,7 +489,7 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
             types: 'url',
             source: track.source,
             id: track.id,
-            br: actualQuality // 使用固定音质
+            br: actualQuality
           }
         });
         
@@ -497,6 +497,10 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
         if (!downloadUrl) {
           throw new Error('无效的下载链接');
         }
+        
+        // 确定文件扩展名
+        const extension = getFileExtension(downloadUrl);
+        const fileName = `${track.name} - ${track.artist}.${extension}`;
         
         // 显示文件大小信息（如果API返回）
         let fileSize = '';
@@ -507,18 +511,45 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
           setDownloadStatus([...newStatus]);
         }
         
-        // 直接下载文件 (仅使用320kbps处理方式)
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        
-        // 确定文件扩展名
-        const extension = getFileExtension(downloadUrl);
-        link.download = `${track.name} - ${track.artist}.${extension}`;
-        
-        // 添加到文档并点击
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // 使用现代方法下载文件
+        try {
+          // 获取音频内容
+          newStatus[i] = { status: 'downloading', message: `准备下载${fileSize}...` };
+          setDownloadStatus([...newStatus]);
+          
+          const audioResponse = await fetch(downloadUrl);
+          const blob = await audioResponse.blob();
+          
+          // 创建下载链接
+          const blobUrl = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = fileName;
+          link.style.display = 'none';
+          
+          // 下载文件
+          document.body.appendChild(link);
+          link.click();
+          
+          // 清理
+          setTimeout(() => {
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+          }, 100);
+          
+        } catch (fetchError) {
+          console.error('Fetch下载失败，尝试备用方法:', fetchError);
+          
+          // 备用下载方法
+          const link = document.createElement('a');
+          link.href = downloadUrl;
+          link.setAttribute('download', fileName);
+          link.setAttribute('target', '_blank');
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
         
         // 更新成功状态
         successCount++;
@@ -560,10 +591,16 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
         .pop()
         .split(/[#?]/)[0];
         
+      // 检查URL中的文件扩展名
       const extensionMatch = fileName.match(/\.([a-z0-9]+)$/i);
-      return extensionMatch ? extensionMatch[1] : 'mp3';
-    } catch {
+      if (extensionMatch) return extensionMatch[1];
+      
+      // 如果URL没有扩展名，根据音质决定
+      if (downloadQuality === '999') return 'flac';
       return 'mp3';
+    } catch {
+      // 默认扩展名也根据音质决定
+      return downloadQuality === '999' ? 'flac' : 'mp3';
     }
   };
 
@@ -775,7 +812,7 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
           {!isDownloading && (
             <div className="mb-3">
               <p className="mb-2">选择下载音质：</p>
-              <div className="d-flex flex-column flex-md-row">
+              <div className="d-flex flex-column">
                 <Form.Check
                   type="radio"
                   id="quality-320"
@@ -783,20 +820,17 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
                   label="标准高音质 (320kbps，体积适中，直接下载)"
                   checked={downloadQuality === '320'}
                   onChange={() => setDownloadQuality('320')}
-                  className="me-3 mb-2"
+                  className="mb-3"
                 />
-                <div className="d-flex align-items-center">
-                  <Form.Check
-                    type="radio"
-                    id="quality-999"
-                    name="download-quality"
-                    label="无损音质 (功能开发中)"
-                    checked={downloadQuality === '999'}
-                    onChange={() => setDownloadQuality('999')}
-                    disabled={true}
-                  />
-                  <span className="ms-2 badge bg-warning text-dark">开发中</span>
-                </div>
+                <Form.Check
+                  type="radio"
+                  id="quality-999"
+                  name="download-quality"
+                  label="无损音质 (FLAC格式，音质更佳，文件更大)"
+                  checked={downloadQuality === '999'}
+                  onChange={() => setDownloadQuality('999')}
+                  disabled={false}
+                />
               </div>
             </div>
           )}
@@ -858,7 +892,7 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
           >
             {isDownloading ? 
               <><Spinner size="sm" className="me-1" /> 下载中...</> : 
-              '开始下载 (高音质)'
+              `开始下载 (${downloadQuality === '999' ? '无损音质' : '高音质'})`
             }
           </Button>
         </Modal.Footer>

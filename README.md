@@ -1,4 +1,4 @@
-# CL-Music 全平台音乐搜索
+# SonicFlow (CL-Music) 全平台音乐搜索
 
 一款基于React开发的在线音乐搜索和播放应用。
 [![Netlify Status](https://api.netlify.com/api/v1/badges/a55b97dc-1ba1-4859-994a-db396b196aa7/deploy-status)](https://app.netlify.com/sites/cl-music/deploys)  [![Vercel Status](https://img.shields.io/badge/vercel-success-{{color}})](https://vercel.com)
@@ -31,16 +31,43 @@
 
   - 音乐搜索
   - 在线播放
-  - 音乐下载
-  - 音质选择(最高支持999k)
-  - 歌词显示(支持双语歌词)
+  - 音乐下载（支持直接下载、无损音质）
+  - 音质选择(最高支持999k无损FLAC)
+  - 歌词显示(支持双语歌词、当前行+下一行预览)
   - 专辑封面显示
   - 收藏功能（红心标记喜爱的歌曲）
   - 收藏歌单导入/导出（支持跨平台歌曲匹配）
+  - 批量下载收藏歌曲（支持无损音质）
   - 播放历史记录
-  - 美化的UI界面
+  - 响应式设计和优化的用户界面
 
-## 新增功能
+## 最新改进
+
+- 📱 **交互与用户体验优化**
+  - 进度条跟手性增强，支持快速精准定位
+  - 拖动时实时预览时间和位置
+  - 拖动把手视觉反馈增强
+  - 优化的动画过渡效果
+
+- 🎵 **歌词显示增强**
+  - 同时显示当前歌词行和下一句歌词
+  - 自动高亮当前播放位置
+  - 歌词展开/折叠优化
+  - 支持歌词自动滚动
+
+- 💾 **下载功能完善**
+  - 支持直接下载，无需跳转
+  - 无损FLAC格式支持
+  - 批量下载收藏歌曲
+  - 完善的下载状态反馈
+
+- 🎨 **界面设计改进**
+  - 导航栏视觉优化
+  - 动画效果增强与交互反馈
+  - 移动端响应式布局优化
+  - 卡片样式与转场动画美化
+
+## 功能详解
 
 - 💖 **收藏功能**
   - 一键收藏喜爱的歌曲
@@ -61,6 +88,7 @@
   - 美化的导航栏和品牌标识
   - 响应式卡片布局
   - 直观的按钮和图标
+  - 流畅的过渡动画
 
 ## 项目部署
  生产环境需配置一个环境编辑，`REACT_APP_API_BASE` 后端API地址，由于跨域问题不可以直接使用，一般填写反代 `https://music-api.gdstudio.xyz/api.php` 后地址，可使用nginx、caddy 等web服务反代，也可是cloudflare worker反代，我这边提供了worker反向代理的代码，见 [worker.js](worker.js)
@@ -135,12 +163,15 @@ cl-music/
     │   ├── index.js        # 入口文件
     │   ├── components/     # 可复用组件
     │   │   ├── HeartButton.js # 收藏按钮组件
-    │   │   └── Navigation.js  # 导航组件
+    │   │   ├── Navigation.js  # 导航组件
+    │   │   └── ProgressBar.js # 进度条组件
     │   ├── pages/          # 页面组件 
     │   │   ├── Favorites.js  # 收藏页面
     │   │   └── History.js    # 历史记录页面
     │   ├── services/       # 服务
     │   │   └── storage.js    # 本地存储服务
+    │   ├── styles/         # 样式文件
+    │   │   └── NavigationFix.css # 导航样式修复
     │   └── setupProxy.js   # 开发代理配置
     └── package.json        # 项目配置文件
 ```

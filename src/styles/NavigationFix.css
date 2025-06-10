@@ -1,0 +1,100 @@
+/* 导航栏样式修复 */
+.navbar {
+  box-shadow: none !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+  background-color: transparent !important;
+  transition: all 0.3s ease;
+}
+
+.navbar-collapse {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  transition: all 0.3s ease;
+}
+
+/* 导航链接动画 */
+.navbar .nav-link {
+  border-bottom: 2px solid transparent;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.navbar .nav-link:after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(45deg, #6a11cb 0%, #2575fc 100%);
+  transition: width 0.3s ease;
+}
+
+.navbar .nav-link:hover:after {
+  width: 100%;
+}
+
+.navbar .nav-link.active {
+  color: #6a11cb !important;
+  font-weight: 500;
+}
+
+.navbar .nav-link.active::after {
+  display: none;
+}
+
+.navbar .nav-link.active {
+  border-bottom: 2px solid #6a11cb;
+}
+
+/* 导航图标动画 */
+.nav-icon {
+  transition: transform 0.3s ease;
+}
+
+.nav-link:hover .nav-icon {
+  transform: scale(1.2);
+}
+
+/* Logo脉冲动画 */
+@keyframes logoPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.logo-pulse {
+  animation: logoPulse 3s infinite ease-in-out;
+}
+
+/* 导航栏整体动画 */
+.nav-animated {
+  animation: navFadeIn 0.5s ease-out;
+}
+
+@keyframes navFadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 响应式导航样式修复 */
+@media (max-width: 991px) {
+  .navbar-collapse {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: #fff !important;
+    border-radius: 0 0 10px 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.07) !important;
+    z-index: 1000;
+    padding: 0.5rem 0;
+    animation: navDropDown 0.3s ease-out;
+  }
+  
+  @keyframes navDropDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+} 

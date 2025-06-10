@@ -28,8 +28,8 @@ body {
 }
 
 .card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
 }
 
 .card .card-body {
@@ -59,12 +59,44 @@ body {
 /* 美化按钮 */
 .btn {
   border-radius: 6px;
-  transition: var(--transition-normal);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.5);
+  opacity: 0;
+  border-radius: 100%;
+  transform: scale(1, 1) translate(-50%, -50%);
+  transform-origin: 50% 50%;
+}
+
+.btn:hover::after {
+  animation: ripple 0.6s ease-out;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0, 0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(20, 20);
+    opacity: 0;
+  }
 }
 
 .btn-primary {
-  background: var(--primary-gradient);
+  background: linear-gradient(45deg, #6a11cb 0%, #2575fc 100%);
   border: none;
+  box-shadow: 0 4px 15px rgba(106, 17, 203, 0.4);
 }
 
 .btn-outline-primary:hover {
@@ -174,6 +206,21 @@ img.rounded {
   animation: fadeIn 0.4s ease-out forwards;
 }
 
+/* 添加卡片交错出现动画 */
+.row .col:nth-child(1) { animation-delay: 0.05s; }
+.row .col:nth-child(2) { animation-delay: 0.1s; }
+.row .col:nth-child(3) { animation-delay: 0.15s; }
+.row .col:nth-child(4) { animation-delay: 0.2s; }
+.row .col:nth-child(5) { animation-delay: 0.25s; }
+.row .col:nth-child(6) { animation-delay: 0.3s; }
+.row .col:nth-child(7) { animation-delay: 0.35s; }
+.row .col:nth-child(8) { animation-delay: 0.4s; }
+
+/* 页面切换动画 */
+.tab-content {
+  animation: fadeIn 0.3s ease-out;
+}
+
 /* 微调间距 */
 h6 {
   font-weight: 600;
@@ -233,6 +280,7 @@ code {
 
 .current-lyric {
   font-weight: 500;
+  color: #333333;
   font-size: 1.1em;
   line-height: 1.4;
   
@@ -336,4 +384,120 @@ code {
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
+}
+
+/* 加载动画增强 */
+.spinner-border {
+  animation-duration: 0.8s;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* 卡片加载骨架屏 */
+@keyframes shimmer {
+  0% {
+    background-position: -468px 0;
+  }
+  100% {
+    background-position: 468px 0;
+  }
+}
+
+.skeleton-loader {
+  background: linear-gradient(to right, #f6f7f8 8%, #edeef1 18%, #f6f7f8 33%);
+  background-size: 800px 104px;
+  animation: shimmer 1.5s linear infinite;
+  border-radius: var(--border-radius);
+  height: 15px;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.skeleton-img {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--border-radius);
+}
+
+.skeleton-title {
+  height: 20px;
+  width: 80%;
+}
+
+.skeleton-text {
+  height: 15px;
+  width: 60%;
+}
+
+/* 控制按钮动画 */
+.control-button {
+  transition: all 0.2s ease;
+}
+
+.control-button:hover {
+  transform: scale(1.1);
+  color: #6a11cb;
+}
+
+.control-button:active {
+  transform: scale(0.95);
+}
+
+/* 歌词高亮动画增强 */
+.lyric-line {
+  transition: all 0.4s ease;
+}
+
+.lyric-line.active {
+  transform: scale(1.05);
+  color: #333333 !important;
+  font-weight: 500;
+  border-radius: 4px;
+  padding-left: 5px !important;
+  padding-right: 5px !important;
+}
+
+/* 下一句歌词样式 */
+.lyric-line.next-active {
+  transform: scale(1.02);
+  border-radius: 4px;
+  padding-left: 3px !important;
+  padding-right: 3px !important;
+}
+
+/* 歌词预览容器样式 */
+.lyrics-preview-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  max-width: 100%;
+  padding: 5px 10px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.lyrics-preview-container:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.current-lyric-container {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  overflow: hidden;
+  max-width: calc(100% - 40px);
+}
+
+.current-lyric {
+  font-weight: 500;
+  color: #333333;
+}
+
+.next-lyric {
+  margin-top: 2px;
+}
+
+@media (max-width: 768px) {
+  .lyrics-preview-container {
+    justify-content: center;
+  }
 }

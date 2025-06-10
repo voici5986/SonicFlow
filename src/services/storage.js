@@ -47,8 +47,8 @@ export async function toggleFavorite(track) {
     // 已收藏，则移除
     favorites.splice(index, 1);
   } else {
-    // 未收藏，则添加
-    favorites.push(track);
+    // 未收藏，则添加到列表开头
+    favorites.unshift(track);
   }
   await saveFavorites(favorites);
   return index === -1; // 返回是否是新添加的 (true = added, false = removed)
