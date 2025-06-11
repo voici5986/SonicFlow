@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Container, Row, Col, Card, Button, Spinner, Modal, Form, Alert, ProgressBar } from 'react-bootstrap';
-import { FaPlay, FaPause, FaDownload, FaTrash, FaFileExport, FaFileImport, FaCloudDownloadAlt } from 'react-icons/fa';
+import { FaPlay, FaPause, FaDownload, FaTrash, FaFileExport, FaFileImport, FaCloudDownloadAlt, FaGithub } from 'react-icons/fa';
 import { getFavorites, toggleFavorite, saveFavorites } from '../services/storage';
 import { toast } from 'react-toastify';
 import axios from 'axios';
@@ -607,9 +607,19 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
   return (
     <Container className="my-4">
       <div className="d-md-flex justify-content-between align-items-center mb-4">
-        <h1 className="mb-3 mb-md-0">我的收藏</h1>
+        <div className="d-flex align-items-center mb-3 mb-md-0">
+          <h1 className="mb-0">我的收藏</h1>
+          <a 
+            href="https://github.com/voici5986/cl_music_X" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="ms-3 text-dark"
+          >
+            <FaGithub size={24} />
+          </a>
+        </div>
         <div className="d-flex flex-wrap justify-content-center justify-content-md-end">
-          <Button 
+          <Button
             variant="outline-danger" 
             size="sm"
             className="me-2 mb-2 mb-md-0 d-flex align-items-center"
@@ -619,7 +629,7 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
           >
             <FaCloudDownloadAlt className="me-1" /> <span>下载全部</span>
           </Button>
-          <Button 
+          <Button
             variant="outline-success" 
             size="sm"
             className="me-2 mb-2 mb-md-0 d-flex align-items-center"
@@ -629,7 +639,7 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
           >
             <FaFileExport className="me-1" /> <span>导出收藏</span>
           </Button>
-          <Button 
+          <Button
             variant="outline-primary" 
             size="sm"
             className="d-flex align-items-center"

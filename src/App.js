@@ -11,39 +11,22 @@ import Navigation from './components/Navigation';
 import ProgressBar from './components/ProgressBar';
 import Favorites from './pages/Favorites';
 import History from './pages/History';
+import User from './pages/User';
+import AuthModal from './components/AuthModal';
+import { useAuth } from './contexts/AuthContext';
 import { addToHistory } from './services/storage';
 // 导入导航样式修复
 import './styles/NavigationFix.css';
 
 const API_BASE = process.env.REACT_APP_API_BASE || '/api';
 
-const Github = () => {
-  return (
-    <a
-      href="https://github.com/voici5986/cl_music_X"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="github-corner"
-        aria-label="View source on GitHub"
-      >
-        <FaGithub
-          size={32}
-          className="text-dark"
-          style={{
-            position: 'fixed',
-            top: '20px',
-            right: '20px',
-            zIndex: 1000,
-            transition: 'transform 0.3s ease'
-          }}
-        />
-      </a>
-  )
-}
-
 const App = () => {
   // 新增当前活动标签页状态
   const [activeTab, setActiveTab] = useState('home');
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  
+  // 获取用户认证状态
+  const { currentUser } = useAuth();
   
   // 原有状态
   const [query, setQuery] = useState('');
@@ -74,7 +57,7 @@ const App = () => {
   // 添加播放进度相关状态
   const [playProgress, setPlayProgress] = useState(0);
   const [playedSeconds, setPlayedSeconds] = useState(0);
-    const [totalSeconds, setTotalSeconds] = useState(0);
+  const [totalSeconds, setTotalSeconds] = useState(0);
 
   // 下载相关状态
   const [downloading, setDownloading] = useState(false);
@@ -86,6 +69,14 @@ const App = () => {
   ];
 
   const qualities = [128, 192, 320, 740, 999];
+
+  // 处理认证窗口
+  const handleAuthModalClose = () => setShowAuthModal(false);
+  const handleAuthModalShow = () => setShowAuthModal(true);
+  const handleAuthSuccess = () => {
+    setShowAuthModal(false);
+    toast.success('账号同步功能已启用！');
+  };
 
   const parseLyric = (text) => {
     const lines = text.split('\n');
@@ -534,9 +525,9 @@ const fetchCover = async (source, picId, size = 300) => {
         link.setAttribute('download', fileName);
         link.setAttribute('target', '_blank');
         link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       }
       
     } catch (error) {
@@ -692,7 +683,7 @@ useEffect(() => {
                   >
                     {downloading && currentDownloadingTrack?.id === track.id ? 
                       <Spinner animation="border" size="sm" /> : 
-                      <FaDownload />
+                    <FaDownload />
                     }
                   </Button>
                 </div>
@@ -705,25 +696,22 @@ useEffect(() => {
     );
   };
 
-  // 根据当前活动标签渲染内容
+  // 渲染内容选择
   const renderContent = () => {
     switch (activeTab) {
       case 'home':
         return renderHomePage();
       case 'favorites':
         return <Favorites 
-                 onPlay={handlePlay} 
-                 currentTrack={currentTrack} 
-                 isPlaying={isPlaying} 
-                 onDownload={handleDownload} 
-               />;
+                onPlay={handlePlay} 
+                currentTrack={currentTrack}
+                isPlaying={isPlaying}
+                onDownload={handleDownload}
+              />;
       case 'history':
-        return <History 
-                 onPlay={handlePlay} 
-                 currentTrack={currentTrack} 
-                 isPlaying={isPlaying} 
-                 onDownload={handleDownload} 
-               />;
+        return <History onPlay={handlePlay} />;
+      case 'user':
+        return <User />;
       default:
         return renderHomePage();
     }
@@ -883,7 +871,7 @@ useEffect(() => {
                   <div className="next-lyric text-truncate text-muted" style={{ fontSize: '0.9em' }}>
                     {lyricData.parsedLyric[currentLyricIndex + 1] ? 
                       lyricData.parsedLyric[currentLyricIndex + 1].text : ''}
-                  </div>
+                </div>
                 </div>
                 
                 <Button
@@ -913,8 +901,8 @@ useEffect(() => {
                 >
                   <FaChevronDown size={18} />
                 </Button>
-              </div>
-            )}
+            </div>
+          )}
           </Col>
         </Row>
           
@@ -980,22 +968,22 @@ useEffect(() => {
   }, []);
 
   return (
-    <div className="app-container">
-      <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
+    <div className="App">
+      <Navigation 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab}
+        onAuthClick={handleAuthModalShow}
+      />
       
-      <Container className="main-content py-4">
-        <div className="tab-content">
-          {renderContent()}
-        </div>
-      </Container>
+      {renderContent()}
       
-      {currentTrack && (
-        <div className="audio-player fixed-bottom bg-white p-2 shadow-lg">
-          {renderAudioPlayer()}
-        </div>
-      )}
-      <Github />
-      <div className="overlay-background" style={{ display: isPlaying ? 'block' : 'none' }} />
+      {renderAudioPlayer()}
+      
+      <AuthModal 
+        show={showAuthModal} 
+        handleClose={handleAuthModalClose} 
+        onAuthSuccess={handleAuthSuccess}
+      />
     </div>
   );
 };
