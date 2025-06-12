@@ -1,6 +1,6 @@
 import { db } from './firebase';
 import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
-import { getFavorites, saveFavorites, getHistory } from './storage';
+import { getFavorites, saveFavorites, getHistory, saveHistory, MAX_HISTORY_ITEMS } from './storage';
 
 // 将本地收藏同步到云端
 export const syncFavoritesToCloud = async (uid) => {
@@ -89,8 +89,7 @@ export const syncHistoryFromCloud = async (uid) => {
     const cloudHistory = userDoc.data().history;
     
     // 保存到本地
-    const historyStore = (await import('./storage')).historyStore;
-    await historyStore.setItem('items', cloudHistory);
+    await saveHistory(cloudHistory);
     
     return { success: true, data: cloudHistory };
   } catch (error) {
@@ -99,7 +98,7 @@ export const syncHistoryFromCloud = async (uid) => {
   }
 };
 
-// 合并本地和云端数据
+// 合并本地和云端收藏数据
 export const mergeFavorites = async (uid) => {
   try {
     if (!uid) return { success: false, error: '用户未登录' };
@@ -140,18 +139,74 @@ export const mergeFavorites = async (uid) => {
   }
 };
 
+// 合并历史记录数据
+export const mergeHistory = async (uid) => {
+  try {
+    if (!uid) return { success: false, error: '用户未登录' };
+
+    // 获取本地历史记录
+    const localHistory = await getHistory();
+    
+    // 获取云端历史记录
+    const userDoc = await getDoc(doc(db, "users", uid));
+    
+    if (!userDoc.exists()) {
+      // 如果云端没有数据，直接上传本地数据
+      return await syncHistoryToCloud(uid);
+    }
+    
+    const cloudHistory = userDoc.data().history || [];
+    
+    // 创建一个Map来存储合并后的历史记录，键为歌曲ID
+    const historyMap = new Map();
+    
+    // 先添加本地历史记录
+    localHistory.forEach(item => {
+      historyMap.set(item.song.id, item);
+    });
+    
+    // 添加云端历史记录，如果相同歌曲则保留最新的时间戳
+    cloudHistory.forEach(item => {
+      const existingItem = historyMap.get(item.song.id);
+      if (!existingItem || item.timestamp > existingItem.timestamp) {
+        historyMap.set(item.song.id, item);
+      }
+    });
+    
+    // 转换回数组并按时间戳排序（最新的在前）
+    let mergedHistory = Array.from(historyMap.values())
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, MAX_HISTORY_ITEMS); // 限制为最大数量
+    
+    // 保存到本地
+    await saveHistory(mergedHistory);
+    
+    // 上传到云端
+    await updateDoc(doc(db, "users", uid), { history: mergedHistory });
+    
+    return { success: true, data: mergedHistory };
+  } catch (error) {
+    console.error("合并历史记录失败:", error);
+    return { success: false, error };
+  }
+};
+
 // 同步器，处理用户登录后的初始化同步
 export const initialSync = async (uid) => {
   try {
     if (!uid) return { success: false };
     
     // 合并收藏
-    await mergeFavorites(uid);
+    const favResult = await mergeFavorites(uid);
     
-    // 暂时只上传历史记录，不合并
-    await syncHistoryToCloud(uid);
+    // 合并历史记录
+    const histResult = await mergeHistory(uid);
     
-    return { success: true };
+    return { 
+      success: favResult.success && histResult.success,
+      favorites: favResult.data,
+      history: histResult.data
+    };
   } catch (error) {
     console.error("初始同步失败:", error);
     return { success: false, error };

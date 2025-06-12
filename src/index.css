@@ -4,6 +4,7 @@
   --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   --transition-normal: all 0.3s ease;
   --border-radius: 10px;
+  --player-height-collapsed: 70px; /* 播放器收起状态高度 */
 }
 
 body {
@@ -359,13 +360,14 @@ code {
 
 .main-content {
   min-height: calc(100vh - 120px); 
+  padding-bottom: calc(var(--player-height-collapsed) + 30px); /* 确保内容不被播放器遮挡 */
 }
 
 
 @media (max-width: 768px) {
   .main-content {
     min-height: calc(100vh - 80px);
-    padding-bottom: 80px !important;
+    padding-bottom: calc(var(--player-height-collapsed) + 40px) !important; /* 增加更多底部内边距 */
   }
   
   .fixed-bottom {

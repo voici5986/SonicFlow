@@ -6,6 +6,7 @@ import { toast } from 'react-toastify';
 import moment from 'moment';
 import 'moment/locale/zh-cn';
 import HeartButton from '../components/HeartButton';
+import './History.css';
 
 // 设置moment为中文
 moment.locale('zh-cn');
@@ -44,9 +45,9 @@ const History = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
     }
   };
 
-  const formatTime = (timestamp) => {
+  const formatCompactTimestamp = (timestamp) => {
     const date = new Date(timestamp);
-    return moment(date).format('YYYY-MM-DD HH:mm');
+    return moment(date).format('MM-DD  HH:mm');
   };
 
   return (
@@ -76,7 +77,11 @@ const History = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
         <Row className="g-4">
           {history.map((item) => (
             <Col key={item.timestamp} xs={12} sm={6} md={4} lg={3}>
-              <Card className="h-100" data-id={item.song.id}>
+              <Card 
+                className="h-100 history-card-timestamp" 
+                data-id={item.song.id} 
+                data-timestamp={formatCompactTimestamp(item.timestamp)}
+              >
                 <Card.Body>
                   <div className="d-flex align-items-center">
                     <img
@@ -97,9 +102,6 @@ const History = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
                       <h6 className="mb-1 text-truncate">{item.song.name}</h6>
                       <small className="text-muted d-block text-truncate">{item.song.artist}</small>
                       <small className="text-muted d-block text-truncate">{item.song.album}</small>
-                      <small className="text-muted d-block mt-1">
-                        <i>{formatTime(item.timestamp)}</i>
-                      </small>
                     </div>
                   </div>
                   
@@ -113,16 +115,21 @@ const History = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
                     >
                       {currentTrack?.id === item.song.id && isPlaying ? <FaPause /> : <FaPlay />}
                     </Button>
-                    <HeartButton track={item.song} className="me-1" />
-                    {onDownload && (
-                      <Button 
-                        variant="outline-success" 
-                        size="sm"
-                        onClick={() => onDownload(item.song)}
-                      >
-                        <FaDownload />
-                      </Button>
-                    )}
+                    <Button 
+                      variant="outline-danger" 
+                      size="sm"
+                      className="me-1"
+                      onClick={() => handleClearHistory()}
+                    >
+                      <FaTrash />
+                    </Button>
+                    <Button 
+                      variant="outline-success" 
+                      size="sm"
+                      onClick={() => onDownload(item.song)}
+                    >
+                      <FaDownload />
+                    </Button>
                   </div>
                 </Card.Body>
               </Card>

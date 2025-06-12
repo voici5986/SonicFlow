@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Container, Row, Col, Card, Button, Spinner, Modal, Form, Alert, ProgressBar } from 'react-bootstrap';
 import { FaPlay, FaPause, FaDownload, FaTrash, FaFileExport, FaFileImport, FaCloudDownloadAlt, FaGithub } from 'react-icons/fa';
-import { getFavorites, toggleFavorite, saveFavorites } from '../services/storage';
+import { getFavorites, toggleFavorite, saveFavorites, MAX_FAVORITES_ITEMS } from '../services/storage';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 
@@ -609,6 +609,9 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
       <div className="d-md-flex justify-content-between align-items-center mb-4">
         <div className="d-flex align-items-center mb-3 mb-md-0">
           <h1 className="mb-0">我的收藏</h1>
+          <span className="ms-3 badge bg-primary">
+            {favorites.length}/{MAX_FAVORITES_ITEMS}
+          </span>
           <a 
             href="https://github.com/voici5986/cl_music_X" 
             target="_blank" 

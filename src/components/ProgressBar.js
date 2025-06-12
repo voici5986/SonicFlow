@@ -173,13 +173,16 @@ const ProgressBar = ({
       ? lastReleasedProgress 
       : playProgress;
   
+  // 计算当前时间（秒）
+  const currentTimeInSeconds = (totalSeconds * displayProgress) / 100;
+  
   return (
     <div 
       className="progress-wrapper" 
       ref={progressBarRef}
       style={{ 
-        padding: '8px 0', 
-        marginBottom: '10px',
+        padding: '4px 0', 
+        marginBottom: '6px',
         cursor: currentTrack ? 'pointer' : 'default',
         position: 'relative',
         touchAction: 'none' // 阻止浏览器默认触摸行为
@@ -197,11 +200,11 @@ const ProgressBar = ({
       <div 
         className="progress" 
         style={{ 
-          height: isHovering ? '10px' : '8px', 
+          height: isHovering ? '8px' : '6px', 
           position: 'relative',
           overflow: 'visible', // 允许把手超出边界
           transition: 'height 0.15s ease',
-          borderRadius: '6px'
+          borderRadius: '3px'
         }}
       >
         {/* 增大触摸区域 */}
@@ -282,6 +285,11 @@ const ProgressBar = ({
               : (displayProgress / 100))))}
         </div>
       )}
+      
+      {/* 时间显示 */}
+      <div className="time-display">
+        {formatTime(currentTimeInSeconds)}/{formatTime(totalSeconds)}
+      </div>
     </div>
   );
 };

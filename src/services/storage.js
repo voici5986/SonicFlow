@@ -14,6 +14,9 @@ export const historyStore = localforage.createInstance({
 /**
  * 收藏歌曲操作
  */
+// 设置收藏上限为500条
+export const MAX_FAVORITES_ITEMS = 500;
+
 export async function getFavorites() {
   try {
     const data = await favoritesStore.getItem('items');
@@ -38,6 +41,12 @@ export async function isFavorite(trackId) {
   return favorites.some(item => item.id === trackId);
 }
 
+// 检查收藏是否已满
+export async function isFavoritesFull() {
+  const favorites = await getFavorites();
+  return favorites.length >= MAX_FAVORITES_ITEMS;
+}
+
 // 添加或移除收藏
 export async function toggleFavorite(track) {
   const favorites = await getFavorites();
@@ -46,18 +55,25 @@ export async function toggleFavorite(track) {
   if (index > -1) {
     // 已收藏，则移除
     favorites.splice(index, 1);
+    await saveFavorites(favorites);
+    return { added: false, full: false };
   } else {
+    // 检查是否已达到上限
+    if (favorites.length >= MAX_FAVORITES_ITEMS) {
+      return { added: false, full: true };
+    }
     // 未收藏，则添加到列表开头
     favorites.unshift(track);
+    await saveFavorites(favorites);
+    return { added: true, full: false };
   }
-  await saveFavorites(favorites);
-  return index === -1; // 返回是否是新添加的 (true = added, false = removed)
 }
 
 /**
  * 播放历史操作
  */
-const MAX_HISTORY_ITEMS = 100; // 最大历史记录数量
+// 修改最大历史记录数为50条
+export const MAX_HISTORY_ITEMS = 50; // 最大历史记录数量
 
 export async function getHistory() {
   try {
@@ -66,6 +82,18 @@ export async function getHistory() {
   } catch (error) {
     console.error("Error getting history:", error);
     return [];
+  }
+}
+
+export async function saveHistory(historyArray) {
+  try {
+    // 确保历史记录不超过最大数量
+    const limitedHistory = historyArray.slice(0, MAX_HISTORY_ITEMS);
+    await historyStore.setItem('items', limitedHistory);
+    return true;
+  } catch (error) {
+    console.error("Error saving history:", error);
+    return false;
   }
 }
 
@@ -89,7 +117,7 @@ export async function addToHistory(track) {
     
     // 如果超过最大记录数，删除最旧的
     if (history.length > MAX_HISTORY_ITEMS) {
-      history.pop();
+      history.length = MAX_HISTORY_ITEMS; // 直接截断数组
     }
     
     await historyStore.setItem('items', history);

@@ -12,19 +12,19 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <AuthProvider>
-      <App />
-      <ToastContainer
+    <App />
+    <ToastContainer
         position="bottom-right"
-        autoClose={3000}
-        hideProgressBar={false}
+      autoClose={3000}
+      hideProgressBar={false}
         newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="colored"
-      />
+      closeOnClick
+      rtl={false}
+      pauseOnFocusLoss
+      draggable
+      pauseOnHover
+      theme="colored"
+    />
     </AuthProvider>
   </React.StrictMode>
 );
