@@ -1,0 +1,33 @@
+diff --git a/node_modules/http-proxy/lib/http-proxy/common.js b/node_modules/http-proxy/lib/http-proxy/common.js
+index 6513e81..0d18908 100644
+--- a/node_modules/http-proxy/lib/http-proxy/common.js
++++ b/node_modules/http-proxy/lib/http-proxy/common.js
+@@ -1,6 +1,6 @@
+ var common   = exports,
+     url      = require('url'),
+-    extend   = require('util')._extend,
++    extend   = Object.assign,
+     required = require('requires-port');
+ 
+ var upgradeHeader = /(^|,)\s*upgrade\s*($|,)/i,
+@@ -246,3 +246,4 @@ common.rewriteCookieProperty = function rewriteCookieProperty(header, config, pr
+ function hasPort(host) {
+   return !!~host.indexOf(':');
+ };
++
+diff --git a/node_modules/http-proxy/lib/http-proxy/index.js b/node_modules/http-proxy/lib/http-proxy/index.js
+index 977a4b3..f8999a4 100644
+--- a/node_modules/http-proxy/lib/http-proxy/index.js
++++ b/node_modules/http-proxy/lib/http-proxy/index.js
+@@ -1,5 +1,5 @@
+ var httpProxy = module.exports,
+-    extend    = require('util')._extend,
++    extend    = Object.assign,
+     parse_url = require('url').parse,
+     EE3       = require('eventemitter3'),
+     http      = require('http'),
+@@ -183,3 +183,4 @@ ProxyServer.prototype.after = function(type, passName, callback) {
+ 
+   passes.splice(i++, 0, callback);
+ };
++

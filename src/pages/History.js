@@ -106,28 +106,28 @@ const History = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
                   </div>
                   
                   <div className="mt-2 d-flex justify-content-end">
-                    <Button 
-                      variant="outline-primary" 
-                      size="sm"
-                      className="me-1"
-                      onClick={() => onPlay(item.song)}
-                      disabled={currentTrack?.id === item.song.id && !currentTrack?.url}
-                    >
-                      {currentTrack?.id === item.song.id && isPlaying ? <FaPause /> : <FaPlay />}
-                    </Button>
+                      <Button 
+                        variant="outline-primary" 
+                        size="sm"
+                        className="me-1"
+                        onClick={() => onPlay(item.song)}
+                        disabled={currentTrack?.id === item.song.id && !currentTrack?.url}
+                      >
+                        {currentTrack?.id === item.song.id && isPlaying ? <FaPause /> : <FaPlay />}
+                      </Button>
                     <HeartButton 
                       track={item.song} 
                       size={16}
                       variant="outline-danger"
                       className="me-1" 
                     />
-                    <Button 
-                      variant="outline-success" 
-                      size="sm"
-                      onClick={() => onDownload(item.song)}
-                    >
-                      <FaDownload />
-                    </Button>
+                      <Button 
+                        variant="outline-success" 
+                        size="sm"
+                        onClick={() => onDownload(item.song)}
+                      >
+                        <FaDownload />
+                      </Button>
                   </div>
                 </Card.Body>
               </Card>

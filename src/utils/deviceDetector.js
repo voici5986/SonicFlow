@@ -182,7 +182,8 @@ export const addDeviceChangeListener = (callback) => {
   };
 };
 
-export default {
+// 创建一个命名对象，代替匿名导出
+const deviceDetector = {
   detectDevice,
   getDeviceType,
   isMobile,
@@ -190,4 +191,6 @@ export default {
   isDesktop,
   getOrientation,
   addDeviceChangeListener
-}; 
+};
+
+export default deviceDetector; 

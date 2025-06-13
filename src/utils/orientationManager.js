@@ -124,10 +124,13 @@ export const addOrientationChangeListener = (callback) => {
   };
 };
 
-export default {
+// 创建一个命名对象，代替匿名导出
+const orientationManager = {
   isOrientationApiSupported,
   lockToPortrait,
   unlockOrientation,
   getCurrentOrientation,
   addOrientationChangeListener
-}; 
+};
+
+export default orientationManager; 

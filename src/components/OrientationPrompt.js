@@ -9,7 +9,6 @@ import { FaMobileAlt } from 'react-icons/fa';
  */
 const OrientationPrompt = () => {
   const deviceInfo = useDevice();
-  const [orientation, setOrientation] = useState(getCurrentOrientation());
   const [visible, setVisible] = useState(false);
 
   // 监听屏幕方向变化
@@ -21,12 +20,10 @@ const OrientationPrompt = () => {
 
     // 初始检查
     const currentOrientation = getCurrentOrientation();
-    setOrientation(currentOrientation);
     setVisible(currentOrientation === 'landscape');
 
     // 添加监听器
     const removeListener = addOrientationChangeListener((newOrientation) => {
-      setOrientation(newOrientation);
       setVisible(newOrientation === 'landscape');
     });
 

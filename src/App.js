@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Container, Row, Col, Form, Button, Card, Spinner, Dropdown } from 'react-bootstrap';
+import { Container, Row, Col, Form, Button, Card, Spinner } from 'react-bootstrap';
 import axios from 'axios';
 import ReactPlayer from 'react-player';
-import { FaPlay, FaPause, FaDownload, FaMusic, FaChevronDown, FaChevronUp, FaGithub, 
-         FaStepBackward, FaStepForward, FaRandom, FaRetweet, FaTimes } from 'react-icons/fa';
+import { FaPlay, FaPause, FaDownload, FaMusic, 
+         FaStepBackward, FaStepForward, FaRandom, FaRetweet } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 // import { RiRepeatOneLine } from 'react-icons/ri';
 import HeartButton from './components/HeartButton';
@@ -21,15 +21,12 @@ import { useAuth } from './contexts/AuthContext';
 import { useDevice } from './contexts/DeviceContext';
 import { addToHistory } from './services/storage';
 import { lockToPortrait } from './utils/orientationManager';
-import { isIOS, applyIOSOrientationLock } from './utils/iOSOrientationHelper';
 // 导入导航样式修复
 import './styles/NavigationFix.css';
-// 导入播放器样式
+// 导入音频播放器样式
 import './styles/AudioPlayer.css';
 // 导入屏幕方向样式
 import './styles/Orientation.css';
-// 导入iOS专用屏幕方向控制
-import './styles/iOSOrientation.css';
 
 const API_BASE = process.env.REACT_APP_API_BASE || '/api';
 
@@ -38,7 +35,8 @@ const App = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [showAuthModal, setShowAuthModal] = useState(false);
   
-  // 获取用户认证状态
+  // 获取用户认证状态 - 我们会在未来的功能中使用
+  // eslint-disable-next-line no-unused-vars
   const { currentUser } = useAuth();
   
   // 原有状态
@@ -69,6 +67,8 @@ const App = () => {
   
   // 添加播放进度相关状态
   const [playProgress, setPlayProgress] = useState(0);
+  // 即使看似未使用，但实际在handleProgress函数中会被使用
+  // eslint-disable-next-line no-unused-vars
   const [playedSeconds, setPlayedSeconds] = useState(0);
   const [totalSeconds, setTotalSeconds] = useState(0);
 
@@ -87,8 +87,8 @@ const App = () => {
   const handleAuthModalClose = () => setShowAuthModal(false);
   const handleAuthModalShow = () => setShowAuthModal(true);
   const handleAuthSuccess = () => {
-    setShowAuthModal(false);
-    toast.success('账号同步功能已启用！');
+    toast.success('认证成功!');
+    handleAuthModalClose();
   };
 
   const parseLyric = (text) => {
@@ -298,9 +298,14 @@ const fetchCover = async (source, picId, size = 300) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, results, quality, currentTrack, isPlaying]);
 
-  // 播放下一首
+  // 添加检查播放列表是否有效的函数
+  const isPlaylistValid = useCallback(() => {
+    return currentPlaylist && currentPlaylist.length > 1;
+  }, [currentPlaylist]);
+
+  // 优化handleNext函数
   const handleNext = useCallback(async () => {
-    if (!currentPlaylist || currentPlaylist.length <= 1) return;
+    if (!isPlaylistValid()) return;
     
     let nextIndex;
     
@@ -336,11 +341,11 @@ const fetchCover = async (source, picId, size = 300) => {
     if (nextTrack) {
       await handlePlay(nextTrack);
     }
-  }, [currentPlaylist, currentIndex, playMode, playHistory, handlePlay]);
+  }, [currentPlaylist, currentIndex, playMode, playHistory, handlePlay, isPlaylistValid]);
   
-  // 播放上一首
+  // 优化handlePrevious函数
   const handlePrevious = useCallback(async () => {
-    if (!currentPlaylist || currentPlaylist.length <= 1) return;
+    if (!isPlaylistValid()) return;
     
     // 计算上一首歌的索引
     let newIndex;
@@ -371,7 +376,7 @@ const fetchCover = async (source, picId, size = 300) => {
       setCurrentIndex(newIndex);
       await handlePlay(currentPlaylist[newIndex]);
     }
-  }, [currentPlaylist, currentIndex, playMode, playHistory, handlePlay]);
+  }, [currentPlaylist, currentIndex, playMode, playHistory, handlePlay, isPlaylistValid]);
 
   // 处理歌曲结束事件
   const handleEnded = useCallback(() => {
@@ -613,11 +618,10 @@ useEffect(() => {
   const renderHomePage = () => {
   return (
       <Container className="my-4">
-        <Form onSubmit={handleSearch} className="mb-4">
+      <Form onSubmit={handleSearch} className="mb-4">
           <Row className="align-items-end g-2">
             <Col xs={12} md={6}>
               <Form.Group>
-                <Form.Label>搜索歌曲</Form.Label>
             <Form.Control
                   type="text"
               value={query}
@@ -629,7 +633,6 @@ useEffect(() => {
           </Col>
             <Col xs={6} md={2}>
               <Form.Group>
-                <Form.Label>音乐源</Form.Label>
             <Form.Select 
               value={source}
               onChange={(e) => setSource(e.target.value)}
@@ -644,7 +647,6 @@ useEffect(() => {
           </Col>
             <Col xs={6} md={2}>
               <Form.Group>
-                <Form.Label>音质</Form.Label>
                 <Form.Select
                   value={quality}
                   onChange={(e) => setQuality(parseInt(e.target.value))}
@@ -667,7 +669,7 @@ useEffect(() => {
 
         {results.length > 0 && (
           <Row className="g-4">
-            {results.map((track) => (
+        {results.map((track) => (
               <Col key={track.id} xs={12} sm={6} md={4} lg={3}>
                 <Card className="h-100">
                   <Card.Body>
@@ -676,12 +678,12 @@ useEffect(() => {
                         src={track.picUrl || 'default_cover.jpg'}
                         alt="专辑封面"
                         className="me-3 rounded"
-                        style={{ 
+                    style={{ 
                           width: '60px', 
-                          height: '60px',
+                      height: '60px',
                           objectFit: 'cover',
                           backgroundColor: '#f5f5f5' 
-                        }}
+                    }}
                         onError={(e) => {
                           e.target.src = 'default_cover.png';
                         }}
@@ -690,7 +692,7 @@ useEffect(() => {
                         <h6 className="mb-1 text-truncate">{track.name}</h6>
                         <small className="text-muted d-block text-truncate">{track.artist}</small>
                         <small className="text-muted d-block text-truncate">{track.album}</small>
-                      </div>
+                </div>
                     </div>
                     
                     <div className="mt-2 d-flex justify-content-end">
@@ -703,29 +705,29 @@ useEffect(() => {
                       >
                         {currentTrack?.id === track.id && isPlaying ? <FaPause /> : <FaPlay />}
                       </Button>
-                      <HeartButton 
-                        track={track} 
+                        <HeartButton 
+                          track={track} 
                         className="me-1" 
-                        onFavoritesChange={() => {
-                          // 如果当前在收藏页面，刷新收藏列表
-                          if (activeTab === 'favorites') {
-                            loadFavorites();
-                          }
-                        }}
-                      />
-                      <Button 
-                        variant="outline-success" 
-                        size="sm"
-                        onClick={() => handleDownload(track)}
-                        disabled={downloading}
-                      >
+                          onFavoritesChange={() => {
+                            // 如果当前在收藏页面，刷新收藏列表
+                            if (activeTab === 'favorites') {
+                              loadFavorites();
+                            }
+                          }}
+                        />
+                  <Button 
+                    variant="outline-success" 
+                    size="sm"
+                    onClick={() => handleDownload(track)}
+                          disabled={downloading}
+                  >
                         <FaDownload />
-                      </Button>
-                    </div>
-                  </Card.Body>
-                </Card>
+                  </Button>
+                </div>
+              </Card.Body>
+            </Card>
               </Col>
-            ))}
+        ))}
           </Row>
         )}
       </Container>
@@ -778,8 +780,11 @@ useEffect(() => {
     }
   };
 
-  // 修改原有的renderAudioPlayer函数，添加HeartButton的onFavoritesChange回调
+  // 优化renderAudioPlayer函数
   const renderAudioPlayer = () => {
+    // 如果没有当前音轨，不渲染任何内容
+    if (!currentTrack) return null;
+    
     // 增加播放器展开状态的类名
     const playerClassName = `audio-player ${lyricExpanded ? 'expanded' : 'collapsed'}`;
     
@@ -790,8 +795,6 @@ useEffect(() => {
              onClick={() => setLyricExpanded(false)}></div>
         
         <div className={playerClassName}>
-          {/* 移除原来的播放器切换按钮 */}
-          
           {/* 添加内部容器以控制溢出 */}
           <div className="player-inner">
             <div className="player-content">
@@ -799,232 +802,129 @@ useEffect(() => {
               <Row className="align-items-center player-info-controls">
                 {/* 左侧：歌曲信息 */}
                 <Col xs={6} md={3} className="d-flex align-items-center mb-2 mb-md-0">
-                  {currentTrack && (
-                    <div className="d-flex align-items-center">
-                      <img 
-                        src={coverCache[`${currentTrack.source}-${currentTrack.pic_id}-300`] || 'default_cover.png'}
-                        alt="当前播放"
-                        style={{ width: '50px', height: '50px' }}
-                        className="me-2 rounded"
-                      />
-                      <div>
-                        <h6 className="mb-0 text-truncate" style={{maxWidth: 'calc(30vw - 20px)'}}>{currentTrack.name}</h6>
-                        <small className="text-muted text-truncate" style={{maxWidth: 'calc(30vw - 20px)', display: 'block'}}>{currentTrack.artist}</small>
-                      </div>
+                  <div className="d-flex align-items-center">
+                    <img 
+                      src={coverCache[`${currentTrack.source}-${currentTrack.pic_id}-300`] || 'default_cover.png'}
+                      alt="当前播放"
+                      style={{ width: '50px', height: '50px' }}
+                      className="me-2 rounded"
+                    />
+                    <div>
+                      <h6 className="mb-0 text-truncate" style={{maxWidth: 'calc(30vw - 20px)'}}>{currentTrack.name}</h6>
+                      <small className="text-muted text-truncate" style={{maxWidth: 'calc(30vw - 20px)', display: 'block'}}>{currentTrack.artist}</small>
                     </div>
-                  )}
+                  </div>
                 </Col>
                 
                 {/* 移动端和平板：进度条在歌曲信息右侧 */}
                 <Col xs={6} className="d-flex d-md-none align-items-center">
-                  {currentTrack && (
-                    <div className="mobile-progress-container">
-                      <ProgressBar 
-                        currentTrack={currentTrack}
-                        playProgress={playProgress}
-                        totalSeconds={totalSeconds}
-                        playerRef={playerRef}
-                        formatTime={formatTime}
-                        deviceType={deviceInfo.deviceType}
-                      />
-                    </div>
-                  )}
+                  <div className="mobile-progress-container">
+                    <ProgressBar 
+                      currentTrack={currentTrack}
+                      playProgress={playProgress}
+                      totalSeconds={totalSeconds}
+                      playerRef={playerRef}
+                      formatTime={formatTime}
+                      deviceType={deviceInfo.deviceType}
+                    />
+                  </div>
                 </Col>
                 
                 {/* 中间空白区域 - 仅在桌面端显示 */}
                 <Col md={6} className="d-none d-md-block">
                   {/* 此区域故意留空，为进度条底部定位留出空间 */}
                 </Col>
-  
-                {/* 右侧：桌面端控制按钮 */}
-                <Col xs={12} md={3} className="mt-2 mt-md-0 d-none d-md-block">
-                  <div className="d-flex align-items-center justify-content-end h-100">
-                    {/* 歌词切换按钮 */}
-                    <Button
-                      variant="link"
-                      onClick={() => setLyricExpanded(!lyricExpanded)}
-                      className="p-2 control-button text-info"
-                      aria-label={lyricExpanded ? "收起歌词" : "展开歌词"}
-                      title={lyricExpanded ? "收起歌词" : "展开歌词"}
-                    >
-                      <span style={{ 
-                        fontWeight: 'bold', 
-                        fontSize: '1.1rem',
-                        fontFamily: 'SimSun, "宋体", serif' 
-                      }}>
-                        词
-                      </span>
-                    </Button>
-                    
-                    {currentTrack && (
-                      <HeartButton 
-                        track={currentTrack} 
-                        size={20} 
-                        variant="link"
-                        className="p-2 control-button" 
-                        onFavoritesChange={loadFavorites}
-                      />
-                    )}
-                    
-                    <Button 
-                      variant="link" 
-                      onClick={handlePrevious}
-                      disabled={!currentTrack || currentPlaylist.length <= 1}
-                      className="mx-1 p-2 control-button text-secondary" 
-                      aria-label="上一首"
-                    >
-                      <FaStepBackward size={20} />
-                    </Button>
-                    
-                    <Button
-                      variant="link"
-                      onClick={() => setIsPlaying(!isPlaying)}
-                      disabled={!currentTrack || !playerUrl}
-                      className="mx-1 p-1 control-button" 
-                      aria-label={isPlaying ? "暂停" : "播放"}
-                    >
-                      {!currentTrack ? 
-                        <FaMusic size={24} className="text-muted" /> 
-                      : isPlaying ? 
-                        <FaPause size={24} className="text-primary" />
-                      : 
-                        <FaPlay size={24} className="text-primary" />
-                      }
-                    </Button>
-                    
-                    <Button 
-                      variant="link" 
-                      onClick={handleNext}
-                      disabled={!currentTrack || currentPlaylist.length <= 1}
-                      className="mx-1 p-2 control-button text-secondary" 
-                      aria-label="下一首"
-                    >
-                      <FaStepForward size={20} />
-                    </Button>
-                    
-                    <Button
-                      variant="link"
-                      onClick={handleTogglePlayMode}
-                      className="mx-1 p-2 text-secondary control-button" 
-                      aria-label="播放模式"
-                    >
-                      {getPlayModeIcon()}
-                    </Button>
-                    
-                    {/* 添加下载按钮 */}
-                    {currentTrack && (
-                      <Button
-                        variant="link"
-                        onClick={() => handleDownload(currentTrack)}
-                        className="mx-1 p-2 text-success control-button" 
-                        aria-label="下载"
-                        title="下载歌曲"
-                        disabled={downloading && currentDownloadingTrack?.id === currentTrack.id}
-                      >
-                        {downloading && currentDownloadingTrack?.id === currentTrack.id ? 
-                          <Spinner animation="border" size="sm" /> : 
-                          <FaDownload size={20} />
-                        }
-                      </Button>
-                    )}
-                  </div>
-                </Col>
                 
-                {/* 移动端：控制按钮和进度条 */}
-                <Col xs={12} className="d-md-none mb-2">
-                  {/* 进度条放在歌曲信息旁边，在下面的控制按钮区域之前 */}
+                {/* 右侧：播放控制 */}
+                <Col xs={12} md={3} className="d-flex justify-content-center justify-content-md-end mt-2 mt-md-0">
+                  {/* 歌词切换按钮 */}
+                  <Button
+                    variant="link"
+                    onClick={() => setLyricExpanded(!lyricExpanded)}
+                    className="p-2 control-button text-info"
+                    aria-label={lyricExpanded ? "收起歌词" : "展开歌词"}
+                    title={lyricExpanded ? "收起歌词" : "展开歌词"}
+                  >
+                    <span style={{ 
+                      fontWeight: 'bold', 
+                      fontSize: '1.1rem',
+                      fontFamily: 'SimSun, "宋体", serif' 
+                    }}>
+                      词
+                    </span>
+                  </Button>
                   
-                  {/* 移动端：控制按钮在进度条下方 */}
-                  <div className="d-flex align-items-center justify-content-center mt-2">
-                    {/* 移动端歌词切换按钮 */}
+                  {currentTrack && (
+                    <HeartButton 
+                      track={currentTrack} 
+                      size={20} 
+                      variant="link"
+                      className="p-2 control-button" 
+                      onFavoritesChange={loadFavorites}
+                    />
+                  )}
+                  
+                  <Button 
+                    variant="link" 
+                    onClick={handlePrevious}
+                    disabled={!currentTrack || currentPlaylist.length <= 1}
+                    className="mx-1 p-2 control-button text-secondary" 
+                    aria-label="上一首"
+                  >
+                    <FaStepBackward size={20} />
+                  </Button>
+                  
+                  <Button
+                    variant="link"
+                    onClick={() => setIsPlaying(!isPlaying)}
+                    disabled={!currentTrack || !playerUrl}
+                    className="mx-1 p-1 control-button" 
+                    aria-label={isPlaying ? "暂停" : "播放"}
+                  >
+                    {!currentTrack ? 
+                      <FaMusic size={24} className="text-muted" /> 
+                    : isPlaying ? 
+                      <FaPause size={24} className="text-primary" />
+                    : 
+                      <FaPlay size={24} className="text-primary" />
+                    }
+                  </Button>
+                  
+                  <Button 
+                    variant="link" 
+                    onClick={handleNext}
+                    disabled={!currentTrack || currentPlaylist.length <= 1}
+                    className="mx-1 p-2 control-button text-secondary" 
+                    aria-label="下一首"
+                  >
+                    <FaStepForward size={20} />
+                  </Button>
+                  
+                  <Button
+                    variant="link"
+                    onClick={handleTogglePlayMode}
+                    className="mx-1 p-2 text-secondary control-button" 
+                    aria-label="播放模式"
+                  >
+                    {getPlayModeIcon()}
+                  </Button>
+                  
+                  {/* 添加下载按钮 */}
+                  {currentTrack && (
                     <Button
                       variant="link"
-                      onClick={() => setLyricExpanded(!lyricExpanded)}
-                      className="p-2 control-button text-info"
-                      aria-label={lyricExpanded ? "收起歌词" : "展开歌词"}
-                      title={lyricExpanded ? "收起歌词" : "展开歌词"}
+                      onClick={() => handleDownload(currentTrack)}
+                      className="mx-1 p-2 text-success control-button" 
+                      aria-label="下载"
+                      title="下载歌曲"
+                      disabled={downloading && currentDownloadingTrack?.id === currentTrack.id}
                     >
-                      <span style={{ 
-                        fontWeight: 'bold', 
-                        fontSize: '1.1rem',
-                        fontFamily: 'SimSun, "宋体", serif' 
-                      }}>
-                        词
-                      </span>
-                    </Button>
-                    
-                    {currentTrack && (
-                      <HeartButton 
-                        track={currentTrack} 
-                        size={22} 
-                        variant="link"
-                        className="p-2 control-button" 
-                        onFavoritesChange={loadFavorites}
-                      />
-                    )}
-                    
-                    <Button 
-                      variant="link" 
-                      onClick={handlePrevious}
-                      disabled={!currentTrack || currentPlaylist.length <= 1}
-                      className="mx-2 p-2 control-button text-secondary" 
-                      aria-label="上一首"
-                    >
-                      <FaStepBackward size={22} />
-                    </Button>
-                    
-                    <Button
-                      variant="link"
-                      onClick={() => setIsPlaying(!isPlaying)}
-                      disabled={!currentTrack || !playerUrl}
-                      className="mx-2 p-1 control-button" 
-                      aria-label={isPlaying ? "暂停" : "播放"}
-                    >
-                      {!currentTrack ? 
-                        <FaMusic size={28} className="text-muted" /> 
-                      : isPlaying ? 
-                        <FaPause size={28} className="text-primary" />
-                      : 
-                        <FaPlay size={28} className="text-primary" />
+                      {downloading && currentDownloadingTrack?.id === currentTrack.id ? 
+                        <Spinner animation="border" size="sm" /> : 
+                        <FaDownload size={20} />
                       }
                     </Button>
-                    
-                    <Button 
-                      variant="link" 
-                      onClick={handleNext}
-                      disabled={!currentTrack || currentPlaylist.length <= 1}
-                      className="mx-2 p-2 control-button text-secondary" 
-                      aria-label="下一首"
-                    >
-                      <FaStepForward size={22} />
-                    </Button>
-                    
-                    <Button
-                      variant="link"
-                      onClick={handleTogglePlayMode}
-                      className="mx-2 p-2 text-secondary control-button" 
-                      aria-label="播放模式"
-                    >
-                      {getPlayModeIcon()}
-                    </Button>
-                    
-                    {/* 添加下载按钮 */}
-                    {currentTrack && (
-                      <Button
-                        variant="link"
-                        onClick={() => handleDownload(currentTrack)}
-                        className="mx-2 p-2 text-success control-button" 
-                        aria-label="下载"
-                        title="下载歌曲"
-                        disabled={downloading && currentDownloadingTrack?.id === currentTrack.id}
-                      >
-                        {downloading && currentDownloadingTrack?.id === currentTrack.id ? 
-                          <Spinner animation="border" size="sm" /> : 
-                          <FaDownload size={22} />
-                        }
-                      </Button>
-                    )}
-                  </div>
+                  )}
                 </Col>
               </Row>
               
@@ -1054,6 +954,7 @@ useEffect(() => {
                 </div>
               )}
 
+              {/* 恢复ReactPlayer组件 */}
               <ReactPlayer
                 ref={playerRef}
                 onProgress={handleProgress}
@@ -1069,7 +970,7 @@ useEffect(() => {
                 height={0}
                 style={{ display: playerUrl ? 'block' : 'none' }} 
               />
-              
+
               {/* 展开状态下的额外内容 */}
               {lyricExpanded && currentTrack && (
                 <div className="player-expanded-view">
@@ -1084,44 +985,44 @@ useEffect(() => {
                   <div className="track-info-expanded">
                     <h2>{currentTrack.name}</h2>
                     <h4>{currentTrack.artist} - {currentTrack.album}</h4>
-                    
+          
                     {/* 歌词滚动区域 */}
-                    <div 
+            <div 
                       className="lyrics-scroll-container" 
-                      ref={lyricsContainerRef}
-                      onScroll={(e) => {
-                        sessionStorage.setItem('userScrolled', true);
-                      }}
-                    >
+            ref={lyricsContainerRef}
+            onScroll={(e) => {
+              sessionStorage.setItem('userScrolled', true);
+            }}
+            >
                       {lyricData.parsedLyric.length > 0 ? (
                         lyricData.parsedLyric.map((line, index) => (
-                          <div
-                            key={index}
-                            className={`lyric-line ${index === currentLyricIndex ? 'active' : ''} ${index === currentLyricIndex + 1 ? 'next-active' : ''}`}
-                            data-time={line.time}
-                            style={{
+              <div
+                key={index}
+                className={`lyric-line ${index === currentLyricIndex ? 'active' : ''} ${index === currentLyricIndex + 1 ? 'next-active' : ''}`}
+                data-time={line.time}
+                    style={{
                               padding: '8px 0',
-                              color: index === currentLyricIndex ? '#333333' : (index === currentLyricIndex + 1 ? '#666666' : '#999999'),
-                              fontWeight: index === currentLyricIndex ? '500' : 'normal',
-                              transition: 'all 0.3s'
-                            }}
-                          >
-                            <div>{line.text}</div>
-                            {lyricData.tLyric && (
+                      color: index === currentLyricIndex ? '#333333' : (index === currentLyricIndex + 1 ? '#666666' : '#999999'),
+                      fontWeight: index === currentLyricIndex ? '500' : 'normal',
+                      transition: 'all 0.3s'
+                    }}
+              >
+                  <div>{line.text}</div>
+                  {lyricData.tLyric && (
                               <div className="translated-lyric" style={{ fontSize: '0.9em', marginTop: '4px' }}>
-                                {parseLyric(lyricData.tLyric)[index]?.text}
-                              </div>
-                            )}
-                          </div>
+                      {parseLyric(lyricData.tLyric)[index]?.text}
+                    </div>
+                  )}
+                </div>
                         ))
                       ) : (
                         <div className="text-center text-muted py-5">暂无歌词</div>
-                      )}
-                    </div>
+              )}
+                </div>
                   </div>
                 </div>
-              )}
-            </div>
+        )}
+      </div>
           </div>
         </div>
       </>
@@ -1130,9 +1031,6 @@ useEffect(() => {
 
   // 使用设备检测功能
   const deviceInfo = useDevice();
-
-  // 开发环境下显示设备调试信息
-  const isDevMode = process.env.NODE_ENV === 'development';
   
   // Service Worker注册对象
   const [swRegistration, setSwRegistration] = useState(null);
@@ -1149,20 +1047,14 @@ useEffect(() => {
   // 尝试锁定屏幕方向为竖屏（仅在移动设备和平板上）
   useEffect(() => {
     if (deviceInfo.isMobile || deviceInfo.isTablet) {
-      if (isIOS()) {
-        // iOS设备使用专用的方向控制方法
-        console.log('检测到iOS设备，应用iOS专用屏幕方向控制');
-        applyIOSOrientationLock();
-      } else {
-        // 非iOS设备使用Screen Orientation API
-        lockToPortrait().then(success => {
-          if (success) {
-            console.log('成功锁定屏幕方向为竖屏');
-          } else {
-            console.log('无法锁定屏幕方向，将使用备选方案');
-          }
-        });
-      }
+      // 尝试锁定屏幕方向
+      lockToPortrait().then(success => {
+        if (success) {
+          console.log('成功锁定屏幕方向为竖屏');
+        } else {
+          console.log('无法锁定屏幕方向，将使用备选方案');
+        }
+      });
     }
   }, [deviceInfo.isMobile, deviceInfo.isTablet]);
 

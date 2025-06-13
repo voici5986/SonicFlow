@@ -15,19 +15,19 @@ root.render(
   <React.StrictMode>
     <AuthProvider>
       <DeviceProvider>
-        <App />
-        <ToastContainer
-          position="bottom-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="colored"
-        />
+    <App />
+    <ToastContainer
+        position="bottom-right"
+      autoClose={3000}
+      hideProgressBar={false}
+        newestOnTop
+      closeOnClick
+      rtl={false}
+      pauseOnFocusLoss
+      draggable
+      pauseOnHover
+      theme="colored"
+    />
       </DeviceProvider>
     </AuthProvider>
   </React.StrictMode>

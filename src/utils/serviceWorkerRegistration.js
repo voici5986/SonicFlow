@@ -170,4 +170,12 @@ export function checkForUpdates() {
   return Promise.resolve(false);
 }
 
-export default { register, unregister, sendMessageToSW, checkForUpdates }; 
+// 创建一个命名对象，代替匿名导出
+const serviceWorkerRegistration = { 
+  register, 
+  unregister, 
+  sendMessageToSW, 
+  checkForUpdates 
+};
+
+export default serviceWorkerRegistration; 
