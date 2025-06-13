@@ -21,12 +21,15 @@ import { useAuth } from './contexts/AuthContext';
 import { useDevice } from './contexts/DeviceContext';
 import { addToHistory } from './services/storage';
 import { lockToPortrait } from './utils/orientationManager';
+import { isIOS, applyIOSOrientationLock } from './utils/iOSOrientationHelper';
 // 导入导航样式修复
 import './styles/NavigationFix.css';
 // 导入播放器样式
 import './styles/AudioPlayer.css';
 // 导入屏幕方向样式
 import './styles/Orientation.css';
+// 导入iOS专用屏幕方向控制
+import './styles/iOSOrientation.css';
 
 const API_BASE = process.env.REACT_APP_API_BASE || '/api';
 
@@ -1146,14 +1149,20 @@ useEffect(() => {
   // 尝试锁定屏幕方向为竖屏（仅在移动设备和平板上）
   useEffect(() => {
     if (deviceInfo.isMobile || deviceInfo.isTablet) {
-      // 尝试锁定屏幕方向
-      lockToPortrait().then(success => {
-        if (success) {
-          console.log('成功锁定屏幕方向为竖屏');
-        } else {
-          console.log('无法锁定屏幕方向，将使用备选方案');
-        }
-      });
+      if (isIOS()) {
+        // iOS设备使用专用的方向控制方法
+        console.log('检测到iOS设备，应用iOS专用屏幕方向控制');
+        applyIOSOrientationLock();
+      } else {
+        // 非iOS设备使用Screen Orientation API
+        lockToPortrait().then(success => {
+          if (success) {
+            console.log('成功锁定屏幕方向为竖屏');
+          } else {
+            console.log('无法锁定屏幕方向，将使用备选方案');
+          }
+        });
+      }
     }
   }, [deviceInfo.isMobile, deviceInfo.isTablet]);
 
