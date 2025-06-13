@@ -115,14 +115,12 @@ const History = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
                     >
                       {currentTrack?.id === item.song.id && isPlaying ? <FaPause /> : <FaPlay />}
                     </Button>
-                    <Button 
-                      variant="outline-danger" 
-                      size="sm"
-                      className="me-1"
-                      onClick={() => handleClearHistory()}
-                    >
-                      <FaTrash />
-                    </Button>
+                    <HeartButton 
+                      track={item.song} 
+                      size={16}
+                      variant="outline-danger"
+                      className="me-1" 
+                    />
                     <Button 
                       variant="outline-success" 
                       size="sm"

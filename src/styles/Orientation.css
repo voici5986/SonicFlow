@@ -1,0 +1,56 @@
+/**
+ * 处理移动设备横屏时的样式
+ */
+
+/* 移动设备横屏时的样式 */
+@media screen and (max-width: 767px) and (orientation: landscape) {
+  /* 隐藏主要内容，由OrientationPrompt组件显示提示 */
+  .App {
+    /* 不要完全隐藏，因为OrientationPrompt组件会显示在其中 */
+    /* display: none; */
+  }
+  
+  /* 播放器在横屏时的特殊处理 */
+  .audio-player {
+    height: auto !important;
+    max-height: 90px !important;
+  }
+  
+  /* 导航栏在横屏时的特殊处理 */
+  .navbar {
+    padding: 0.3rem 1rem !important;
+  }
+  
+  /* 搜索框在横屏时的特殊处理 */
+  .search-form {
+    max-width: 50% !important;
+  }
+}
+
+/* 平板横屏时的样式 */
+@media screen and (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+  /* 平板设备横屏时可以正常显示，但做一些优化 */
+  
+  /* 播放器在平板横屏时的特殊处理 */
+  .audio-player {
+    height: auto !important;
+    max-height: 100px !important;
+  }
+}
+
+/* 强制竖屏的CSS变换方法（备选方案） */
+/* 注意：这种方法不推荐使用，因为会导致用户体验不佳，只作为备选方案 */
+/*
+@media screen and (orientation: landscape) {
+  html {
+    transform: rotate(-90deg);
+    transform-origin: left top;
+    width: 100vh;
+    height: 100vw;
+    overflow-x: hidden;
+    position: absolute;
+    top: 100%;
+    left: 0;
+  }
+}
+*/ 

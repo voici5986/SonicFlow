@@ -13,12 +13,20 @@ import Favorites from './pages/Favorites';
 import History from './pages/History';
 import User from './pages/User';
 import AuthModal from './components/AuthModal';
+import DeviceDebugger from './components/DeviceDebugger';
+import OrientationPrompt from './components/OrientationPrompt';
+import InstallPWA from './components/InstallPWA';
+import UpdateNotification from './components/UpdateNotification';
 import { useAuth } from './contexts/AuthContext';
+import { useDevice } from './contexts/DeviceContext';
 import { addToHistory } from './services/storage';
+import { lockToPortrait } from './utils/orientationManager';
 // 导入导航样式修复
 import './styles/NavigationFix.css';
 // 导入播放器样式
 import './styles/AudioPlayer.css';
+// 导入屏幕方向样式
+import './styles/Orientation.css';
 
 const API_BASE = process.env.REACT_APP_API_BASE || '/api';
 
@@ -683,6 +691,15 @@ useEffect(() => {
                     </div>
                     
                     <div className="mt-2 d-flex justify-content-end">
+                      <Button 
+                        variant="outline-primary" 
+                        size="sm"
+                        className="me-1"
+                        onClick={() => handlePlay(track)}
+                        disabled={currentTrack?.id === track.id && !currentTrack?.url}
+                      >
+                        {currentTrack?.id === track.id && isPlaying ? <FaPause /> : <FaPlay />}
+                      </Button>
                       <HeartButton 
                         track={track} 
                         className="me-1" 
@@ -693,15 +710,6 @@ useEffect(() => {
                           }
                         }}
                       />
-                      <Button 
-                        variant="outline-primary" 
-                        size="sm"
-                        className="me-1"
-                        onClick={() => handlePlay(track)}
-                        disabled={currentTrack?.id === track.id && !currentTrack?.url}
-                      >
-                        {currentTrack?.id === track.id && isPlaying ? <FaPause /> : <FaPlay />}
-                      </Button>
                       <Button 
                         variant="outline-success" 
                         size="sm"
@@ -804,7 +812,7 @@ useEffect(() => {
                   )}
                 </Col>
                 
-                {/* 移动端：进度条在歌曲信息右侧 */}
+                {/* 移动端和平板：进度条在歌曲信息右侧 */}
                 <Col xs={6} className="d-flex d-md-none align-items-center">
                   {currentTrack && (
                     <div className="mobile-progress-container">
@@ -814,6 +822,7 @@ useEffect(() => {
                         totalSeconds={totalSeconds}
                         playerRef={playerRef}
                         formatTime={formatTime}
+                        deviceType={deviceInfo.deviceType}
                       />
                     </div>
                   )}
@@ -1017,19 +1026,30 @@ useEffect(() => {
               </Row>
               
               {/* 桌面端：进度条和时间 - 绝对定位在底部 */}
-              <div className="d-none d-md-block progress-control-container">
-                <div className="d-flex align-items-center">
-                  <div className="progress-bar-container">
-                    <ProgressBar 
-                      currentTrack={currentTrack}
-                      playProgress={playProgress}
-                      totalSeconds={totalSeconds}
-                      playerRef={playerRef}
-                      formatTime={formatTime}
-                    />
+              {deviceInfo.isDesktop && (
+                <div className="d-none d-md-block progress-control-container">
+                  {/* 收起状态下的单行歌词显示 */}
+                  {!lyricExpanded && currentTrack && (
+                    <div className="current-lyric-line text-left">
+                      {lyricData.parsedLyric.length > 0 && currentLyricIndex >= 0 ? 
+                        lyricData.parsedLyric[currentLyricIndex]?.text || "暂无歌词" 
+                        : "暂无歌词"}
+                    </div>
+                  )}
+                  <div className="d-flex align-items-center">
+                    <div className="progress-bar-container">
+                      <ProgressBar 
+                        currentTrack={currentTrack}
+                        playProgress={playProgress}
+                        totalSeconds={totalSeconds}
+                        playerRef={playerRef}
+                        formatTime={formatTime}
+                        deviceType={deviceInfo.deviceType}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               <ReactPlayer
                 ref={playerRef}
@@ -1105,15 +1125,37 @@ useEffect(() => {
     );
   };
 
-  // 使用媒体查询检测屏幕大小
-  useEffect(() => {
-    const handleResize = () => {
-      // 屏幕大小改变时的处理逻辑
-    };
+  // 使用设备检测功能
+  const deviceInfo = useDevice();
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+  // 开发环境下显示设备调试信息
+  const isDevMode = process.env.NODE_ENV === 'development';
+  
+  // Service Worker注册对象
+  const [swRegistration, setSwRegistration] = useState(null);
+  
+  // 获取Service Worker注册对象
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(registration => {
+        setSwRegistration(registration);
+      });
+    }
   }, []);
+  
+  // 尝试锁定屏幕方向为竖屏（仅在移动设备和平板上）
+  useEffect(() => {
+    if (deviceInfo.isMobile || deviceInfo.isTablet) {
+      // 尝试锁定屏幕方向
+      lockToPortrait().then(success => {
+        if (success) {
+          console.log('成功锁定屏幕方向为竖屏');
+        } else {
+          console.log('无法锁定屏幕方向，将使用备选方案');
+        }
+      });
+    }
+  }, [deviceInfo.isMobile, deviceInfo.isTablet]);
 
   return (
     <div className="App">
@@ -1133,6 +1175,18 @@ useEffect(() => {
         handleClose={handleAuthModalClose} 
         onAuthSuccess={handleAuthSuccess}
       />
+      
+      {/* 设备调试信息 - 已关闭显示，但后台检测仍在运行 */}
+      <DeviceDebugger show={false} />
+      
+      {/* 横屏提示组件 */}
+      <OrientationPrompt />
+      
+      {/* PWA安装提示 */}
+      <InstallPWA />
+      
+      {/* 应用更新通知 */}
+      <UpdateNotification registration={swRegistration} />
     </div>
   );
 };

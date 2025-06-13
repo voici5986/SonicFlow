@@ -6,7 +6,8 @@ const ProgressBar = ({
   playProgress, 
   totalSeconds, 
   playerRef,
-  formatTime 
+  formatTime,
+  deviceType = 'desktop' // 设备类型参数，默认为桌面端
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragProgress, setDragProgress] = useState(0);
@@ -200,7 +201,7 @@ const ProgressBar = ({
       <div 
         className="progress" 
         style={{ 
-          height: isHovering ? '8px' : '6px', 
+          height: isHovering ? '8px' : (deviceType === 'mobile' ? '4px' : '6px'), 
           position: 'relative',
           overflow: 'visible', // 允许把手超出边界
           transition: 'height 0.15s ease',
@@ -241,10 +242,10 @@ const ProgressBar = ({
           style={{
             display: (isDragging || isHovering) ? 'block' : 'none',
             position: 'absolute',
-            left: `calc(${displayProgress}% - 10px)`,
-            top: '-6px',
-            width: '20px',
-            height: '20px',
+            left: `calc(${displayProgress}% - ${deviceType === 'mobile' ? 8 : 10}px)`,
+            top: deviceType === 'mobile' ? '-5px' : '-6px',
+            width: deviceType === 'mobile' ? '16px' : '20px',
+            height: deviceType === 'mobile' ? '16px' : '20px',
             borderRadius: '50%',
             backgroundColor: '#dc3545',
             boxShadow: '0 0 6px rgba(0,0,0,0.3)',
@@ -287,7 +288,9 @@ const ProgressBar = ({
       )}
       
       {/* 时间显示 */}
-      <div className="time-display">
+      <div className="time-display" style={{
+        fontSize: deviceType === 'mobile' ? '11px' : '12px'
+      }}>
         {formatTime(currentTimeInSeconds)}/{formatTime(totalSeconds)}
       </div>
     </div>
