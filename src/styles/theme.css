@@ -1,0 +1,127 @@
+/* theme.css - 统一的主题变量系统 */
+
+:root {
+  /* ===== 颜色系统 ===== */
+  /* 基础颜色 */
+  --color-primary: #6a11cb;
+  --color-primary-light: #8a3fdb;
+  --color-primary-dark: #5a0eab;
+  --color-secondary: #2575fc;
+  --color-secondary-light: #4591ff;
+  --color-secondary-dark: #1b5ed9;
+  
+  /* 功能性颜色 */
+  --color-success: #28a745;
+  --color-danger: #e74c3c;
+  --color-warning: #ffc107;
+  --color-info: #17a2b8;
+  
+  /* 中性颜色 */
+  --color-text-primary: #333333;
+  --color-text-secondary: #666666;
+  --color-text-muted: #999999;
+  --color-background: #ffffff;
+  --color-background-alt: #f8f9fa;
+  --color-border: rgba(0, 0, 0, 0.1);
+  
+  /* 渐变色 */
+  --gradient-primary: linear-gradient(45deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  --gradient-dark: linear-gradient(45deg, #333333 0%, #555555 100%);
+  
+  /* ===== 排版 ===== */
+  --font-family-base: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-size-base: 1rem;
+  --font-size-sm: 0.875rem;
+  --font-size-lg: 1.25rem;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+  --line-height-base: 1.5;
+  
+  /* ===== 间距 ===== */
+  --spacing-xs: 0.25rem;  /* 4px */
+  --spacing-sm: 0.5rem;   /* 8px */
+  --spacing-md: 1rem;     /* 16px */
+  --spacing-lg: 1.5rem;   /* 24px */
+  --spacing-xl: 2rem;     /* 32px */
+  
+  /* ===== 边框 ===== */
+  --border-radius-sm: 4px;
+  --border-radius-md: 6px;
+  --border-radius-lg: 10px;
+  --border-width: 1px;
+  --border-radius: 10px; /* 保留原有变量名以保持兼容性 */
+  
+  /* ===== 阴影 ===== */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
+  --shadow-inset: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+  --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); /* 保留原有变量名以保持兼容性 */
+  
+  /* ===== 过渡效果 ===== */
+  --transition-fast: all 0.2s ease;
+  --transition-normal: all 0.3s ease;
+  --transition-slow: all 0.5s ease;
+  --transition-bounce: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  
+  /* ===== 动画曲线 ===== */
+  --ease-in-out: cubic-bezier(0.645, 0.045, 0.355, 1);
+  --ease-out-back: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --ease-in-back: cubic-bezier(0.6, -0.28, 0.735, 0.045);
+  --ease-out-circ: cubic-bezier(0.08, 0.82, 0.17, 1);
+  --ease-in-circ: cubic-bezier(0.6, 0.04, 0.98, 0.335);
+  
+  /* ===== 组件特定变量 ===== */
+  /* 播放器 */
+  --player-height-collapsed: 85px;
+  --player-height-expanded: 70vh;
+  --player-transition: var(--transition-bounce);
+  --player-shadow: 0 -4px 20px rgba(0, 0, 0, 0.07);
+  
+  /* 卡片 */
+  --card-hover-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  --card-hover-transform: translateY(-5px);
+  --card-transition: all 0.3s var(--ease-out-circ);
+  --card-active-scale: 0.98;
+  --card-border-radius: var(--border-radius-lg);
+  
+  /* 导航栏 */
+  --navbar-height: 60px;
+  --navbar-shadow: 0 2px 15px rgba(0, 0, 0, 0.04);
+  --navbar-border: 1px solid rgba(0, 0, 0, 0.06);
+  
+  /* 进度条 */
+  --progress-height: 6px;
+  --progress-height-hover: 8px;
+  --progress-border-radius: 10px;
+  --progress-background: #ddd;
+  --progress-fill: var(--color-danger);
+  
+  /* 按钮 */
+  --button-hover-transform: translateY(-2px);
+  --button-active-transform: translateY(1px);
+  --button-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --button-hover-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+  
+  /* 保留原有的主要变量名以保持兼容性 */
+  --primary-gradient: linear-gradient(45deg, #6a11cb 0%, #2575fc 100%);
+}
+
+/* 媒体查询中的变量调整 */
+@media (max-width: 1024px) {
+  :root {
+    --player-height-collapsed: 125px;
+    /* 其他响应式变量调整... */
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --spacing-lg: 1.25rem;
+    --spacing-xl: 1.75rem;
+    --card-hover-transform: translateY(-3px);
+    /* 其他移动端变量调整... */
+  }
+} 

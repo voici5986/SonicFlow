@@ -1,6 +1,14 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+// 首先导入主题文件
+import './styles/theme.css';
 import './index.css';
+// 其他样式文件
+import './styles/App.css';
+import './styles/AudioPlayer.css';
+import './styles/NavigationFix.css';
+import './styles/Orientation.css';
+import './styles/UserProfile.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { ToastContainer } from 'react-toastify';

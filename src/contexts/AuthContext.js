@@ -9,6 +9,7 @@ import {
 } from '../services/firebase';
 import { initialSync } from '../services/syncService';
 import { toast } from 'react-toastify';
+import { saveSyncStatus } from '../services/storage';
 
 // 创建认证上下文
 export const AuthContext = createContext();
@@ -126,11 +127,64 @@ export const AuthProvider = ({ children }) => {
       if (user) {
         setSyncComplete(false);
         try {
-          await initialSync(user.uid);
+          // 更新同步状态为"正在同步"
+          await saveSyncStatus({
+            loading: true,
+            success: null,
+            message: '登录后自动同步...',
+            timestamp: null
+          }, user.uid);
+          
+          // 添加超时处理
+          const syncPromise = initialSync(user.uid);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('同步操作超时')), 30000)
+          );
+          
+          // 使用Promise.race确保同步不会永久挂起
+          const result = await Promise.race([syncPromise, timeoutPromise])
+            .catch(error => {
+              console.error('同步超时或出错:', error);
+              return { success: false, error: error.message || '同步超时' };
+            });
+          
+          // 根据结果更新同步状态
+          if (result && result.success) {
+            await saveSyncStatus({
+              loading: false,
+              success: true,
+              message: '登录同步成功',
+              timestamp: new Date()
+            }, user.uid);
           setSyncComplete(true);
+          } else {
+            await saveSyncStatus({
+              loading: false,
+              success: false,
+              message: `登录同步失败: ${result?.error || '未知错误'}`,
+              timestamp: new Date()
+            }, user.uid);
+            toast.error('数据同步失败');
+          }
         } catch (error) {
           console.error('数据同步失败', error);
+          
+          // 确保一定会更新同步错误状态
+          try {
+            await saveSyncStatus({
+              loading: false,
+              success: false,
+              message: `同步错误: ${error.message || '未知错误'}`,
+              timestamp: new Date()
+            }, user.uid);
+          } catch (e) {
+            console.error('更新同步状态失败', e);
+          }
+          
           toast.error('数据同步失败');
+        } finally {
+          // 确保设置同步完成状态，即使发生错误
+          setSyncComplete(true);
         }
       }
     });

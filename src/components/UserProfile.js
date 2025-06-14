@@ -1,19 +1,41 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Card, Image, Badge, Spinner, Alert } from 'react-bootstrap';
+import { Button, Card, Image, Spinner, Container } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
-import { syncFavoritesToCloud, syncFavoritesFromCloud, syncHistoryToCloud, syncHistoryFromCloud } from '../services/syncService';
-import { getFavorites, getHistory } from '../services/storage';
-import { FaSync, FaCloudUploadAlt, FaCloudDownloadAlt, FaSignOutAlt } from 'react-icons/fa';
+import { getFavorites, getHistory, getSyncStatus, saveSyncStatus } from '../services/storage';
+import { FaHeart, FaHistory, FaSignOutAlt, FaSync } from 'react-icons/fa';
+import '../styles/UserProfile.css';
 
 const UserProfile = () => {
   const { currentUser, signOut } = useAuth();
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [historyCount, setHistoryCount] = useState(0);
-  const [syncStatus, setSyncStatus] = useState({ loading: false, success: null, message: '' });
+  const [syncStatus, setSyncStatus] = useState({ 
+    loading: false, 
+    success: null, 
+    message: '', 
+    timestamp: null 
+  });
+  
+  // 加载同步状态
+  const loadSyncStatus = async () => {
+    if (currentUser) {
+      const savedStatus = await getSyncStatus(currentUser.uid);
+      setSyncStatus(savedStatus);
+    }
+  };
   
   useEffect(() => {
     loadCounts();
-  }, []);
+    loadSyncStatus();
+  }, [currentUser]); // 添加currentUser作为依赖
+  
+  // 更新同步状态并保存到缓存
+  const updateSyncStatus = async (newStatus) => {
+    setSyncStatus(newStatus);
+    if (currentUser) {
+      await saveSyncStatus(newStatus, currentUser.uid);
+    }
+  };
   
   const loadCounts = async () => {
     const favorites = await getFavorites();
@@ -22,71 +44,38 @@ const UserProfile = () => {
     setHistoryCount(history.length);
   };
   
-  const handleSyncToCloud = async () => {
-    if (!currentUser) return;
-    
-    setSyncStatus({ loading: true, success: null, message: '正在同步到云端...' });
-    
-    try {
-      const favResult = await syncFavoritesToCloud(currentUser.uid);
-      const histResult = await syncHistoryToCloud(currentUser.uid);
-      
-      if (favResult.success && histResult.success) {
-        setSyncStatus({ loading: false, success: true, message: '同步到云端成功' });
-      } else {
-        setSyncStatus({ 
-          loading: false, 
-          success: false, 
-          message: `同步失败: ${favResult.error || histResult.error || '未知错误'}`
-        });
-      }
-    } catch (error) {
-      setSyncStatus({ loading: false, success: false, message: `同步错误: ${error.message}` });
-    }
-  };
-  
-  const handleSyncFromCloud = async () => {
-    if (!currentUser) return;
-    
-    setSyncStatus({ loading: true, success: null, message: '正在从云端同步...' });
-    
-    try {
-      const favResult = await syncFavoritesFromCloud(currentUser.uid);
-      const histResult = await syncHistoryFromCloud(currentUser.uid);
-      
-      if (favResult.success && histResult.success) {
-        setSyncStatus({ loading: false, success: true, message: '从云端同步成功' });
-        loadCounts(); // 更新计数
-      } else {
-        setSyncStatus({ 
-          loading: false, 
-          success: false, 
-          message: `同步失败: ${favResult.error || histResult.error || '未知错误'}`
-        });
-      }
-    } catch (error) {
-      setSyncStatus({ loading: false, success: false, message: `同步错误: ${error.message}` });
-    }
-  };
-  
   const handleManualSync = async () => {
     if (!currentUser) return;
     
-    setSyncStatus({ loading: true, success: null, message: '正在数据同步...' });
+    await updateSyncStatus({ loading: true, success: null, message: '正在数据同步...', timestamp: null });
     
     try {
-      // 执行双向合并操作
       const { initialSync } = await import('../services/syncService');
       const result = await initialSync(currentUser.uid);
       
       if (result.success) {
-        setSyncStatus({ loading: false, success: true, message: '数据同步成功' });
+        await updateSyncStatus({ 
+          loading: false, 
+          success: true, 
+          message: '数据同步成功', 
+          timestamp: new Date() 
+        });
         loadCounts(); // 更新计数
       } else {
-        setSyncStatus({ loading: false, success: false, message: `同步失败: ${result.error || '未知错误'}` });
+        await updateSyncStatus({ 
+          loading: false, 
+          success: false, 
+          message: `同步失败: ${result.error || '未知错误'}`, 
+          timestamp: new Date() 
+        });
       }
     } catch (error) {
-      setSyncStatus({ loading: false, success: false, message: `同步错误: ${error.message}` });
+      await updateSyncStatus({ 
+        loading: false, 
+        success: false, 
+        message: `同步错误: ${error.message}`, 
+        timestamp: new Date() 
+      });
     }
   };
   
@@ -105,95 +94,130 @@ const UserProfile = () => {
   const userInitial = currentUser.displayName ? currentUser.displayName[0].toUpperCase() : 
                      (currentUser.email ? currentUser.email[0].toUpperCase() : '?');
   
+  // 格式化时间
+  const formatTime = (date) => {
+    if (!date) return '';
+    if (typeof date === 'string') {
+      date = new Date(date);
+    }
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+  
+  // 渲染同步状态
+  const renderSyncStatus = () => {
+    const timeString = syncStatus.timestamp ? formatTime(syncStatus.timestamp) : '未同步';
+    let statusClass = '';
+    let statusText = '';
+    
+    if (syncStatus.loading) {
+      statusClass = 'info';
+      statusText = `正在同步: ${syncStatus.message}`;
+    } else if (syncStatus.success === true) {
+      statusClass = 'success';
+      statusText = `同步成功: ${timeString}`;
+    } else if (syncStatus.success === false) {
+      statusClass = 'danger';
+      statusText = `同步失败: ${timeString}`;
+    } else {
+      statusClass = 'secondary';
+      statusText = '未同步';
+    }
+    
+    return (
+      <div className="sync-status-container">
+        <div className={`sync-status ${statusClass}`}>
+          {statusText}
+        </div>
+      </div>
+    );
+  };
+  
   return (
-    <Card className="border-0 shadow-sm mb-4">
+    <div className="user-profile-container">
+      <Container>
+        <div className="user-dashboard">
+          {/* 用户资料卡片 */}
+          <Card className="profile-card">
       <Card.Body>
-        <div className="d-flex align-items-center mb-3">
+              <div className="avatar-container">
           {currentUser.photoURL ? (
             <Image 
               src={currentUser.photoURL} 
               roundedCircle 
-              width={60} 
-              height={60} 
-              className="me-3" 
+                    className="user-avatar"
             />
           ) : (
-            <div 
-              className="rounded-circle bg-primary text-white d-flex justify-content-center align-items-center me-3"
-              style={{ width: '60px', height: '60px', fontSize: '1.5rem' }}
-            >
+                  <div className="avatar-initial rounded-circle d-flex justify-content-center align-items-center">
               {userInitial}
             </div>
           )}
-          
-          <div>
-            <h5 className="mb-0">{currentUser.displayName || '用户'}</h5>
-            <p className="text-muted mb-0">{currentUser.email}</p>
           </div>
-          
+              <div className="user-info">
+                <h3 className="user-name">{currentUser.displayName || '用户'}</h3>
+                <p className="user-email">{currentUser.email}</p>
           <Button 
             variant="outline-danger" 
-            size="sm"
-            className="ms-auto"
+                  className="logout-button w-100 mt-2"
             onClick={handleLogout}
           >
-            <FaSignOutAlt className="me-1" /> 退出登录
+                  <FaSignOutAlt className="me-2" /> 退出登录
           </Button>
         </div>
-        
-        <div className="mb-3">
-          <Badge bg="primary" className="me-2">
-            收藏: {favoritesCount}
-          </Badge>
-          <Badge bg="secondary">
-            历史记录: {historyCount}
-          </Badge>
+            </Card.Body>
+          </Card>
+          
+          {/* 统计卡片 */}
+          <Card className="stats-card">
+            <Card.Body>
+              <div className="stats-item">
+                <div className="stats-icon favorites">
+                  <FaHeart />
+                </div>
+                <div className="stats-content">
+                  <div className="stats-value">{favoritesCount}</div>
+                  <p className="stats-label">收藏的歌曲</p>
+                </div>
         </div>
         
-        {syncStatus.message && (
-          <Alert 
-            variant={syncStatus.success === null ? 'info' : 
-                    syncStatus.success ? 'success' : 'danger'} 
-            className="py-2 mb-3"
-          >
-            {syncStatus.message}
-          </Alert>
-        )}
-        
-        <div className="d-flex gap-2 mt-3">
+              <div className="stats-item">
+                <div className="stats-icon history">
+                  <FaHistory />
+                </div>
+                <div className="stats-content">
+                  <div className="stats-value">{historyCount}</div>
+                  <p className="stats-label">历史记录</p>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+          
+          {/* 同步卡片 */}
+          <Card className="sync-card">
+            <Card.Body>
+              {renderSyncStatus()}
           <Button 
-            variant="outline-primary" 
+                variant="primary" 
             onClick={handleManualSync}
             disabled={syncStatus.loading}
-            className="w-100"
+                className="sync-button w-100"
           >
             {syncStatus.loading ? (
-              <Spinner animation="border" size="sm" />
+                  <Spinner animation="border" size="sm" className="me-2" />
             ) : (
-              <>
-                <FaSync className="me-1" /> 双向同步
-              </>
+                  <><FaSync className="me-2" /> 同步数据</>
             )}
           </Button>
-          
-          <Button 
-            variant="outline-success" 
-            onClick={handleSyncToCloud}
-            disabled={syncStatus.loading}
-          >
-            <FaCloudUploadAlt className="me-1" /> 上传
-          </Button>
-          
-          <Button 
-            variant="outline-info" 
-            onClick={handleSyncFromCloud}
-            disabled={syncStatus.loading}
-          >
-            <FaCloudDownloadAlt className="me-1" /> 下载
-          </Button>
+            </Card.Body>
+          </Card>
         </div>
-      </Card.Body>
-    </Card>
+      </Container>
+    </div>
   );
 };
 

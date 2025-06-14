@@ -11,6 +11,12 @@ export const historyStore = localforage.createInstance({
   storeName: 'history'
 });
 
+// 添加同步状态存储实例
+export const syncStore = localforage.createInstance({
+  name: 'clMusicApp',
+  storeName: 'syncStatus'
+});
+
 /**
  * 收藏歌曲操作
  */
@@ -135,6 +141,33 @@ export async function clearHistory() {
     return true;
   } catch (error) {
     console.error("Error clearing history:", error);
+    return false;
+  }
+}
+
+/**
+ * 同步状态操作
+ */
+// 获取同步状态
+export async function getSyncStatus(userId) {
+  try {
+    const key = `sync_status_${userId || 'default'}`;
+    const data = await syncStore.getItem(key);
+    return data || { loading: false, success: null, message: '', timestamp: null };
+  } catch (error) {
+    console.error("Error getting sync status:", error);
+    return { loading: false, success: null, message: '', timestamp: null };
+  }
+}
+
+// 保存同步状态
+export async function saveSyncStatus(status, userId) {
+  try {
+    const key = `sync_status_${userId || 'default'}`;
+    await syncStore.setItem(key, status);
+    return true;
+  } catch (error) {
+    console.error("Error saving sync status:", error);
     return false;
   }
 } 

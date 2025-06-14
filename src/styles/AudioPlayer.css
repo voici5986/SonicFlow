@@ -1,9 +1,5 @@
 /* 音频播放器样式 */
-:root {
-  --player-height-collapsed: 85px;
-  --player-height-expanded: 70vh;
-  --player-transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
+/* 播放器变量已移至theme.css */
 
 /* 播放器基础样式 */
 .audio-player {
@@ -119,6 +115,9 @@
 /* 按钮过渡效果 */
 .control-button {
   transition: all 0.2s ease;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .control-button:hover {
@@ -129,6 +128,63 @@
   transform: scale(0.95);
 }
 
+/* 移除控制按钮的卡片样式 */
+.control-icon-btn {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px !important;
+}
+
+/* 控制按钮容器样式 */
+.control-buttons-container {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* 播放控制区域样式 */
+.play-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.play-controls .card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+}
+
+.play-controls .card-body {
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+/* 播放按钮特殊样式 */
+.play-pause-button {
+  height: 40px;
+  width: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 /* 为主内容区域添加底部内边距，避免被播放器遮挡 - 当播放器显示时才应用 */
 .App:has(.audio-player) .main-content {
   padding-bottom: calc(var(--player-height-collapsed) + 30px);
@@ -136,10 +192,7 @@
 
 /* 响应式调整 - 移动设备和平板竖屏 */
 @media (max-width: 1024px) {
-  :root {
-    --player-height-collapsed: 125px;
-  }
-  
+  /* 响应式变量已移至theme.css */
   .audio-player.collapsed {
     padding: 8px;
   }

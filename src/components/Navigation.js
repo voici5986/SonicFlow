@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Nav, Navbar, Container, Button } from 'react-bootstrap';
 import { FaHome, FaHeart, FaHistory, FaUser } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,7 +7,24 @@ import '../styles/NavigationFix.css';
 const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
   // 添加展开状态控制
   const [expanded, setExpanded] = useState(false);
+  // 添加滚动状态
+  const [scrolled, setScrolled] = useState(false);
   const { currentUser } = useAuth();
+  
+  // 监听滚动事件
+  useEffect(() => {
+    const handleScroll = () => {
+      const isScrolled = window.scrollY > 20;
+      if (isScrolled !== scrolled) {
+        setScrolled(isScrolled);
+      }
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [scrolled]);
   
   // 处理菜单项点击事件
   const handleNavItemClick = (id) => {
@@ -41,7 +58,12 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
     (currentUser && currentUser.email ? currentUser.email[0].toUpperCase() : null);
 
   return (
-    <Navbar expand="lg" expanded={expanded} onToggle={setExpanded} className="nav-animated">
+    <Navbar 
+      expand="lg" 
+      expanded={expanded} 
+      onToggle={setExpanded} 
+      className={`nav-animated ${scrolled ? 'scrolled' : ''}`}
+    >
       <Container fluid>
         <Navbar.Brand className="d-flex align-items-center">
           <img

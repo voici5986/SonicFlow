@@ -1,9 +1,15 @@
-/* 导航栏样式修复 */
+/* 导航栏样式修复 - 现代化设计 */
 .navbar {
   box-shadow: none !important;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
-  background-color: transparent !important;
+  background-color: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   transition: all 0.3s ease;
+  padding: 0.8rem 1rem !important;
+  position: sticky;
+  top: 0;
+  z-index: 1020;
 }
 
 .navbar-collapse {
@@ -12,12 +18,16 @@
   transition: all 0.3s ease;
 }
 
-/* 导航链接动画 */
+/* 导航链接动画 - 增强版 */
 .navbar .nav-link {
   border-bottom: 2px solid transparent;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   position: relative;
   overflow: hidden;
+  padding: 0.5rem 0.8rem !important;
+  margin: 0 0.3rem;
+  border-radius: 8px;
+  font-weight: 500;
 }
 
 .navbar .nav-link:after {
@@ -27,8 +37,13 @@
   left: 0;
   width: 0;
   height: 2px;
-  background: linear-gradient(45deg, #6a11cb 0%, #2575fc 100%);
-  transition: width 0.3s ease;
+  background: var(--gradient-primary);
+  transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.navbar .nav-link:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+  transform: translateY(-2px);
 }
 
 .navbar .nav-link:hover:after {
@@ -36,36 +51,48 @@
 }
 
 .navbar .nav-link.active {
-  color: #6a11cb !important;
-  font-weight: 500;
+  color: var(--color-primary) !important;
+  font-weight: 600;
+  background-color: rgba(106, 17, 203, 0.05);
 }
 
 .navbar .nav-link.active::after {
-  display: none;
+  display: block;
+  width: 100%;
 }
 
-.navbar .nav-link.active {
-  border-bottom: 2px solid #6a11cb;
-}
-
-/* 导航图标动画 */
+/* 导航图标动画增强 */
 .nav-icon {
-  transition: transform 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .nav-link:hover .nav-icon {
-  transform: scale(1.2);
+  transform: scale(1.2) rotate(5deg);
 }
 
-/* Logo脉冲动画 */
+.nav-link.active .nav-icon {
+  transform: scale(1.1);
+  color: var(--color-primary);
+}
+
+/* Logo脉冲动画增强 */
 @keyframes logoPulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-  100% { transform: scale(1); }
+  0% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.1); filter: brightness(1.2); }
+  100% { transform: scale(1); filter: brightness(1); }
 }
 
 .logo-pulse {
-  animation: logoPulse 3s infinite ease-in-out;
+  animation: logoPulse 4s infinite ease-in-out;
+  transition: all 0.3s ease;
+}
+
+.logo-pulse:hover {
+  animation-play-state: paused;
+  filter: drop-shadow(0 0 3px rgba(106, 17, 203, 0.5));
 }
 
 /* 导航栏整体动画 */
@@ -78,23 +105,98 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* 响应式导航样式修复 */
+/* 导航品牌名称悬停效果 */
+.navbar-brand {
+  transition: all 0.3s ease;
+}
+
+.navbar-brand:hover {
+  transform: scale(1.05);
+}
+
+/* 用户头像/按钮动画 */
+.navbar .nav-link img.rounded-circle,
+.navbar .nav-link .rounded-circle,
+.navbar button.rounded-circle {
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.navbar .nav-link:hover img.rounded-circle,
+.navbar .nav-link:hover .rounded-circle,
+.navbar button.rounded-circle:hover {
+  transform: scale(1.15);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 汉堡菜单按钮动画 */
+.navbar-toggler {
+  border: none !important;
+  padding: 0.5rem !important;
+  border-radius: 8px !important;
+  transition: all 0.3s ease;
+}
+
+.navbar-toggler:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.navbar-toggler:focus {
+  box-shadow: 0 0 0 3px rgba(106, 17, 203, 0.2) !important;
+}
+
+.navbar-toggler-icon {
+  transition: all 0.3s ease;
+}
+
+.navbar-toggler:hover .navbar-toggler-icon {
+  transform: scale(1.1);
+}
+
+/* 响应式导航样式修复 - 增强版 */
 @media (max-width: 991px) {
   .navbar-collapse {
     position: absolute;
     top: 100%;
     left: 0;
     right: 0;
-    background-color: #fff !important;
-    border-radius: 0 0 10px 10px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.07) !important;
+    background-color: rgba(255, 255, 255, 0.98) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 0 0 16px 16px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
     z-index: 1000;
-    padding: 0.5rem 0;
-    animation: navDropDown 0.3s ease-out;
+    padding: 0.5rem;
+    animation: navDropDown 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    overflow: hidden;
+  }
+  
+  .navbar .nav-link {
+    margin: 0.3rem 0.5rem;
+    padding: 0.8rem 1rem !important;
+    border-radius: 8px;
+  }
+  
+  .navbar .nav-link:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+  }
+  
+  .navbar .nav-link.active {
+    background-color: rgba(106, 17, 203, 0.08);
   }
   
   @keyframes navDropDown {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(-15px); max-height: 0; }
+    to { opacity: 1; transform: translateY(0); max-height: 300px; }
   }
+  
+  .navbar-nav {
+    padding: 0.5rem;
+  }
+  }
+
+/* 滚动时导航栏效果 */
+.navbar.scrolled {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+  padding: 0.6rem 1rem !important;
 } 

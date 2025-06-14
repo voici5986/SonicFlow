@@ -57,12 +57,6 @@ const HeartButton = ({
       if (onFavoritesChange) {
         onFavoritesChange();
       }
-      
-      // 显示操作反馈
-      toast.success(
-        result.added ? '已添加到收藏' : '已从收藏中移除', 
-        { icon: result.added ? '❤️' : '💔', className: 'custom-toast' }
-      );
     } catch (error) {
       console.error('收藏操作失败:', error);
       toast.error('操作失败，请重试', { icon: '⚠️', className: 'custom-toast error-toast' });

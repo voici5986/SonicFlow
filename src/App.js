@@ -35,8 +35,7 @@ const App = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [showAuthModal, setShowAuthModal] = useState(false);
   
-  // 获取用户认证状态 - 我们会在未来的功能中使用
-  // eslint-disable-next-line no-unused-vars
+  // 获取用户认证状态
   const { currentUser } = useAuth();
   
   // 原有状态
@@ -75,6 +74,109 @@ const App = () => {
   // 下载相关状态
   const [downloading, setDownloading] = useState(false);
   const [currentDownloadingTrack, setCurrentDownloadingTrack] = useState(null);
+  
+  // 应用启动时自动同步数据
+  useEffect(() => {
+    // 只在用户已登录且组件挂载后运行
+    if (currentUser) {
+      // 使用一个标记来避免重复同步
+      let isSyncCancelled = false;
+      
+      // 先检查最近的同步状态，如果最近10分钟内已同步过则跳过
+      const checkAndSync = async () => {
+        try {
+          const { getSyncStatus, saveSyncStatus } = await import('./services/storage');
+          const lastStatus = await getSyncStatus(currentUser.uid);
+          
+          // 如果在过去10分钟内有过成功的同步，则跳过此次同步
+          const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+          if (lastStatus.timestamp && new Date(lastStatus.timestamp) > tenMinutesAgo && lastStatus.success) {
+            console.log('最近已同步过，跳过应用启动同步');
+            return;
+          }
+          
+          // 确保同步状态不是正在加载，避免与登录同步冲突
+          if (lastStatus.loading) {
+            console.log('有其他同步任务正在进行，跳过应用启动同步');
+            return;
+          }
+          
+          // 如果同步被取消则返回
+          if (isSyncCancelled) return;
+          
+          // 更新同步状态为"正在同步"
+          await saveSyncStatus({ 
+            loading: true, 
+            success: null, 
+            message: '应用启动自动同步...', 
+            timestamp: null 
+          }, currentUser.uid);
+          
+          // 添加超时处理
+          const { initialSync } = await import('./services/syncService');
+          const syncPromise = initialSync(currentUser.uid);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('同步操作超时')), 30000)
+          );
+          
+          // 使用Promise.race确保同步不会永久挂起
+          const result = await Promise.race([syncPromise, timeoutPromise])
+            .catch(error => {
+              console.error('应用启动同步超时或出错:', error);
+              return { success: false, error: error.message || '同步超时' };
+            });
+          
+          // 如果同步被取消则不更新状态
+          if (isSyncCancelled) return;
+          
+          // 根据结果更新同步状态
+          if (result && result.success) {
+            await saveSyncStatus({ 
+              loading: false, 
+              success: true, 
+              message: '自动同步成功', 
+              timestamp: new Date() 
+            }, currentUser.uid);
+          } else {
+            await saveSyncStatus({ 
+              loading: false, 
+              success: false, 
+              message: `自动同步失败: ${result?.error || '未知错误'}`, 
+              timestamp: new Date() 
+            }, currentUser.uid);
+          }
+          
+          console.log('应用启动自动同步完成');
+        } catch (error) {
+          console.error('应用启动自动同步失败:', error);
+          
+          // 如果同步被取消则不更新状态
+          if (isSyncCancelled) return;
+          
+          // 确保更新同步错误状态
+          try {
+            const { saveSyncStatus } = await import('./services/storage');
+            await saveSyncStatus({ 
+              loading: false, 
+              success: false, 
+              message: `同步错误: ${error.message || '未知错误'}`, 
+              timestamp: new Date() 
+            }, currentUser.uid);
+          } catch (e) {
+            console.error('更新同步状态失败', e);
+          }
+        }
+      };
+      
+      // 延迟5秒执行以避免与登录时的同步重叠
+      const syncTimer = setTimeout(checkAndSync, 5000);
+      
+      return () => {
+        clearTimeout(syncTimer);
+        isSyncCancelled = true;
+      };
+    }
+  }, [currentUser]);
 
   const sources = [
     'netease', 'joox', 'tencent', 'tidal', 'spotify',
@@ -800,48 +902,48 @@ useEffect(() => {
             <div className="player-content">
               {/* 基础播放控制区域 - 在收起和展开状态都显示 */}
               <Row className="align-items-center player-info-controls">
-                {/* 左侧：歌曲信息 */}
+          {/* 左侧：歌曲信息 */}
                 <Col xs={6} md={3} className="d-flex align-items-center mb-2 mb-md-0">
-                  <div className="d-flex align-items-center">
-                    <img 
-                      src={coverCache[`${currentTrack.source}-${currentTrack.pic_id}-300`] || 'default_cover.png'}
-                      alt="当前播放"
-                      style={{ width: '50px', height: '50px' }}
-                      className="me-2 rounded"
-                    />
-                    <div>
+              <div className="d-flex align-items-center">
+                <img 
+                  src={coverCache[`${currentTrack.source}-${currentTrack.pic_id}-300`] || 'default_cover.png'}
+                  alt="当前播放"
+                  style={{ width: '50px', height: '50px' }}
+                  className="me-2 rounded"
+                />
+                <div>
                       <h6 className="mb-0 text-truncate" style={{maxWidth: 'calc(30vw - 20px)'}}>{currentTrack.name}</h6>
                       <small className="text-muted text-truncate" style={{maxWidth: 'calc(30vw - 20px)', display: 'block'}}>{currentTrack.artist}</small>
-                    </div>
-                  </div>
-                </Col>
-                
+                </div>
+              </div>
+          </Col>
+          
                 {/* 移动端和平板：进度条在歌曲信息右侧 */}
                 <Col xs={6} className="d-flex d-md-none align-items-center">
                   <div className="mobile-progress-container">
-                    <ProgressBar 
-                      currentTrack={currentTrack}
-                      playProgress={playProgress}
-                      totalSeconds={totalSeconds}
-                      playerRef={playerRef}
-                      formatTime={formatTime}
+              <ProgressBar 
+                currentTrack={currentTrack}
+                playProgress={playProgress}
+                totalSeconds={totalSeconds}
+                playerRef={playerRef}
+                formatTime={formatTime}
                       deviceType={deviceInfo.deviceType}
-                    />
-                  </div>
+              />
+            </div>
                 </Col>
-                
+            
                 {/* 中间空白区域 - 仅在桌面端显示 */}
                 <Col md={6} className="d-none d-md-block">
                   {/* 此区域故意留空，为进度条底部定位留出空间 */}
                 </Col>
                 
                 {/* 右侧：播放控制 */}
-                <Col xs={12} md={3} className="d-flex justify-content-center justify-content-md-end mt-2 mt-md-0">
+                <Col xs={12} md={3} className="d-flex justify-content-center justify-content-md-end mt-2 mt-md-0 control-buttons-container">
                   {/* 歌词切换按钮 */}
                   <Button
                     variant="link"
                     onClick={() => setLyricExpanded(!lyricExpanded)}
-                    className="p-2 control-button text-info"
+                    className="p-2 control-button text-info control-icon-btn"
                     aria-label={lyricExpanded ? "收起歌词" : "展开歌词"}
                     title={lyricExpanded ? "收起歌词" : "展开歌词"}
                   >
@@ -859,72 +961,72 @@ useEffect(() => {
                       track={currentTrack} 
                       size={20} 
                       variant="link"
-                      className="p-2 control-button" 
+                      className="p-2 control-button control-icon-btn" 
                       onFavoritesChange={loadFavorites}
                     />
                   )}
                   
-                  <Button 
-                    variant="link" 
-                    onClick={handlePrevious}
-                    disabled={!currentTrack || currentPlaylist.length <= 1}
-                    className="mx-1 p-2 control-button text-secondary" 
-                    aria-label="上一首"
-                  >
-                    <FaStepBackward size={20} />
-                  </Button>
-                  
-                  <Button
-                    variant="link"
-                    onClick={() => setIsPlaying(!isPlaying)}
-                    disabled={!currentTrack || !playerUrl}
-                    className="mx-1 p-1 control-button" 
-                    aria-label={isPlaying ? "暂停" : "播放"}
-                  >
-                    {!currentTrack ? 
-                      <FaMusic size={24} className="text-muted" /> 
-                    : isPlaying ? 
-                      <FaPause size={24} className="text-primary" />
-                    : 
-                      <FaPlay size={24} className="text-primary" />
-                    }
-                  </Button>
-                  
-                  <Button 
-                    variant="link" 
-                    onClick={handleNext}
-                    disabled={!currentTrack || currentPlaylist.length <= 1}
-                    className="mx-1 p-2 control-button text-secondary" 
-                    aria-label="下一首"
-                  >
-                    <FaStepForward size={20} />
-                  </Button>
-                  
-                  <Button
-                    variant="link"
-                    onClick={handleTogglePlayMode}
-                    className="mx-1 p-2 text-secondary control-button" 
-                    aria-label="播放模式"
-                  >
-                    {getPlayModeIcon()}
-                  </Button>
-                  
-                  {/* 添加下载按钮 */}
-                  {currentTrack && (
-                    <Button
-                      variant="link"
-                      onClick={() => handleDownload(currentTrack)}
-                      className="mx-1 p-2 text-success control-button" 
-                      aria-label="下载"
-                      title="下载歌曲"
-                      disabled={downloading && currentDownloadingTrack?.id === currentTrack.id}
-                    >
-                      {downloading && currentDownloadingTrack?.id === currentTrack.id ? 
-                        <Spinner animation="border" size="sm" /> : 
-                        <FaDownload size={20} />
-                      }
-                    </Button>
-                  )}
+              <Button 
+                variant="link" 
+                onClick={handlePrevious}
+                disabled={!currentTrack || currentPlaylist.length <= 1}
+                className="mx-1 p-2 control-button text-secondary control-icon-btn" 
+                aria-label="上一首"
+              >
+                <FaStepBackward size={20} />
+              </Button>
+              
+              <Button
+                variant="link"
+                onClick={() => setIsPlaying(!isPlaying)}
+                disabled={!currentTrack || !playerUrl}
+                className="mx-1 p-1 control-button control-icon-btn" 
+                aria-label={isPlaying ? "暂停" : "播放"}
+              >
+                {!currentTrack ? 
+                  <FaMusic size={24} className="text-muted" /> 
+                 : isPlaying ? 
+                  <FaPause size={24} className="text-primary" />
+                 : 
+                  <FaPlay size={24} className="text-primary" />
+                }
+              </Button>
+              
+              <Button 
+                variant="link" 
+                onClick={handleNext}
+                disabled={!currentTrack || currentPlaylist.length <= 1}
+                className="mx-1 p-2 control-button text-secondary control-icon-btn" 
+                aria-label="下一首"
+              >
+                <FaStepForward size={20} />
+              </Button>
+              
+              <Button
+                variant="link"
+                onClick={handleTogglePlayMode}
+                className="mx-1 p-2 text-secondary control-button control-icon-btn" 
+                aria-label="播放模式"
+              >
+                {getPlayModeIcon()}
+              </Button>
+              
+              {/* 添加下载按钮 */}
+              {currentTrack && (
+                <Button
+                  variant="link"
+                  onClick={() => handleDownload(currentTrack)}
+                  className="mx-1 p-2 text-success control-button control-icon-btn" 
+                  aria-label="下载"
+                  title="下载歌曲"
+                  disabled={downloading && currentDownloadingTrack?.id === currentTrack.id}
+                >
+                  {downloading && currentDownloadingTrack?.id === currentTrack.id ? 
+                    <Spinner animation="border" size="sm" /> : 
+                    <FaDownload size={20} />
+                  }
+                </Button>
+              )}
                 </Col>
               </Row>
               
@@ -937,7 +1039,7 @@ useEffect(() => {
                       {lyricData.parsedLyric.length > 0 && currentLyricIndex >= 0 ? 
                         lyricData.parsedLyric[currentLyricIndex]?.text || "暂无歌词" 
                         : "暂无歌词"}
-                    </div>
+            </div>
                   )}
                   <div className="d-flex align-items-center">
                     <div className="progress-bar-container">
@@ -955,21 +1057,21 @@ useEffect(() => {
               )}
 
               {/* 恢复ReactPlayer组件 */}
-              <ReactPlayer
-                ref={playerRef}
-                onProgress={handleProgress}
-                url={playerUrl}
-                playing={isPlaying}
-                onReady={() => console.log('播放器就绪')}
-                onError={(e) => {
-                  console.error('播放错误:', e);
-                  setIsPlaying(false);
-                }}
-                onEnded={handleEnded}
-                config={{ file: { forceAudio: true } }}
-                height={0}
+            <ReactPlayer
+              ref={playerRef}
+              onProgress={handleProgress}
+              url={playerUrl}
+              playing={isPlaying}
+              onReady={() => console.log('播放器就绪')}
+              onError={(e) => {
+                console.error('播放错误:', e);
+                setIsPlaying(false);
+              }}
+              onEnded={handleEnded}
+              config={{ file: { forceAudio: true } }}
+              height={0}
                 style={{ display: playerUrl ? 'block' : 'none' }} 
-              />
+            />
 
               {/* 展开状态下的额外内容 */}
               {lyricExpanded && currentTrack && (
