@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Nav, Navbar, Container, Button } from 'react-bootstrap';
 import { FaHome, FaHeart, FaHistory, FaUser } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
+import NetworkStatus from './NetworkStatus';
 import '../styles/NavigationFix.css';
 
 const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
@@ -66,15 +67,13 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
     >
       <Container fluid>
         <Navbar.Brand className="d-flex align-items-center">
-          <img
-            src="/favicon.ico"
-            width="30"
-            height="30"
-            className="d-inline-block align-top me-2 logo-pulse"
-            alt="Logo"
-          />
           <span style={logoStyle}>SonicFlow</span>
         </Navbar.Brand>
+
+        {/* 网络状态指示器 - 放在SonicFlow右侧 */}
+        <div className="d-flex align-items-center">
+          <NetworkStatus inNavbar={true} />
+        </div>
 
         {/* 用户头像/登录按钮 - 在所有屏幕尺寸显示 */}
         <div className="order-lg-last ms-auto me-2">

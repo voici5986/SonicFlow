@@ -19,7 +19,7 @@ import InstallPWA from './components/InstallPWA';
 import UpdateNotification from './components/UpdateNotification';
 import { useAuth } from './contexts/AuthContext';
 import { useDevice } from './contexts/DeviceContext';
-import { addToHistory } from './services/storage';
+import { addToHistory, getNetworkStatus, saveNetworkStatus } from './services/storage';
 import { lockToPortrait } from './utils/orientationManager';
 // 导入导航样式修复
 import './styles/NavigationFix.css';
@@ -27,6 +27,25 @@ import './styles/NavigationFix.css';
 import './styles/AudioPlayer.css';
 // 导入屏幕方向样式
 import './styles/Orientation.css';
+// 导入网络状态样式
+import './styles/NetworkStatus.css';
+
+// 离线模式横幅样式
+const offlineBannerStyle = {
+  position: 'fixed',
+  top: '56px',
+  left: 0,
+  width: '100%',
+  padding: '8px 0',
+  backgroundColor: '#fff3cd',
+  color: '#856404',
+  textAlign: 'center',
+  zIndex: 1040,
+  borderBottom: '1px solid #ffeeba',
+  fontSize: '0.9rem',
+  fontWeight: 500,
+  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+};
 
 const API_BASE = process.env.REACT_APP_API_BASE || '/api';
 
@@ -35,8 +54,14 @@ const App = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [showAuthModal, setShowAuthModal] = useState(false);
   
+  // 定义handleTabChange作为setActiveTab的别名
+  const handleTabChange = setActiveTab;
+  
   // 获取用户认证状态
-  const { currentUser } = useAuth();
+  const { currentUser, isOfflineMode } = useAuth();
+  
+  // 网络状态
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   
   // 原有状态
   const [query, setQuery] = useState('');
@@ -75,6 +100,38 @@ const App = () => {
   const [downloading, setDownloading] = useState(false);
   const [currentDownloadingTrack, setCurrentDownloadingTrack] = useState(null);
   
+  // 检测网络状态
+  useEffect(() => {
+    // 初始化网络状态
+    const initNetworkStatus = async () => {
+      const status = await getNetworkStatus();
+      setIsOnline(status.online);
+    };
+    
+    initNetworkStatus();
+    
+    // 处理网络事件
+    const handleOnline = () => {
+      setIsOnline(true);
+      saveNetworkStatus({ online: true, lastChecked: Date.now() });
+      toast.success('网络已恢复连接');
+    };
+    
+    const handleOffline = () => {
+      setIsOnline(false);
+      saveNetworkStatus({ online: false, lastChecked: Date.now() });
+      toast.error('网络连接已断开，部分功能可能受限');
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+  
   // 应用启动时自动同步数据
   useEffect(() => {
     // 只在用户已登录且组件挂载后运行
@@ -85,6 +142,24 @@ const App = () => {
       // 先检查最近的同步状态，如果最近10分钟内已同步过则跳过
       const checkAndSync = async () => {
         try {
+          console.log('开始应用启动同步检查...');
+          
+          // 检查网络状态
+          const { getNetworkStatus } = await import('./services/storage');
+          const networkStatus = await getNetworkStatus();
+          if (!networkStatus.online) {
+            console.warn('网络离线，跳过应用启动同步');
+            return;
+          }
+          
+          // 检查Firebase可用性
+          const { checkFirebaseAvailability } = await import('./services/firebase');
+          const firebaseAvailable = await checkFirebaseAvailability();
+          if (!firebaseAvailable) {
+            console.warn('Firebase不可用，跳过应用启动同步');
+            return;
+          }
+          
           const { getSyncStatus, saveSyncStatus } = await import('./services/storage');
           const lastStatus = await getSyncStatus(currentUser.uid);
           
@@ -168,8 +243,8 @@ const App = () => {
         }
       };
       
-      // 延迟5秒执行以避免与登录时的同步重叠
-      const syncTimer = setTimeout(checkAndSync, 5000);
+      // 延迟10秒执行以避免与登录时的同步重叠，并确保网络和Firebase连接已经稳定
+      const syncTimer = setTimeout(checkAndSync, 10000);
       
       return () => {
         clearTimeout(syncTimer);
@@ -213,7 +288,17 @@ const App = () => {
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!query) return;
+    
+    // 如果离线，显示提示
+    if (!isOnline) {
+      toast.error('您当前处于离线状态，无法搜索音乐');
+      return;
+    }
+    
+    if (!query) {
+      toast.warning('请输入搜索关键词');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -861,7 +946,7 @@ useEffect(() => {
                 onDownload={handleDownload}
               />
             ) : activeTab === 'user' ? (
-              <User />
+              <User onTabChange={handleTabChange} />
             ) : (
               renderHomePage()
             )}
@@ -1190,6 +1275,13 @@ useEffect(() => {
       
       {/* 应用更新通知 */}
       <UpdateNotification registration={swRegistration} />
+      
+      {/* 离线模式提示 */}
+      {isOfflineMode && (
+        <div style={offlineBannerStyle}>
+          您正在使用离线模式，部分功能将不可用
+        </div>
+      )}
     </div>
   );
 };

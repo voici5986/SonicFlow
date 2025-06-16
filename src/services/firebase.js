@@ -23,16 +23,81 @@ const firebaseConfig = {
   appId: process.env.REACT_APP_FIREBASE_APP_ID
 };
 
-// 初始化 Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+// 添加Firebase可用性标志和错误
+// 默认假设Firebase可用，后续会验证
+let isFirebaseAvailable = true;
+let firebaseInitError = null;
 
-// Google 提供商
-const googleProvider = new GoogleAuthProvider();
+// 初始化 Firebase 以及错误处理
+let app, auth, db, googleProvider;
+try {
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+  googleProvider = new GoogleAuthProvider();
+} catch (error) {
+  console.error("Firebase初始化失败:", error);
+  firebaseInitError = error;
+  isFirebaseAvailable = false;
+  
+  // 创建模拟对象，以防应用崩溃
+  auth = {
+    onAuthStateChanged: (callback) => {
+      setTimeout(() => callback(null), 0);
+      return () => {};
+    },
+    signOut: () => Promise.resolve()
+  };
+  
+  db = {
+    // 最小可用模拟对象
+  };
+  
+  googleProvider = {};
+}
+
+/**
+ * 检查Firebase服务是否可用
+ * @returns {Promise<boolean>} Firebase服务是否可用
+ */
+export const checkFirebaseAvailability = async () => {
+  // 如果初始化就失败了，直接返回false
+  if (firebaseInitError) return false;
+  
+  try {
+    // 尝试轻量级操作以验证连接
+    const timeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('连接超时')), 5000)
+    );
+    
+    await Promise.race([
+      timeout,
+      new Promise(resolve => {
+        // 只是测试连接，不需要实际监听用户状态变化
+        const unsubscribe = auth.onAuthStateChanged(() => {
+          unsubscribe();
+          resolve();
+        }, (error) => {
+          console.error("Firebase连接检测错误:", error);
+          resolve(); // 即使有错误也resolve，让外层catch处理
+        });
+      })
+    ]);
+    
+    return true;
+  } catch (error) {
+    console.warn("Firebase连接测试失败:", error);
+    isFirebaseAvailable = false;
+    return false;
+  }
+};
 
 // 身份验证函数
 export const registerWithEmailAndPassword = async (email, password, displayName) => {
+  if (!isFirebaseAvailable) {
+    return { user: null, error: new Error('Firebase服务不可用') };
+  }
+  
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     if (displayName) {
@@ -46,6 +111,10 @@ export const registerWithEmailAndPassword = async (email, password, displayName)
 };
 
 export const loginWithEmailAndPassword = async (email, password) => {
+  if (!isFirebaseAvailable) {
+    return { user: null, error: new Error('Firebase服务不可用') };
+  }
+  
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     return { user: userCredential.user, error: null };
@@ -55,6 +124,10 @@ export const loginWithEmailAndPassword = async (email, password) => {
 };
 
 export const loginWithGoogle = async () => {
+  if (!isFirebaseAvailable) {
+    return { user: null, error: new Error('Firebase服务不可用') };
+  }
+  
   try {
     const result = await signInWithPopup(auth, googleProvider);
     // 确保用户文档存在
@@ -69,6 +142,10 @@ export const loginWithGoogle = async () => {
 };
 
 export const sendPasswordReset = async (email) => {
+  if (!isFirebaseAvailable) {
+    return { error: new Error('Firebase服务不可用') };
+  }
+  
   try {
     await sendPasswordResetEmail(auth, email);
     return { error: null };
@@ -78,6 +155,10 @@ export const sendPasswordReset = async (email) => {
 };
 
 export const logout = async () => {
+  if (!isFirebaseAvailable) {
+    return { error: null };
+  }
+  
   try {
     await signOut(auth);
     return { error: null };
@@ -88,6 +169,11 @@ export const logout = async () => {
 
 // 创建用户文档
 export const createUserDocument = async (uid, userData) => {
+  if (!isFirebaseAvailable) {
+    return null;
+  }
+  
+  try {
   const userRef = doc(db, "users", uid);
   const docSnap = await getDoc(userRef);
   
@@ -101,10 +187,18 @@ export const createUserDocument = async (uid, userData) => {
   }
   
   return userRef;
+  } catch (error) {
+    console.error("创建用户文档失败:", error);
+    return null;
+  }
 };
 
 // 验证用户是否登录
 export const getCurrentUser = () => {
+  if (!isFirebaseAvailable) {
+    return Promise.resolve(null);
+  }
+  
   return new Promise((resolve, reject) => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       unsubscribe();
@@ -113,4 +207,4 @@ export const getCurrentUser = () => {
   });
 };
 
-export { auth, db }; 
+export { auth, db, isFirebaseAvailable, firebaseInitError }; 

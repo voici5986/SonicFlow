@@ -17,6 +17,18 @@ export const syncStore = localforage.createInstance({
   storeName: 'syncStatus'
 });
 
+// 添加本地用户存储实例
+export const userStore = localforage.createInstance({
+  name: 'clMusicApp',
+  storeName: 'localUser'
+});
+
+// 网络状态存储实例
+export const networkStore = localforage.createInstance({
+  name: 'clMusicApp',
+  storeName: 'networkStatus'
+});
+
 /**
  * 收藏歌曲操作
  */
@@ -76,10 +88,70 @@ export async function toggleFavorite(track) {
 }
 
 /**
+ * 本地用户操作
+ */
+// 保存本地用户信息
+export async function saveLocalUser(user) {
+  try {
+    await userStore.setItem('localUser', user);
+    return true;
+  } catch (error) {
+    console.error("保存本地用户信息失败:", error);
+    return false;
+  }
+}
+
+// 获取本地用户信息
+export function getLocalUser() {
+  try {
+    return userStore.getItem('localUser');
+  } catch (error) {
+    console.error("获取本地用户信息失败:", error);
+    return null;
+  }
+}
+
+// 删除本地用户信息
+export async function removeLocalUser() {
+  try {
+    await userStore.removeItem('localUser');
+    return true;
+  } catch (error) {
+    console.error("删除本地用户信息失败:", error);
+    return false;
+  }
+}
+
+/**
+ * 网络状态操作
+ */
+// 保存网络状态
+export async function saveNetworkStatus(status) {
+  try {
+    await networkStore.setItem('status', status);
+    return true;
+  } catch (error) {
+    console.error("保存网络状态失败:", error);
+    return false;
+  }
+}
+
+// 获取网络状态
+export async function getNetworkStatus() {
+  try {
+    const status = await networkStore.getItem('status');
+    return status || { online: navigator.onLine, lastChecked: Date.now() };
+  } catch (error) {
+    console.error("获取网络状态失败:", error);
+    return { online: navigator.onLine, lastChecked: Date.now() };
+  }
+}
+
+/**
  * 播放历史操作
  */
-// 修改最大历史记录数为50条
-export const MAX_HISTORY_ITEMS = 50; // 最大历史记录数量
+// 修改最大历史记录数为100条
+export const MAX_HISTORY_ITEMS = 100; // 最大历史记录数量
 
 export async function getHistory() {
   try {

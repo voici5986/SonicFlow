@@ -3,9 +3,10 @@ import { Button, Card, Image, Spinner, Container } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
 import { getFavorites, getHistory, getSyncStatus, saveSyncStatus } from '../services/storage';
 import { FaHeart, FaHistory, FaSignOutAlt, FaSync } from 'react-icons/fa';
+import FirebaseStatus from './FirebaseStatus';
 import '../styles/UserProfile.css';
 
-const UserProfile = () => {
+const UserProfile = ({ onTabChange }) => {
   const { currentUser, signOut } = useAuth();
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [historyCount, setHistoryCount] = useState(0);
@@ -84,6 +85,13 @@ const UserProfile = () => {
       await signOut();
     } catch (error) {
       console.error('退出登录失败:', error);
+    }
+  };
+  
+  // 处理收藏和历史记录点击
+  const handleStatsCardClick = (tabId) => {
+    if (onTabChange) {
+      onTabChange(tabId);
     }
   };
   
@@ -175,7 +183,10 @@ const UserProfile = () => {
           {/* 统计卡片 */}
           <Card className="stats-card">
             <Card.Body>
-              <div className="stats-item">
+              <div 
+                className="stats-item clickable" 
+                onClick={() => handleStatsCardClick('favorites')}
+              >
                 <div className="stats-icon favorites">
                   <FaHeart />
                 </div>
@@ -185,7 +196,10 @@ const UserProfile = () => {
                 </div>
         </div>
         
-              <div className="stats-item">
+              <div 
+                className="stats-item clickable" 
+                onClick={() => handleStatsCardClick('history')}
+              >
                 <div className="stats-icon history">
                   <FaHistory />
                 </div>
@@ -200,7 +214,13 @@ const UserProfile = () => {
           {/* 同步卡片 */}
           <Card className="sync-card">
             <Card.Body>
+              {/* Firebase状态指示器 */}
+              <FirebaseStatus />
+              
+              {/* 同步状态 */}
               {renderSyncStatus()}
+              
+              {/* 同步按钮 */}
           <Button 
                 variant="primary" 
             onClick={handleManualSync}

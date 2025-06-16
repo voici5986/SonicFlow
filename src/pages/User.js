@@ -4,12 +4,12 @@ import UserProfile from '../components/UserProfile';
 import Auth from './Auth';
 import { useAuth } from '../contexts/AuthContext';
 
-const User = () => {
+const User = ({ onTabChange }) => {
   const { currentUser } = useAuth();
   
   return (
     <Container className="my-4">
-      {currentUser ? <UserProfile /> : <Auth />}
+      {currentUser ? <UserProfile onTabChange={onTabChange} /> : <Auth />}
     </Container>
   );
 };

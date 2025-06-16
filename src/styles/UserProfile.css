@@ -167,6 +167,21 @@
   margin: 0;
 }
 
+/* 添加可点击样式 */
+.stats-item.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.stats-item.clickable:hover {
+  transform: translateY(-3px);
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.stats-item.clickable:active {
+  transform: translateY(-1px);
+}
+
 /* 同步卡片 */
 .sync-card {
   border: none !important;

@@ -1,0 +1,133 @@
+/* 网络状态指示器样式 */
+.network-status {
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100%);
+    background-color: white;
+    border-radius: 20px;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+    z-index: 1050;
+    font-size: 14px;
+    font-weight: 500;
+    max-width: 90%;
+}
+
+.network-status.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+.network-status .indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.network-status.online {
+    border-left: 3px solid #28a745;
+}
+
+.network-status.offline {
+    border-left: 3px solid #dc3545;
+}
+
+.network-status.online .indicator {
+    background-color: #28a745;
+}
+
+.network-status.offline .indicator {
+    background-color: #dc3545;
+}
+
+.network-status .retry-btn {
+    margin-left: 10px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.network-status .retry-btn:hover {
+    background-color: #e9ecef;
+}
+
+.network-status .retry-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* 导航栏内的网络状态指示器样式 */
+.network-status-navbar {
+    display: flex;
+    align-items: center;
+    font-size: 0.8rem;
+    padding: 4px 8px;
+    border-radius: 12px;
+    margin-right: 10px;
+    font-weight: 500;
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.network-status-navbar .indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+
+.network-status-navbar.online .indicator {
+    background-color: #28a745;
+}
+
+.network-status-navbar.offline .indicator {
+    background-color: #dc3545;
+}
+
+.network-status-navbar.online {
+    color: #28a745;
+}
+
+.network-status-navbar.offline {
+    color: #dc3545;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7);
+    }
+    
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 5px rgba(244, 67, 54, 0);
+    }
+    
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(244, 67, 54, 0);
+    }
+}
+
+.network-status.offline .indicator {
+    animation: pulse 2s infinite;
+}
+
+@media (max-width: 576px) {
+    .network-status {
+        bottom: 80px;
+        right: 15px;
+        padding: 8px 15px;
+        font-size: 0.8rem;
+    }
+} 

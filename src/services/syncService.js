@@ -1,6 +1,34 @@
-import { db } from './firebase';
+import { db, isFirebaseAvailable, checkFirebaseAvailability } from './firebase';
 import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
-import { getFavorites, saveFavorites, getHistory, saveHistory, MAX_HISTORY_ITEMS } from './storage';
+import { getFavorites, saveFavorites, getHistory, saveHistory, MAX_HISTORY_ITEMS, getNetworkStatus } from './storage';
+
+/**
+ * 检查是否可以执行同步操作
+ * @returns {Promise<{canSync: boolean, error: string|null}>}
+ */
+const checkSyncAvailability = async () => {
+  // 检查Firebase是否可用
+  if (!isFirebaseAvailable) {
+    console.warn("同步检测: Firebase初始化不可用");
+    return { canSync: false, error: '当前处于离线模式，无法同步数据' };
+  }
+  
+  // 进一步检查Firebase连接
+  const firebaseAvailable = await checkFirebaseAvailability();
+  if (!firebaseAvailable) {
+    console.warn("同步检测: Firebase连接测试失败");
+    return { canSync: false, error: 'Firebase服务连接失败，无法同步数据' };
+  }
+  
+  // 检查网络连接状态
+  const networkStatus = await getNetworkStatus();
+  if (!networkStatus.online) {
+    console.warn("同步检测: 网络连接不可用");
+    return { canSync: false, error: '网络连接已断开，无法同步数据' };
+  }
+  
+  return { canSync: true, error: null };
+};
 
 /**
  * 通用同步函数，根据不同参数执行不同的同步行为
@@ -11,7 +39,19 @@ import { getFavorites, saveFavorites, getHistory, saveHistory, MAX_HISTORY_ITEMS
  */
 const syncData = async (uid, dataType, direction) => {
   try {
-    if (!uid) return { success: false, error: '用户未登录' };
+    console.log(`开始${dataType}同步，方向: ${direction}`);
+    
+    // 检查同步可用性
+    const { canSync, error } = await checkSyncAvailability();
+    if (!canSync) {
+      console.warn(`${dataType}同步失败: ${error}`);
+      return { success: false, error };
+    }
+    
+    if (!uid) {
+      console.warn(`${dataType}同步失败: 用户未登录`);
+      return { success: false, error: '用户未登录' };
+    }
 
     // 根据数据类型确定使用的函数和字段名
     const isHistory = dataType === 'history';
@@ -22,6 +62,7 @@ const syncData = async (uid, dataType, direction) => {
 
     // 获取本地数据
     const localData = await getLocalData();
+    console.log(`已获取本地${errorMsg}数据: ${localData.length}条`);
     
     // 获取用户文档引用
     const userRef = doc(db, "users", uid);
@@ -33,41 +74,51 @@ const syncData = async (uid, dataType, direction) => {
     
     if (!userSnap.exists()) {
       // 用户文档不存在，创建新文档
+        console.log(`创建新的用户文档: ${uid}`);
         await setDoc(userRef, { [fieldName]: localData });
     } else {
       // 更新现有文档
+        console.log(`更新现有用户文档: ${uid}`);
         await updateDoc(userRef, { [fieldName]: localData });
       }
       
+      console.log(`${errorMsg}上传到云端成功`);
       return { success: true };
       
     } else if (direction === 'fromCloud') {
       // 从云端下载
+      console.log(`尝试从云端下载${errorMsg}`);
       const userDoc = await getDoc(userRef);
       
       if (!userDoc.exists() || !userDoc.data()[fieldName]) {
+        console.warn(`云端${errorMsg}不存在`);
         return { success: false, error: `云端${errorMsg}不存在` };
       }
       
       const cloudData = userDoc.data()[fieldName];
+      console.log(`已获取云端${errorMsg}数据: ${cloudData.length}条`);
       
       // 保存到本地
       await saveLocalData(cloudData);
+      console.log(`${errorMsg}从云端下载成功`);
       
       return { success: true, data: cloudData };
       
     } else if (direction === 'merge') {
       // 双向合并
       // 获取云端数据
+      console.log(`尝试合并${errorMsg}数据`);
       const userDoc = await getDoc(userRef);
       
       if (!userDoc.exists()) {
         // 如果云端没有数据，直接上传本地数据
+        console.log(`云端没有${errorMsg}数据，上传本地数据`);
         await setDoc(userRef, { [fieldName]: localData });
         return { success: true, data: localData };
       }
       
       const cloudData = userDoc.data()[fieldName] || [];
+      console.log(`已获取云端${errorMsg}数据: ${cloudData.length}条`);
       
       // 根据数据类型执行不同的合并策略
       let mergedData;
@@ -105,15 +156,20 @@ const syncData = async (uid, dataType, direction) => {
         });
       }
       
+      console.log(`${errorMsg}合并完成，共${mergedData.length}条`);
+      
       // 保存到本地
       await saveLocalData(mergedData);
+      console.log(`合并后的${errorMsg}已保存到本地`);
       
       // 上传到云端
       await updateDoc(userRef, { [fieldName]: mergedData });
+      console.log(`合并后的${errorMsg}已上传到云端`);
       
       return { success: true, data: mergedData };
     }
     
+    console.warn(`无效的同步方向: ${direction}`);
     return { success: false, error: '无效的同步方向' };
   } catch (error) {
     console.error(`同步${dataType}失败:`, error);
@@ -154,16 +210,33 @@ export const mergeHistory = async (uid) => {
 // 同步器，处理用户登录后的初始化同步
 export const initialSync = async (uid) => {
   try {
-    if (!uid) return { success: false };
+    console.log("开始初始同步操作");
+    
+    // 检查同步可用性
+    const { canSync, error } = await checkSyncAvailability();
+    if (!canSync) {
+      console.warn(`初始同步失败: ${error}`);
+      return { success: false, error };
+    }
+    
+    if (!uid) {
+      console.warn("初始同步失败: 用户未登录");
+      return { success: false, error: '用户未登录' };
+    }
     
     // 合并收藏
+    console.log("开始合并收藏数据");
     const favResult = await mergeFavorites(uid);
     
     // 合并历史记录
+    console.log("开始合并历史记录数据");
     const histResult = await mergeHistory(uid);
     
+    const success = favResult.success && histResult.success;
+    console.log(`初始同步${success ? '成功' : '失败'}`);
+    
     return { 
-      success: favResult.success && histResult.success,
+      success,
       favorites: favResult.data,
       history: histResult.data
     };
