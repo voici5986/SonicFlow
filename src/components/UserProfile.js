@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Button, Card, Image, Spinner, Container } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
 import { getFavorites, getHistory, getSyncStatus, saveSyncStatus } from '../services/storage';
-import { FaHeart, FaHistory, FaSignOutAlt, FaSync } from 'react-icons/fa';
+import { FaHeart, FaHistory, FaSignOutAlt, FaSync, FaGlobe, FaGlobeAsia, FaExclamationTriangle, FaWifi } from 'react-icons/fa';
 import FirebaseStatus from './FirebaseStatus';
+import { useRegion } from '../contexts/RegionContext';
 import '../styles/UserProfile.css';
 
 const UserProfile = ({ onTabChange }) => {
   const { currentUser, signOut } = useAuth();
+  const { appMode, refreshRegionDetection, APP_MODES, isLoading } = useRegion();
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [historyCount, setHistoryCount] = useState(0);
   const [syncStatus, setSyncStatus] = useState({ 
@@ -16,6 +18,34 @@ const UserProfile = ({ onTabChange }) => {
     message: '', 
     timestamp: null 
   });
+  
+  // 获取模式图标
+  const getModeIcon = () => {
+    switch (appMode) {
+      case APP_MODES.FULL:
+        return <FaGlobe className="mode-icon full" />;
+      case APP_MODES.CHINA:
+        return <FaGlobeAsia className="mode-icon china" />;
+      case APP_MODES.OFFLINE:
+        return <FaExclamationTriangle className="mode-icon offline" />;
+      default:
+        return <FaWifi className="mode-icon loading pulse" />;
+    }
+  };
+  
+  // 获取模式名称
+  const getModeName = () => {
+    switch (appMode) {
+      case APP_MODES.FULL:
+        return '完整模式';
+      case APP_MODES.CHINA:
+        return '中国模式';
+      case APP_MODES.OFFLINE:
+        return '离线模式';
+      default:
+        return '加载中...';
+    }
+  };
   
   // 加载同步状态
   const loadSyncStatus = async () => {
@@ -150,37 +180,37 @@ const UserProfile = ({ onTabChange }) => {
     <div className="user-profile-container">
       <Container>
         <div className="user-dashboard">
-          {/* 用户资料卡片 */}
+          {/* 1. 用户资料卡片 */}
           <Card className="profile-card">
-      <Card.Body>
+            <Card.Body>
               <div className="avatar-container">
-          {currentUser.photoURL ? (
-            <Image 
-              src={currentUser.photoURL} 
-              roundedCircle 
+                {currentUser.photoURL ? (
+                  <Image 
+                    src={currentUser.photoURL} 
+                    roundedCircle 
                     className="user-avatar"
-            />
-          ) : (
+                  />
+                ) : (
                   <div className="avatar-initial rounded-circle d-flex justify-content-center align-items-center">
-              {userInitial}
-            </div>
-          )}
-          </div>
+                    {userInitial}
+                  </div>
+                )}
+              </div>
               <div className="user-info">
                 <h3 className="user-name">{currentUser.displayName || '用户'}</h3>
                 <p className="user-email">{currentUser.email}</p>
-          <Button 
-            variant="outline-danger" 
+                <Button 
+                  variant="outline-danger" 
                   className="logout-button w-100 mt-2"
-            onClick={handleLogout}
-          >
+                  onClick={handleLogout}
+                >
                   <FaSignOutAlt className="me-2" /> 退出登录
-          </Button>
-        </div>
+                </Button>
+              </div>
             </Card.Body>
           </Card>
           
-          {/* 统计卡片 */}
+          {/* 2. 统计卡片 */}
           <Card className="stats-card">
             <Card.Body>
               <div 
@@ -194,8 +224,8 @@ const UserProfile = ({ onTabChange }) => {
                   <div className="stats-value">{favoritesCount}</div>
                   <p className="stats-label">收藏的歌曲</p>
                 </div>
-        </div>
-        
+              </div>
+              
               <div 
                 className="stats-item clickable" 
                 onClick={() => handleStatsCardClick('history')}
@@ -211,7 +241,7 @@ const UserProfile = ({ onTabChange }) => {
             </Card.Body>
           </Card>
           
-          {/* 同步卡片 */}
+          {/* 3. 同步卡片 */}
           <Card className="sync-card">
             <Card.Body>
               {/* Firebase状态指示器 */}
@@ -221,18 +251,37 @@ const UserProfile = ({ onTabChange }) => {
               {renderSyncStatus()}
               
               {/* 同步按钮 */}
-          <Button 
+              <Button 
                 variant="primary" 
-            onClick={handleManualSync}
-            disabled={syncStatus.loading}
+                onClick={handleManualSync}
+                disabled={syncStatus.loading}
                 className="sync-button w-100"
-          >
-            {syncStatus.loading ? (
+              >
+                {syncStatus.loading ? (
                   <Spinner animation="border" size="sm" className="me-2" />
-            ) : (
+                ) : (
                   <><FaSync className="me-2" /> 同步数据</>
-            )}
-          </Button>
+                )}
+              </Button>
+            </Card.Body>
+          </Card>
+          
+          {/* 4. 应用模式卡片 - 简化版 */}
+          <Card className="app-mode-card">
+            <Card.Body className="d-flex flex-column align-items-center">
+              <div className="app-mode-content">
+                {getModeIcon()}
+                <h3 className="app-mode-name">{getModeName()}</h3>
+                <p className="app-mode-description">所有功能可用</p>
+                <Button 
+                  variant="primary" 
+                  className="refresh-button"
+                  onClick={refreshRegionDetection}
+                  disabled={isLoading}
+                >
+                  {isLoading ? '检测中...' : '刷新检测'}
+                </Button>
+              </div>
             </Card.Body>
           </Card>
         </div>

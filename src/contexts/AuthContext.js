@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { 
   auth, 
   loginWithEmailAndPassword,
@@ -13,6 +13,7 @@ import {
 import { initialSync } from '../services/syncService';
 import { toast } from 'react-toastify';
 import { saveSyncStatus, getLocalUser, saveLocalUser, getNetworkStatus } from '../services/storage';
+import { APP_MODES } from '../services/regionDetection';
 
 // 创建认证上下文
 export const AuthContext = createContext();
@@ -26,10 +27,60 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [syncComplete, setSyncComplete] = useState(false);
   const [isOfflineMode, setIsOfflineMode] = useState(!isFirebaseAvailable);
+  
+  // 添加对当前应用模式的引用
+  const appModeRef = useRef(null);
+  
+  // 检测应用模式变化
+  useEffect(() => {
+    const handleAppModeChange = (event) => {
+      if (event.detail && event.detail.mode) {
+        appModeRef.current = event.detail.mode;
+        
+        // 如果切换到中国模式或离线模式，设置为离线模式
+        if (event.detail.mode === APP_MODES.CHINA || event.detail.mode === APP_MODES.OFFLINE) {
+          setIsOfflineMode(true);
+          
+          // 如果没有当前用户，尝试加载本地用户
+          if (!currentUser) {
+            const localUser = getLocalUser();
+            if (localUser) {
+              setCurrentUser(localUser);
+            }
+          }
+        } 
+        // 如果切换到完整模式，尝试恢复Firebase连接
+        else if (event.detail.mode === APP_MODES.FULL) {
+          checkFirebaseAvailability().then(available => {
+            setIsOfflineMode(!available);
+          });
+        }
+      }
+    };
+    
+    // 监听应用模式变化事件
+    window.addEventListener('appModeChange', handleAppModeChange);
+    
+    return () => {
+      window.removeEventListener('appModeChange', handleAppModeChange);
+    };
+  }, [currentUser]);
 
   // 检测Firebase可用性
   useEffect(() => {
     const checkFirebase = async () => {
+      // 如果当前是中国模式或离线模式，直接设为离线模式
+      if (appModeRef.current === APP_MODES.CHINA || appModeRef.current === APP_MODES.OFFLINE) {
+        setIsOfflineMode(true);
+        
+        // 尝试从本地获取用户数据
+        const localUser = getLocalUser();
+        if (localUser) {
+          setCurrentUser(localUser);
+        }
+        return;
+      }
+      
       const available = await checkFirebaseAvailability();
       setIsOfflineMode(!available);
       
@@ -38,7 +89,6 @@ export const AuthProvider = ({ children }) => {
         const localUser = getLocalUser();
         if (localUser) {
           setCurrentUser(localUser);
-          toast.info('已切换到离线模式，使用本地账户');
         }
       }
     };
@@ -48,8 +98,8 @@ export const AuthProvider = ({ children }) => {
 
   // 注册
   const register = async (email, password, displayName) => {
-    // 如果处于离线模式，创建本地用户
-    if (isOfflineMode) {
+    // 如果处于离线模式或中国模式，创建本地用户
+    if (isOfflineMode || appModeRef.current === APP_MODES.CHINA) {
       try {
         // 创建简单的本地用户对象
         const localUser = {
@@ -63,10 +113,10 @@ export const AuthProvider = ({ children }) => {
         // 保存本地用户
         saveLocalUser(localUser);
         setCurrentUser(localUser);
-        toast.success('离线模式：本地账户创建成功');
+        toast.success('本地账户创建成功');
         return { success: true, user: localUser };
       } catch (err) {
-        toast.error('离线模式：创建本地账户失败');
+        toast.error('创建本地账户失败');
         return { success: false, error: err };
       }
     }
@@ -96,8 +146,8 @@ export const AuthProvider = ({ children }) => {
 
   // 邮箱密码登录
   const login = async (email, password) => {
-    // 如果处于离线模式，尝试获取本地用户
-    if (isOfflineMode) {
+    // 如果处于离线模式或中国模式，尝试获取本地用户
+    if (isOfflineMode || appModeRef.current === APP_MODES.CHINA) {
       try {
         const localUser = getLocalUser();
         
@@ -105,14 +155,14 @@ export const AuthProvider = ({ children }) => {
         if (localUser && localUser.email === email) {
           // 简单模拟密码检查，实际生产中应使用更安全的方式
           setCurrentUser(localUser);
-          toast.success('离线模式：本地账户登录成功');
+          toast.success('本地账户登录成功');
           return { success: true, user: localUser };
         } else {
-          toast.error('离线模式：邮箱或密码错误');
-          return { success: false, error: new Error('离线模式：邮箱或密码错误') };
+          toast.error('邮箱或密码错误');
+          return { success: false, error: new Error('邮箱或密码错误') };
         }
       } catch (err) {
-        toast.error('离线模式：登录失败');
+        toast.error('登录失败');
         return { success: false, error: err };
       }
     }
@@ -140,9 +190,9 @@ export const AuthProvider = ({ children }) => {
 
   // Google登录
   const signInWithGoogle = async () => {
-    if (isOfflineMode) {
-      toast.error('离线模式：Google登录不可用');
-      return { success: false, error: new Error('离线模式：Google登录不可用') };
+    if (isOfflineMode || appModeRef.current === APP_MODES.CHINA) {
+      toast.error('当前模式下Google登录不可用');
+      return { success: false, error: new Error('当前模式下Google登录不可用') };
     }
     
     try {
@@ -181,9 +231,9 @@ export const AuthProvider = ({ children }) => {
 
   // 重置密码
   const resetPassword = async (email) => {
-    if (isOfflineMode) {
-      toast.error('离线模式：重置密码功能不可用');
-      return { success: false, error: new Error('离线模式：重置密码功能不可用') };
+    if (isOfflineMode || appModeRef.current === APP_MODES.CHINA) {
+      toast.error('当前模式下重置密码功能不可用');
+      return { success: false, error: new Error('当前模式下重置密码功能不可用') };
     }
     
     try {
@@ -203,8 +253,8 @@ export const AuthProvider = ({ children }) => {
 
   // 监听用户登录状态
   useEffect(() => {
-    // 离线模式下不需要监听Firebase身份验证状态
-    if (isOfflineMode) {
+    // 离线模式或中国模式下不需要监听Firebase身份验证状态
+    if (isOfflineMode || appModeRef.current === APP_MODES.CHINA) {
       setLoading(false);
       return () => {};
     }
@@ -229,6 +279,19 @@ export const AuthProvider = ({ children }) => {
               loading: false,
               success: false,
               message: '网络离线，同步已跳过',
+              timestamp: new Date()
+            }, user.uid);
+            return;
+          }
+          
+          // 检查应用模式
+          if (appModeRef.current === APP_MODES.CHINA || appModeRef.current === APP_MODES.OFFLINE) {
+            console.warn('当前模式不支持同步，跳过登录同步');
+            setSyncComplete(true);
+            await saveSyncStatus({
+              loading: false,
+              success: false,
+              message: '当前模式不支持同步，同步已跳过',
               timestamp: new Date()
             }, user.uid);
             return;
@@ -265,71 +328,60 @@ export const AuthProvider = ({ children }) => {
           // 使用Promise.race确保同步不会永久挂起
           const result = await Promise.race([syncPromise, timeoutPromise])
             .catch(error => {
-              console.error('同步超时或出错:', error);
-              return { success: false, error: error.message || '同步超时' };
+              console.error('登录同步失败:', error);
+              return { success: false, error: error.message };
             });
           
-          // 根据结果更新同步状态
-          if (result && result.success) {
-            await saveSyncStatus({
-              loading: false,
-              success: true,
-              message: '登录同步成功',
-              timestamp: new Date()
-            }, user.uid);
           setSyncComplete(true);
+          
+          // 更新同步状态
+          await saveSyncStatus({
+            loading: false,
+            success: result.success,
+            message: result.success ? '同步完成' : `同步失败: ${result.error}`,
+            timestamp: new Date()
+          }, user.uid);
+          
+          if (result.success) {
+            console.log('登录同步成功');
           } else {
-            await saveSyncStatus({
-              loading: false,
-              success: false,
-              message: `登录同步失败: ${result?.error || '未知错误'}`,
-              timestamp: new Date()
-            }, user.uid);
-            toast.error('数据同步失败');
-            setSyncComplete(true);
+            console.warn('登录同步失败:', result.error);
           }
         } catch (error) {
-          console.error('数据同步失败', error);
-          
-          // 确保一定会更新同步错误状态
-          try {
-            await saveSyncStatus({
-              loading: false,
-              success: false,
-              message: `同步错误: ${error.message || '未知错误'}`,
-              timestamp: new Date()
-            }, user.uid);
-          } catch (e) {
-            console.error('更新同步状态失败', e);
-          }
-          
-          toast.error('数据同步失败');
-        } finally {
-          // 确保设置同步完成状态，即使发生错误
+          console.error('同步过程中发生错误:', error);
           setSyncComplete(true);
+          
+          // 更新同步状态
+          await saveSyncStatus({
+            loading: false,
+            success: false,
+            message: `同步错误: ${error.message}`,
+            timestamp: new Date()
+          }, user.uid);
         }
       }
     });
     
-    return unsubscribe;
+    return () => unsubscribe();
   }, [isOfflineMode]);
 
-  // 导出认证上下文值
+  // 上下文值
   const value = {
     currentUser,
+    isOfflineMode,
     loading,
     syncComplete,
-    isOfflineMode,
-    register,
     login,
+    register,
     signInWithGoogle,
     signOut,
-    resetPassword
+    resetPassword,
+    firebaseInitError
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }; 

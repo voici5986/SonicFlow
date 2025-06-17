@@ -28,6 +28,95 @@
   transform: translateY(-5px);
 }
 
+/* 应用模式卡片 */
+.app-mode-card {
+  border: none !important;
+  border-radius: var(--border-radius-lg) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: var(--shadow-md) !important;
+  transition: var(--card-transition) !important;
+  overflow: hidden;
+  height: 100%;
+}
+
+.app-mode-card:hover {
+  box-shadow: var(--card-hover-shadow) !important;
+  transform: translateY(-5px);
+}
+
+.app-mode-card .card-body {
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.app-mode-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.app-mode-card .mode-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: white;
+}
+
+.app-mode-card .mode-icon.full {
+  background: linear-gradient(45deg, #28a745, #20c997);
+}
+
+.app-mode-card .mode-icon.china {
+  background: linear-gradient(45deg, #ffc107, #fd7e14);
+}
+
+.app-mode-card .mode-icon.offline {
+  background: linear-gradient(45deg, #dc3545, #ff6b6b);
+}
+
+.app-mode-card .mode-icon.loading {
+  background: linear-gradient(45deg, #6c757d, #868e96);
+}
+
+.app-mode-card .mode-icon.loading.pulse {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.app-mode-name {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.app-mode-description {
+  margin-bottom: 1rem;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.refresh-button {
+  min-width: 120px;
+}
+
 /* 用户头像容器 */
 .avatar-container {
   position: relative;
@@ -99,7 +188,6 @@
   box-shadow: var(--shadow-md) !important;
   transition: var(--card-transition) !important;
   background-color: white;
-  height: 100%;
 }
 
 .stats-card:hover {
@@ -111,12 +199,17 @@
   padding: 1rem;
 }
 
+/* 优化统计卡片布局 */
+.stats-card-body {
+  padding: 0.75rem !important;
+}
+
 .stats-item {
   display: flex;
   align-items: center;
-  padding: 0.75rem;
+  padding: 0.5rem;
   border-radius: var(--border-radius-md);
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
   transition: all 0.3s ease;
   background-color: rgba(0, 0, 0, 0.02);
 }
@@ -294,17 +387,18 @@
 /* 响应式调整 */
 @media (max-width: 992px) {
   .user-dashboard {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: 1fr 1fr;
   }
 }
 
 @media (max-width: 768px) {
   .user-dashboard {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
+    padding: 0 0.5rem;
   }
   
   .profile-card {
-    grid-column: span 2;
+    margin-bottom: 1rem;
   }
   
   .user-avatar, .avatar-initial {
@@ -314,9 +408,9 @@
   }
   
   .stats-icon {
-    width: 36px;
-    height: 36px;
-    font-size: 1.1rem;
+    width: 35px;
+    height: 35px;
+    font-size: 1rem;
   }
   
   .stats-value {
@@ -330,6 +424,61 @@
   }
   
   .profile-card {
-    grid-column: span 1;
+    margin-bottom: 1rem;
   }
+}
+
+/* 游客用户页面样式 */
+.user-dashboard-guest {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* 等高度行 */
+.equal-height-row {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.equal-height-row > [class*='col-'] {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 登录表单容器 */
+.login-form-container,
+.register-form-container {
+  background-color: white;
+  border-radius: var(--border-radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-md);
+  transition: var(--card-transition);
+  margin-bottom: 0;
+}
+
+.login-form-container h3,
+.register-form-container h3 {
+  color: var(--color-primary);
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+}
+
+/* 应用模式区域样式 */
+.region-status-wrapper {
+  background-color: white;
+  border-radius: var(--border-radius-lg);
+  padding: 0.5rem;
+  box-shadow: var(--shadow-md);
+  transition: var(--card-transition);
+}
+
+.region-status-wrapper:hover {
+  box-shadow: var(--card-hover-shadow);
+  transform: translateY(-5px);
+}
+
+.region-note {
+  padding: 0 0.5rem 0.25rem;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
 } 

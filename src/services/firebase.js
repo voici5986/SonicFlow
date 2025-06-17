@@ -31,10 +31,12 @@ let firebaseInitError = null;
 // 初始化 Firebase 以及错误处理
 let app, auth, db, googleProvider;
 try {
+  console.log("正在初始化Firebase...");
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
   db = getFirestore(app);
   googleProvider = new GoogleAuthProvider();
+  console.log("Firebase初始化成功");
 } catch (error) {
   console.error("Firebase初始化失败:", error);
   firebaseInitError = error;
@@ -61,29 +63,59 @@ try {
  * @returns {Promise<boolean>} Firebase服务是否可用
  */
 export const checkFirebaseAvailability = async () => {
+  console.log("开始检查Firebase可用性...");
+  
   // 如果初始化就失败了，直接返回false
-  if (firebaseInitError) return false;
+  if (firebaseInitError) {
+    console.log("Firebase初始化已失败，不可用");
+    return false;
+  }
+  
+  // 检查网络连接
+  if (!navigator.onLine) {
+    console.log("网络离线，Firebase不可用");
+    return false;
+  }
   
   try {
+    console.log("尝试连接Firebase服务...");
+    
+    // 检查环境变量是否配置
+    if (!process.env.REACT_APP_FIREBASE_API_KEY || !process.env.REACT_APP_FIREBASE_PROJECT_ID) {
+      console.warn("Firebase配置不完整，可能导致连接失败");
+    }
+    
     // 尝试轻量级操作以验证连接
     const timeout = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('连接超时')), 5000)
+      setTimeout(() => reject(new Error('Firebase连接超时')), 5000)
     );
     
     await Promise.race([
       timeout,
-      new Promise(resolve => {
-        // 只是测试连接，不需要实际监听用户状态变化
-        const unsubscribe = auth.onAuthStateChanged(() => {
-          unsubscribe();
-          resolve();
-        }, (error) => {
-          console.error("Firebase连接检测错误:", error);
-          resolve(); // 即使有错误也resolve，让外层catch处理
-        });
+      new Promise((resolve, reject) => {
+        try {
+          // 测试auth服务连接
+          const unsubscribe = auth.onAuthStateChanged(
+            (user) => {
+              console.log("Firebase Auth连接成功");
+              unsubscribe();
+              resolve(true);
+            }, 
+            (error) => {
+              console.error("Firebase Auth连接失败:", error);
+              unsubscribe();
+              reject(error);
+            }
+          );
+        } catch (error) {
+          console.error("Firebase Auth测试过程中出错:", error);
+          reject(error);
+        }
       })
     ]);
     
+    console.log("Firebase服务可用");
+    isFirebaseAvailable = true;
     return true;
   } catch (error) {
     console.warn("Firebase连接测试失败:", error);

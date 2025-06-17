@@ -12,13 +12,13 @@ import ProgressBar from './components/ProgressBar';
 import Favorites from './pages/Favorites';
 import History from './pages/History';
 import User from './pages/User';
-import AuthModal from './components/AuthModal';
 import DeviceDebugger from './components/DeviceDebugger';
 import OrientationPrompt from './components/OrientationPrompt';
 import InstallPWA from './components/InstallPWA';
 import UpdateNotification from './components/UpdateNotification';
 import { useAuth } from './contexts/AuthContext';
 import { useDevice } from './contexts/DeviceContext';
+import { RegionProvider } from './contexts/RegionContext';
 import { addToHistory, getNetworkStatus, saveNetworkStatus } from './services/storage';
 import { lockToPortrait } from './utils/orientationManager';
 // 导入导航样式修复
@@ -52,7 +52,6 @@ const API_BASE = process.env.REACT_APP_API_BASE || '/api';
 const App = () => {
   // 新增当前活动标签页状态
   const [activeTab, setActiveTab] = useState('home');
-  const [showAuthModal, setShowAuthModal] = useState(false);
   
   // 定义handleTabChange作为setActiveTab的别名
   const handleTabChange = setActiveTab;
@@ -259,14 +258,6 @@ const App = () => {
   ];
 
   const qualities = [128, 192, 320, 740, 999];
-
-  // 处理认证窗口
-  const handleAuthModalClose = () => setShowAuthModal(false);
-  const handleAuthModalShow = () => setShowAuthModal(true);
-  const handleAuthSuccess = () => {
-    toast.success('认证成功!');
-    handleAuthModalClose();
-  };
 
   const parseLyric = (text) => {
     const lines = text.split('\n');
@@ -792,6 +783,7 @@ useEffect(() => {
 }, [currentLyricIndex, lyricExpanded]);
 
   // 渲染加载中状态
+  // eslint-disable-next-line no-unused-vars
   const renderLoader = () => {
     return (
       <div className="text-center my-5">
@@ -921,39 +913,20 @@ useEffect(() => {
     );
   };
 
-  // 渲染内容选择
+  // 修改renderContent函数，添加设置页面
   const renderContent = () => {
-    return (
-      <div className="main-content">
-        <Container fluid className="px-0">
-          <div>
-            {loading ? (
-              renderLoader()
-            ) : activeTab === 'home' ? (
-              renderHomePage()
-            ) : activeTab === 'favorites' ? (
-              <Favorites 
-                onPlay={handlePlay} 
-                currentTrack={currentTrack}
-                isPlaying={isPlaying}
-                onDownload={handleDownload}
-              />
-            ) : activeTab === 'history' ? (
-              <History 
-                onPlay={handlePlay} 
-                currentTrack={currentTrack}
-                isPlaying={isPlaying}
-                onDownload={handleDownload}
-              />
-            ) : activeTab === 'user' ? (
-              <User onTabChange={handleTabChange} />
-            ) : (
-              renderHomePage()
-            )}
-          </div>
-        </Container>
-      </div>
-    );
+    switch (activeTab) {
+      case 'home':
+        return renderHomePage();
+      case 'favorites':
+        return <Favorites onPlay={handlePlay} />;
+      case 'history':
+        return <History onPlay={handlePlay} />;
+      case 'user':
+        return <User onTabChange={handleTabChange} />;
+      default:
+        return renderHomePage();
+    }
   };
 
   // 在App组件中添加loadFavorites函数
@@ -1220,6 +1193,7 @@ useEffect(() => {
   const deviceInfo = useDevice();
   
   // Service Worker注册对象
+  // eslint-disable-next-line no-unused-vars
   const [swRegistration, setSwRegistration] = useState(null);
   
   // 获取Service Worker注册对象
@@ -1246,43 +1220,31 @@ useEffect(() => {
   }, [deviceInfo.isMobile, deviceInfo.isTablet]);
 
   return (
-    <div className="App">
-      <Navigation 
-        activeTab={activeTab} 
-        onTabChange={setActiveTab}
-        onAuthClick={handleAuthModalShow}
-      />
-      
-      {renderContent()}
-      
-      {/* 只有当曾经播放过歌曲时才显示播放器 */}
-      {currentTrack && renderAudioPlayer()}
-      
-      <AuthModal 
-        show={showAuthModal} 
-        handleClose={handleAuthModalClose} 
-        onAuthSuccess={handleAuthSuccess}
-      />
-      
-      {/* 设备调试信息 - 已关闭显示，但后台检测仍在运行 */}
-      <DeviceDebugger show={false} />
-      
-      {/* 横屏提示组件 */}
-      <OrientationPrompt />
-      
-      {/* PWA安装提示 */}
-      <InstallPWA />
-      
-      {/* 应用更新通知 */}
-      <UpdateNotification registration={swRegistration} />
-      
-      {/* 离线模式提示 */}
-      {isOfflineMode && (
-        <div style={offlineBannerStyle}>
-          您正在使用离线模式，部分功能将不可用
-        </div>
-      )}
-    </div>
+    <RegionProvider>
+      <div className="app-container">
+        <OrientationPrompt />
+        <Navigation 
+          activeTab={activeTab} 
+          onTabChange={handleTabChange}
+        />
+        
+        {isOfflineMode && (
+          <div style={offlineBannerStyle}>
+            当前处于离线模式，仅可访问已缓存的内容
+          </div>
+        )}
+        
+        <Container fluid className="mt-4 pb-5">
+          {renderContent()}
+        </Container>
+        
+        {currentTrack && renderAudioPlayer()}
+        
+        <InstallPWA />
+        <UpdateNotification />
+        {process.env.NODE_ENV === 'development' && <DeviceDebugger />}
+      </div>
+    </RegionProvider>
   );
 };
 

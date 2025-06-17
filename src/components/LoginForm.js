@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Form, Button, Card, Alert, Spinner } from 'react-bootstrap';
+import { Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
 import { FaGoogle } from 'react-icons/fa';
 
@@ -68,83 +68,86 @@ const LoginForm = ({ onToggleForm, onLoginSuccess }) => {
   };
 
   return (
-    <Card className="shadow-sm border-0 mb-4">
-      <Card.Header className="bg-gradient-primary border-0 text-center">
-        <h3 className="text-white mb-0">登录账号</h3>
-      </Card.Header>
-      <Card.Body className="p-4">
-        {error && <Alert variant="danger">{error}</Alert>}
-        {resetEmailSent && <Alert variant="success">重置密码邮件已发送，请查收</Alert>}
-        
-        <Form onSubmit={handleSubmit} data-testid="login-form">
-          <Form.Group className="mb-3" controlId="formEmail">
-            <Form.Label>邮箱地址</Form.Label>
-            <Form.Control
-              type="email"
-              placeholder="请输入邮箱地址"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </Form.Group>
+    <div className="login-form-container py-3">
+      <h3 className="text-center mb-4">登录账号</h3>
+      {error && <Alert variant="danger">{error}</Alert>}
+      {resetEmailSent && <Alert variant="success">重置密码邮件已发送，请查收</Alert>}
+      
+      <Form onSubmit={handleSubmit} data-testid="login-form">
+        <Form.Group className="mb-3" controlId="formEmail">
+          <Form.Label>邮箱地址</Form.Label>
+          <Form.Control
+            type="email"
+            placeholder="请输入邮箱地址"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </Form.Group>
 
-          <Form.Group className="mb-3" controlId="formPassword">
-            <Form.Label>密码</Form.Label>
-            <Form.Control
-              type="password"
-              placeholder="请输入密码"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </Form.Group>
+        <Form.Group className="mb-3" controlId="formPassword">
+          <Form.Label>密码</Form.Label>
+          <Form.Control
+            type="password"
+            placeholder="请输入密码"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </Form.Group>
 
-          <div className="d-flex justify-content-between mb-4">
-            <Button
-              variant="link"
-              className="p-0 text-decoration-none"
-              onClick={handleForgotPassword}
-              disabled={loading}
+        <div className="d-flex justify-content-between mb-4">
+          <a
+            href="#"
+            className="text-primary"
+            onClick={(e) => {
+              e.preventDefault();
+              handleForgotPassword();
+            }}
+            style={{ cursor: 'pointer', textDecoration: 'none' }}
+          >
+            忘记密码？
+          </a>
+        </div>
+
+        <Button
+          variant="primary"
+          type="submit"
+          disabled={loading}
+          className="w-100 mb-3"
+        >
+          {loading ? <Spinner animation="border" size="sm" /> : "登录"}
+        </Button>
+
+        <div className="text-center mb-3">或</div>
+
+        <Button
+          variant="outline-danger"
+          onClick={handleGoogleLogin}
+          disabled={loading}
+          className="w-100 mb-3"
+        >
+          <FaGoogle className="me-2" /> Google登录
+        </Button>
+
+        <div className="text-center mt-3">
+          <p className="mb-0">
+            还没有账号？{" "}
+            <a
+              href="#"
+              className="text-primary"
+              onClick={(e) => {
+                e.preventDefault();
+                onToggleForm();
+              }}
+              style={{ cursor: 'pointer', textDecoration: 'none' }}
             >
-              忘记密码？
-            </Button>
-          </div>
-
-          <Button
-            variant="primary"
-            type="submit"
-            disabled={loading}
-            className="w-100 mb-3"
-          >
-            {loading ? <Spinner animation="border" size="sm" /> : "登录"}
-          </Button>
-
-          <div className="text-center mb-3">或</div>
-
-          <Button
-            variant="outline-danger"
-            onClick={handleGoogleLogin}
-            disabled={loading}
-            className="w-100 mb-3"
-          >
-            <FaGoogle className="me-2" /> Google登录
-          </Button>
-
-          <div className="text-center mt-3">
-            <p className="mb-0">
-              还没有账号？{" "}
-              <Button
-                variant="link"
-                onClick={onToggleForm}
-                className="p-0 text-decoration-none"
-              >
-                立即注册
-              </Button>
-            </p>
-          </div>
-        </Form>
-      </Card.Body>
-    </Card>
+              立即注册
+            </a>
+          </p>
+        </div>
+      </Form>
+    </div>
   );
 };
 
