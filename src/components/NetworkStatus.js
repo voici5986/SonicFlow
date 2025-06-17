@@ -1,83 +1,59 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../styles/NetworkStatus.css';
-import { saveNetworkStatus, getNetworkStatus } from '../services/storage';
+import useNetworkStatus from '../hooks/useNetworkStatus';
 
 // 网络状态指示器组件
 const NetworkStatus = ({ inNavbar = false }) => {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const { isOnline } = useNetworkStatus({
+    dispatchEvents: true, // 确保继续分发网络状态事件，供其他组件使用
+    showToasts: false // 不在这里显示提示，由App.js负责
+  });
+  
   const [showStatus, setShowStatus] = useState(true); // 默认显示
   const [fadeTimeout, setFadeTimeout] = useState(null);
-  
-  // 发送网络状态变化的自定义事件
-  const dispatchNetworkStatusChange = useCallback((online) => {
-    // 创建并分发自定义事件，带有网络状态信息
-    const event = new CustomEvent('networkStatusChange', { 
-      detail: { online, lastChecked: Date.now() } 
-    });
-    window.dispatchEvent(event);
-    console.log(`已分发网络状态变化事件: ${online ? '在线' : '离线'}`);
-  }, []);
 
-  // 初始化加载存储的网络状态
   useEffect(() => {
-    const loadNetworkStatus = async () => {
-      const status = await getNetworkStatus();
-      
-      // 只有当状态真的变化时才更新和分发事件
-      if (status.online !== isOnline) {
-        setIsOnline(status.online);
-        dispatchNetworkStatusChange(status.online);
-      }
-      
-      setShowStatus(true); // 组件挂载时显示状态
-      
-      // 设置初始显示的自动隐藏，仅当不在导航栏中时
-      if (!inNavbar && status.online) { // 只有在在线状态下才自动隐藏
-        const timeout = setTimeout(() => setShowStatus(false), 5000);
-        setFadeTimeout(timeout);
-      }
-    };
+    // 组件挂载时显示状态
+    setShowStatus(true);
     
-    loadNetworkStatus();
-    
-    // 添加在线/离线事件监听
-    const handleOnline = () => {
-      setIsOnline(true);
-      setShowStatus(true);
-      saveNetworkStatus({ online: true, lastChecked: Date.now() });
+    // 设置初始显示的自动隐藏，仅当不在导航栏中时
+    if (!inNavbar && isOnline) { // 只有在在线状态下才自动隐藏
+      const timeout = setTimeout(() => setShowStatus(false), 5000);
+      setFadeTimeout(timeout);
       
-      // 分发网络状态变化事件
-      dispatchNetworkStatusChange(true);
+      return () => {
+        if (timeout) clearTimeout(timeout);
+      };
+    }
+  }, [inNavbar, isOnline]);
+  
+  // 监听网络状态变化，更新UI
+  useEffect(() => {
+    // 当网络状态变为在线，且不在导航栏中，设置自动隐藏
+    if (isOnline && !inNavbar) {
+      setShowStatus(true); // 先显示
       
-      // 仅当不在导航栏中时设置自动隐藏
-      if (!inNavbar) {
-        if (fadeTimeout) clearTimeout(fadeTimeout);
-        const timeout = setTimeout(() => setShowStatus(false), 5000);
-        setFadeTimeout(timeout);
-      }
-    };
-    
-    const handleOffline = () => {
-      setIsOnline(false);
-      setShowStatus(true);
-      saveNetworkStatus({ online: false, lastChecked: Date.now() });
-      
-      // 分发网络状态变化事件
-      dispatchNetworkStatusChange(false);
-      
+      // 清除现有计时器
       if (fadeTimeout) clearTimeout(fadeTimeout);
-    };
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
       
-      if (fadeTimeout) clearTimeout(fadeTimeout);
-    };
-  }, [isOnline, inNavbar, fadeTimeout, dispatchNetworkStatusChange]);
+      // 设置新计时器
+      const timeout = setTimeout(() => setShowStatus(false), 5000);
+      setFadeTimeout(timeout);
+      
+      return () => {
+        if (timeout) clearTimeout(timeout);
+      };
+    } else if (!isOnline) {
+      // 离线状态始终显示
+      setShowStatus(true);
+      
+      // 清除现有计时器
+      if (fadeTimeout) {
+        clearTimeout(fadeTimeout);
+        setFadeTimeout(null);
+      }
+    }
+  }, [isOnline, inNavbar, fadeTimeout]);
 
   // 状态指示器类名
   const statusClassName = `network-status ${isOnline ? 'online' : 'offline'} ${

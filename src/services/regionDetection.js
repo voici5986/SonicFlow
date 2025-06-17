@@ -146,6 +146,7 @@ export const determineAppMode = async (isOnline = navigator.onLine) => {
         if (hasInternationalIp) {
           console.log('IP历史记录中发现国际IP，尝试检测Firebase连接');
           try {
+            // 使用与useFirebaseStatus相同的逻辑检测Firebase可用性
             const firebaseAvailable = await checkFirebaseAvailability();
             
             if (firebaseAvailable) {

@@ -4,6 +4,8 @@ import { FaPlay, FaPause, FaDownload, FaTrash, FaFileExport, FaFileImport, FaClo
 import { getFavorites, toggleFavorite, saveFavorites, MAX_FAVORITES_ITEMS } from '../services/storage';
 import { toast } from 'react-toastify';
 import axios from 'axios';
+import { downloadTrack, downloadTracks } from '../services/downloadService';
+import { searchMusic } from '../services/musicApiService';
 
 const API_BASE = process.env.REACT_APP_API_BASE || '/api';
 
@@ -22,7 +24,10 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [downloadStatus, setDownloadStatus] = useState([]);
-  const [downloadQuality, setDownloadQuality] = useState('320'); // 默认选择320kbps
+  const [downloadQuality, setDownloadQuality] = useState('999'); // 默认选择无损音质
+  // 添加单首歌曲下载状态
+  const [downloading, setDownloading] = useState(false);
+  const [currentDownloadingTrack, setCurrentDownloadingTrack] = useState(null);
 
   useEffect(() => {
     loadFavorites();
@@ -58,8 +63,32 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
     if (typeof onDownload === 'function') {
       onDownload(track);
     } else {
-      console.error('下载功能未实现');
-      toast.error('下载功能暂不可用', { icon: '⚠️' });
+      try {
+        console.log('使用内部下载逻辑');
+        
+        // 设置下载状态
+        setDownloading(true);
+        setCurrentDownloadingTrack(track);
+        
+        // 使用下载服务模块
+        await downloadTrack(
+          track, 
+          999, // 使用无损音质
+          null, // 下载开始回调
+          () => {
+            // 下载结束回调
+            setDownloading(false);
+            setCurrentDownloadingTrack(null);
+          }
+        );
+      } catch (error) {
+        console.error('下载失败:', error);
+        toast.error('下载失败，请稍后重试', {
+          icon: '❌'
+        });
+        setDownloading(false);
+        setCurrentDownloadingTrack(null);
+      }
     }
   };
 
@@ -69,15 +98,8 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
       // 辅助函数：使用指定关键词搜索歌曲
       const searchWithKeyword = async (keyword, source) => {
         try {
-          return await axios.get(`${API_BASE}`, {
-            params: {
-              types: 'search',
-              source: source,
-              name: keyword,
-              count: 15, // 增加结果数量
-              pages: 1
-            }
-          });
+          const results = await searchMusic(keyword, source, 15, 1);
+          return { data: results };
         } catch (error) {
           console.error(`搜索 "${keyword}" 在 ${source} 失败:`, error);
           return null;
@@ -455,7 +477,7 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
     
     setShowDownloadModal(true);
     setDownloadStatus(favorites.map(() => ({ status: 'pending', message: '等待下载' })));
-    setDownloadQuality('320'); // 重置为默认音质
+    setDownloadQuality('999'); // 重置为无损音质
   };
   
   // 开始批量下载过程
@@ -466,111 +488,28 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
     const actualQuality = downloadQuality;
     
     setIsDownloading(true);
-    let successCount = 0;
-    const newStatus = [...downloadStatus];
     
-    // 根据音质设置显示名称
-    const qualityName = actualQuality === '999' ? '无损音质' : '高音质';
-    
-    for (let i = 0; i < favorites.length; i++) {
-      try {
-        // 更新进度
-        setDownloadProgress(Math.floor((i / favorites.length) * 100));
+    // 使用下载服务模块批量下载
+    await downloadTracks(favorites, actualQuality, {
+      onStart: () => {
+        // 开始批量下载
+        setDownloadProgress(0);
+      },
+      onProgress: (index, progress, status) => {
+        // 更新下载进度
+        setDownloadProgress(progress);
         
-        // 更新状态为下载中
-        newStatus[i] = { status: 'downloading', message: `获取${qualityName}...` };
-        setDownloadStatus([...newStatus]);
-        
-        // 获取下载链接
-        const track = favorites[i];
-        
-        const response = await axios.get(`${API_BASE}`, {
-          params: {
-            types: 'url',
-            source: track.source,
-            id: track.id,
-            br: actualQuality
-          }
-        });
-        
-        const downloadUrl = response.data.url.replace(/\\/g, '');
-        if (!downloadUrl) {
-          throw new Error('无效的下载链接');
-        }
-        
-        // 确定文件扩展名
-        const extension = getFileExtension(downloadUrl);
-        const fileName = `${track.name} - ${track.artist}.${extension}`;
-        
-        // 显示文件大小信息（如果API返回）
-        let fileSize = '';
-        if (response.data.size) {
-          const sizeMB = (parseInt(response.data.size) / (1024 * 1024)).toFixed(2);
-          fileSize = ` (${sizeMB} MB)`;
-          newStatus[i] = { status: 'downloading', message: `下载中${fileSize}...` };
-          setDownloadStatus([...newStatus]);
-        }
-        
-        // 使用现代方法下载文件
-        try {
-          // 获取音频内容
-          newStatus[i] = { status: 'downloading', message: `准备下载${fileSize}...` };
-          setDownloadStatus([...newStatus]);
-          
-          const audioResponse = await fetch(downloadUrl);
-          const blob = await audioResponse.blob();
-          
-          // 创建下载链接
-          const blobUrl = window.URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = blobUrl;
-          link.download = fileName;
-          link.style.display = 'none';
-          
-          // 下载文件
-          document.body.appendChild(link);
-          link.click();
-          
-          // 清理
-          setTimeout(() => {
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(blobUrl);
-          }, 100);
-          
-        } catch (fetchError) {
-          console.error('Fetch下载失败，尝试备用方法:', fetchError);
-          
-          // 备用下载方法
-          const link = document.createElement('a');
-          link.href = downloadUrl;
-          link.setAttribute('download', fileName);
-          link.setAttribute('target', '_blank');
-          link.style.display = 'none';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
-        
-        // 更新成功状态
-        successCount++;
-        newStatus[i] = { status: 'success', message: `下载成功${fileSize}` };
-        
-        // 在处理之间添加延迟，避免浏览器拦截
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-      } catch (error) {
-        console.error(`下载歌曲 "${favorites[i].name}" 失败:`, error);
-        newStatus[i] = { status: 'error', message: '下载失败' };
+        // 更新单曲下载状态
+        const newStatus = [...downloadStatus];
+        newStatus[index] = status;
+        setDownloadStatus(newStatus);
+      },
+      onFinish: (successCount, totalCount) => {
+        // 下载完成
+        setDownloadProgress(100);
+        setIsDownloading(false);
       }
-      
-      // 更新下载状态
-      setDownloadStatus([...newStatus]);
-    }
-    
-    // 完成下载
-    setDownloadProgress(100);
-    setIsDownloading(false);
-    toast.success(`成功下载 ${successCount} 首${qualityName}歌曲`, { icon: '✅' });
+    });
   };
   
   // 关闭下载模态框
@@ -579,28 +518,6 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
       setShowDownloadModal(false);
       setDownloadStatus([]);
       setDownloadProgress(0);
-    }
-  };
-  
-  // 获取文件扩展名
-  const getFileExtension = (url) => {
-    try {
-      const cleanUrl = url.replace(/\\/g, '');
-      const fileName = new URL(cleanUrl).pathname
-        .split('/')
-        .pop()
-        .split(/[#?]/)[0];
-        
-      // 检查URL中的文件扩展名
-      const extensionMatch = fileName.match(/\.([a-z0-9]+)$/i);
-      if (extensionMatch) return extensionMatch[1];
-      
-      // 如果URL没有扩展名，根据音质决定
-      if (downloadQuality === '999') return 'flac';
-      return 'mp3';
-    } catch {
-      // 默认扩展名也根据音质决定
-      return downloadQuality === '999' ? 'flac' : 'mp3';
     }
   };
 
@@ -708,15 +625,17 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
                     >
                       <FaTrash />
                     </Button>
-                    {onDownload && (
-                      <Button 
-                        variant="outline-success" 
-                        size="sm"
-                        onClick={() => handleDownload(track)}
-                      >
+                    <Button 
+                      variant="outline-success" 
+                      size="sm"
+                      onClick={() => handleDownload(track)}
+                      disabled={downloading && currentDownloadingTrack?.id === track.id}
+                    >
+                      {downloading && currentDownloadingTrack?.id === track.id ? 
+                        <Spinner animation="border" size="sm" /> : 
                         <FaDownload />
-                      </Button>
-                    )}
+                      }
+                    </Button>
                   </div>
                 </Card.Body>
               </Card>
@@ -828,20 +747,20 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
               <div className="d-flex flex-column">
                 <Form.Check
                   type="radio"
-                  id="quality-320"
-                  name="download-quality"
-                  label="标准高音质 (320kbps，体积适中，直接下载)"
-                  checked={downloadQuality === '320'}
-                  onChange={() => setDownloadQuality('320')}
-                  className="mb-3"
-                />
-                <Form.Check
-                  type="radio"
                   id="quality-999"
                   name="download-quality"
                   label="无损音质 (FLAC格式，音质更佳，文件更大)"
                   checked={downloadQuality === '999'}
                   onChange={() => setDownloadQuality('999')}
+                  className="mb-3"
+                />
+                <Form.Check
+                  type="radio"
+                  id="quality-320"
+                  name="download-quality"
+                  label="标准高音质 (320kbps，体积适中，直接下载)"
+                  checked={downloadQuality === '320'}
+                  onChange={() => setDownloadQuality('320')}
                   disabled={false}
                 />
               </div>

@@ -7,6 +7,7 @@ import moment from 'moment';
 import 'moment/locale/zh-cn';
 import HeartButton from '../components/HeartButton';
 import './History.css';
+import { downloadTrack } from '../services/downloadService';
 
 // 设置moment为中文
 moment.locale('zh-cn');
@@ -14,6 +15,8 @@ moment.locale('zh-cn');
 const History = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
+  const [currentDownloadingTrack, setCurrentDownloadingTrack] = useState(null);
 
   useEffect(() => {
     loadHistory();
@@ -48,6 +51,40 @@ const History = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
   const formatCompactTimestamp = (timestamp) => {
     const date = new Date(timestamp);
     return moment(date).format('MM-DD  HH:mm');
+  };
+
+  // 处理下载功能
+  const handleDownload = async (track) => {
+    try {
+      // 如果提供了外部的onDownload函数，优先使用
+      if (typeof onDownload === 'function') {
+        onDownload(track);
+        return;
+      }
+      
+      // 使用下载服务模块处理下载
+      setDownloading(true);
+      setCurrentDownloadingTrack(track);
+      
+      await downloadTrack(
+        track, 
+        999, // 使用无损音质
+        null, // 下载开始回调
+        () => {
+          // 下载结束回调
+          setDownloading(false);
+          setCurrentDownloadingTrack(null);
+        }
+      );
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('下载失败，请稍后重试', {
+        icon: '❌',
+        duration: 3000
+      });
+      setDownloading(false);
+      setCurrentDownloadingTrack(null);
+    }
   };
 
   return (
@@ -121,13 +158,17 @@ const History = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
                       variant="outline-danger"
                       className="me-1" 
                     />
-                      <Button 
-                        variant="outline-success" 
-                        size="sm"
-                        onClick={() => onDownload(item.song)}
-                      >
+                    <Button 
+                      variant="outline-success" 
+                      size="sm"
+                      onClick={() => handleDownload(item.song)}
+                      disabled={downloading && currentDownloadingTrack?.id === item.song.id}
+                    >
+                      {downloading && currentDownloadingTrack?.id === item.song.id ? 
+                        <Spinner animation="border" size="sm" /> : 
                         <FaDownload />
-                      </Button>
+                      }
+                    </Button>
                   </div>
                 </Card.Body>
               </Card>

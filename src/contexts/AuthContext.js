@@ -6,14 +6,13 @@ import {
   registerWithEmailAndPassword,
   logout,
   sendPasswordReset,
-  isFirebaseAvailable,
-  checkFirebaseAvailability,
   firebaseInitError
 } from '../services/firebase';
 import { initialSync } from '../services/syncService';
 import { toast } from 'react-toastify';
 import { saveSyncStatus, getLocalUser, saveLocalUser, getNetworkStatus } from '../services/storage';
 import { APP_MODES } from '../services/regionDetection';
+import useFirebaseStatus from '../hooks/useFirebaseStatus';
 
 // 创建认证上下文
 export const AuthContext = createContext();
@@ -26,6 +25,13 @@ export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [syncComplete, setSyncComplete] = useState(false);
+  
+  // 使用Firebase状态Hook
+  const { isAvailable: isFirebaseAvailable, checkAvailability } = useFirebaseStatus({
+    showToasts: false, // 不显示提示，由AuthContext自己处理
+    manualCheck: true // 手动检查，避免和regionDetection中的检查冲突
+  });
+  
   const [isOfflineMode, setIsOfflineMode] = useState(!isFirebaseAvailable);
   
   // 添加对当前应用模式的引用
@@ -51,7 +57,7 @@ export const AuthProvider = ({ children }) => {
         } 
         // 如果切换到完整模式，尝试恢复Firebase连接
         else if (event.detail.mode === APP_MODES.FULL) {
-          checkFirebaseAvailability().then(available => {
+          checkAvailability().then(available => {
             setIsOfflineMode(!available);
           });
         }
@@ -64,7 +70,7 @@ export const AuthProvider = ({ children }) => {
     return () => {
       window.removeEventListener('appModeChange', handleAppModeChange);
     };
-  }, [currentUser]);
+  }, [currentUser, checkAvailability]);
 
   // 检测Firebase可用性
   useEffect(() => {
@@ -81,7 +87,7 @@ export const AuthProvider = ({ children }) => {
         return;
       }
       
-      const available = await checkFirebaseAvailability();
+      const available = await checkAvailability();
       setIsOfflineMode(!available);
       
       if (!available) {
@@ -94,7 +100,12 @@ export const AuthProvider = ({ children }) => {
     };
     
     checkFirebase();
-  }, []);
+  }, [checkAvailability]);
+
+  // 更新Firebase可用性状态
+  useEffect(() => {
+    setIsOfflineMode(!isFirebaseAvailable);
+  }, [isFirebaseAvailable]);
 
   // 注册
   const register = async (email, password, displayName) => {
@@ -297,8 +308,8 @@ export const AuthProvider = ({ children }) => {
             return;
           }
           
-          // 检查Firebase可用性
-          const firebaseAvailable = await checkFirebaseAvailability();
+          // 检查Firebase可用性，使用Hook提供的方法
+          const firebaseAvailable = await checkAvailability();
           if (!firebaseAvailable) {
             console.warn('Firebase不可用，跳过登录同步');
             setSyncComplete(true);
@@ -363,7 +374,7 @@ export const AuthProvider = ({ children }) => {
     });
     
     return () => unsubscribe();
-  }, [isOfflineMode]);
+  }, [isOfflineMode, checkAvailability]);
 
   // 上下文值
   const value = {

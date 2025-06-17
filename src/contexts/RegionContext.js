@@ -6,6 +6,7 @@ import {
   isChinaUser,
   getCurrentAppMode
 } from '../services/regionDetection';
+import useNetworkStatus from '../hooks/useNetworkStatus';
 
 // 创建区域上下文
 const RegionContext = createContext();
@@ -15,6 +16,12 @@ export const RegionProvider = ({ children }) => {
   const [appMode, setAppMode] = useState(APP_MODES.LOADING);
   const [isLoading, setIsLoading] = useState(true);
   const [isChina, setIsChina] = useState(false);
+  
+  // 使用自定义Hook管理网络状态，不显示提示（由App.js处理），但监听变化
+  const { isOnline } = useNetworkStatus({
+    showToasts: false,
+    dispatchEvents: false // 区域上下文内部不需要分发事件
+  });
   
   // 初始化区域检测
   useEffect(() => {
@@ -43,41 +50,25 @@ export const RegionProvider = ({ children }) => {
     initRegion();
   }, []);
   
-  // 监听网络状态变化
+  // 监听网络状态变化，更新应用模式
   useEffect(() => {
-    const handleOnline = async () => {
+    const updateAppMode = async () => {
       try {
-        const newMode = await handleNetworkStatusChange(true);
+        console.log(`RegionContext: 网络状态变为 ${isOnline ? '在线' : '离线'}, 更新应用模式`);
+        const newMode = await handleNetworkStatusChange(isOnline);
         setAppMode(newMode);
         setIsChina(isChinaUser());
         
         // 发送应用模式变化事件
         dispatchAppModeChangeEvent(newMode);
       } catch (error) {
-        console.error("处理在线状态变化失败:", error);
+        console.error("处理网络状态变化失败:", error);
       }
     };
     
-    const handleOffline = async () => {
-      try {
-        const newMode = await handleNetworkStatusChange(false);
-        setAppMode(newMode);
-        
-        // 发送应用模式变化事件
-        dispatchAppModeChangeEvent(newMode);
-      } catch (error) {
-        console.error("处理离线状态变化失败:", error);
-      }
-    };
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
+    // 当网络状态变化时更新模式
+    updateAppMode();
+  }, [isOnline]);
   
   // 发送应用模式变化事件
   const dispatchAppModeChangeEvent = (mode) => {

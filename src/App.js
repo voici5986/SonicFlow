@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { Container, Row, Col, Form, Button, Card, Spinner } from 'react-bootstrap';
-import axios from 'axios';
 import ReactPlayer from 'react-player';
 import { FaPlay, FaPause, FaDownload, FaMusic, 
          FaStepBackward, FaStepForward, FaRandom, FaRetweet } from 'react-icons/fa';
@@ -9,9 +8,6 @@ import { toast } from 'react-toastify';
 import HeartButton from './components/HeartButton';
 import Navigation from './components/Navigation';
 import ProgressBar from './components/ProgressBar';
-import Favorites from './pages/Favorites';
-import History from './pages/History';
-import User from './pages/User';
 import DeviceDebugger from './components/DeviceDebugger';
 import OrientationPrompt from './components/OrientationPrompt';
 import InstallPWA from './components/InstallPWA';
@@ -19,8 +15,12 @@ import UpdateNotification from './components/UpdateNotification';
 import { useAuth } from './contexts/AuthContext';
 import { useDevice } from './contexts/DeviceContext';
 import { RegionProvider } from './contexts/RegionContext';
-import { addToHistory, getNetworkStatus, saveNetworkStatus } from './services/storage';
+import { addToHistory } from './services/storage';
 import { lockToPortrait } from './utils/orientationManager';
+import { downloadTrack } from './services/downloadService';
+import { searchMusic, playMusic, getCoverImage } from './services/musicApiService';
+import useNetworkStatus from './hooks/useNetworkStatus';
+import useFirebaseStatus from './hooks/useFirebaseStatus';
 // 导入导航样式修复
 import './styles/NavigationFix.css';
 // 导入音频播放器样式
@@ -29,6 +29,11 @@ import './styles/AudioPlayer.css';
 import './styles/Orientation.css';
 // 导入网络状态样式
 import './styles/NetworkStatus.css';
+
+// 改为懒加载
+const Favorites = React.lazy(() => import('./pages/Favorites'));
+const History = React.lazy(() => import('./pages/History'));
+const User = React.lazy(() => import('./pages/User'));
 
 // 离线模式横幅样式
 const offlineBannerStyle = {
@@ -47,8 +52,6 @@ const offlineBannerStyle = {
   boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
 };
 
-const API_BASE = process.env.REACT_APP_API_BASE || '/api';
-
 const App = () => {
   // 新增当前活动标签页状态
   const [activeTab, setActiveTab] = useState('home');
@@ -57,10 +60,20 @@ const App = () => {
   const handleTabChange = setActiveTab;
   
   // 获取用户认证状态
-  const { currentUser, isOfflineMode } = useAuth();
+  const { isOfflineMode } = useAuth();
   
-  // 网络状态
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  // 使用自定义Hook管理网络状态
+  const { isOnline } = useNetworkStatus({
+    showToasts: true, // 显示网络状态变化的提示
+    dispatchEvents: true // 分发网络状态变化事件
+  });
+  
+  // 使用自定义Hook管理Firebase状态
+  // eslint-disable-next-line no-unused-vars
+  const { isAvailable: _isFirebaseAvailable } = useFirebaseStatus({
+    showToasts: true, // 显示Firebase状态变化的提示
+    manualCheck: false // 自动检查
+  });
   
   // 原有状态
   const [query, setQuery] = useState('');
@@ -99,159 +112,6 @@ const App = () => {
   const [downloading, setDownloading] = useState(false);
   const [currentDownloadingTrack, setCurrentDownloadingTrack] = useState(null);
   
-  // 检测网络状态
-  useEffect(() => {
-    // 初始化网络状态
-    const initNetworkStatus = async () => {
-      const status = await getNetworkStatus();
-      setIsOnline(status.online);
-    };
-    
-    initNetworkStatus();
-    
-    // 处理网络事件
-    const handleOnline = () => {
-      setIsOnline(true);
-      saveNetworkStatus({ online: true, lastChecked: Date.now() });
-      toast.success('网络已恢复连接');
-    };
-    
-    const handleOffline = () => {
-      setIsOnline(false);
-      saveNetworkStatus({ online: false, lastChecked: Date.now() });
-      toast.error('网络连接已断开，部分功能可能受限');
-    };
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-  
-  // 应用启动时自动同步数据
-  useEffect(() => {
-    // 只在用户已登录且组件挂载后运行
-    if (currentUser) {
-      // 使用一个标记来避免重复同步
-      let isSyncCancelled = false;
-      
-      // 先检查最近的同步状态，如果最近10分钟内已同步过则跳过
-      const checkAndSync = async () => {
-        try {
-          console.log('开始应用启动同步检查...');
-          
-          // 检查网络状态
-          const { getNetworkStatus } = await import('./services/storage');
-          const networkStatus = await getNetworkStatus();
-          if (!networkStatus.online) {
-            console.warn('网络离线，跳过应用启动同步');
-            return;
-          }
-          
-          // 检查Firebase可用性
-          const { checkFirebaseAvailability } = await import('./services/firebase');
-          const firebaseAvailable = await checkFirebaseAvailability();
-          if (!firebaseAvailable) {
-            console.warn('Firebase不可用，跳过应用启动同步');
-            return;
-          }
-          
-          const { getSyncStatus, saveSyncStatus } = await import('./services/storage');
-          const lastStatus = await getSyncStatus(currentUser.uid);
-          
-          // 如果在过去10分钟内有过成功的同步，则跳过此次同步
-          const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-          if (lastStatus.timestamp && new Date(lastStatus.timestamp) > tenMinutesAgo && lastStatus.success) {
-            console.log('最近已同步过，跳过应用启动同步');
-            return;
-          }
-          
-          // 确保同步状态不是正在加载，避免与登录同步冲突
-          if (lastStatus.loading) {
-            console.log('有其他同步任务正在进行，跳过应用启动同步');
-            return;
-          }
-          
-          // 如果同步被取消则返回
-          if (isSyncCancelled) return;
-          
-          // 更新同步状态为"正在同步"
-          await saveSyncStatus({ 
-            loading: true, 
-            success: null, 
-            message: '应用启动自动同步...', 
-            timestamp: null 
-          }, currentUser.uid);
-          
-          // 添加超时处理
-          const { initialSync } = await import('./services/syncService');
-          const syncPromise = initialSync(currentUser.uid);
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('同步操作超时')), 30000)
-          );
-          
-          // 使用Promise.race确保同步不会永久挂起
-          const result = await Promise.race([syncPromise, timeoutPromise])
-            .catch(error => {
-              console.error('应用启动同步超时或出错:', error);
-              return { success: false, error: error.message || '同步超时' };
-            });
-          
-          // 如果同步被取消则不更新状态
-          if (isSyncCancelled) return;
-          
-          // 根据结果更新同步状态
-          if (result && result.success) {
-            await saveSyncStatus({ 
-              loading: false, 
-              success: true, 
-              message: '自动同步成功', 
-              timestamp: new Date() 
-            }, currentUser.uid);
-          } else {
-            await saveSyncStatus({ 
-              loading: false, 
-              success: false, 
-              message: `自动同步失败: ${result?.error || '未知错误'}`, 
-              timestamp: new Date() 
-            }, currentUser.uid);
-          }
-          
-          console.log('应用启动自动同步完成');
-        } catch (error) {
-          console.error('应用启动自动同步失败:', error);
-          
-          // 如果同步被取消则不更新状态
-          if (isSyncCancelled) return;
-          
-          // 确保更新同步错误状态
-          try {
-            const { saveSyncStatus } = await import('./services/storage');
-            await saveSyncStatus({ 
-              loading: false, 
-              success: false, 
-              message: `同步错误: ${error.message || '未知错误'}`, 
-              timestamp: new Date() 
-            }, currentUser.uid);
-          } catch (e) {
-            console.error('更新同步状态失败', e);
-          }
-        }
-      };
-      
-      // 延迟10秒执行以避免与登录时的同步重叠，并确保网络和Firebase连接已经稳定
-      const syncTimer = setTimeout(checkAndSync, 10000);
-      
-      return () => {
-        clearTimeout(syncTimer);
-        isSyncCancelled = true;
-      };
-    }
-  }, [currentUser]);
-
   const sources = [
     'netease', 'joox', 'tencent', 'tidal', 'spotify',
     'korean', 'kuwo', 'migu', 'kugou', 'qq',
@@ -293,24 +153,18 @@ const App = () => {
 
     setLoading(true);
     try {
-      const response = await axios.get(`${API_BASE}`, {
-        params: {
-          types: 'search',
-          source: source,
-          name: query,
-          count: 20,
-          pages: 1
-        }
-      });
-            // 获取结果后处理封面
-        const resultsWithCover = await Promise.all(
-          response.data.map(async track => ({
-            ...track,
-            picUrl: await fetchCover(track.source, track.pic_id)
-          }))
-        );
-        
-        setResults(resultsWithCover);
+      // 使用新的musicApiService进行搜索
+      const searchResults = await searchMusic(query, source, 20, 1);
+      
+      // 获取结果后处理封面
+      const resultsWithCover = await Promise.all(
+        searchResults.map(async track => ({
+          ...track,
+          picUrl: await fetchCover(track.source, track.pic_id)
+        }))
+      );
+      
+      setResults(resultsWithCover);
     } catch (error) {
       console.error('Search error:', error);
       toast.error('搜索失败，请稍后重试', {
@@ -328,16 +182,8 @@ const fetchCover = async (source, picId, size = 300) => {
   if (coverCache[cacheKey]) return coverCache[cacheKey];
 
   try {
-    const response = await axios.get(`${API_BASE}`, {
-      params: {
-        types: 'pic',
-        source: source,
-        id: picId,
-        size: size
-      }
-    });
-    
-    const url = response.data.url.replace(/\\/g, '');
+    // 使用新的API服务获取封面
+    const url = await getCoverImage(source, picId, size);
     
     // 更新缓存
     setCoverCache(prev => ({
@@ -422,43 +268,23 @@ const fetchCover = async (source, picId, size = 300) => {
       setCurrentIndex(index);
       setPlayHistory([index]);
 
-      const [urlResponse, lyricResponse] = await Promise.all([
-        axios.get(API_BASE, {
-          params: { types: 'url', source: track.source, id: track.id, br: quality }
-        }),
-        axios.get(API_BASE, {
-          params: { types: 'lyric', source: track.source, id: track.lyric_id }
-        })
-      ]);
-      console.log(urlResponse.data.size);
-  
-      const rawLyric = lyricResponse.data.lyric || '';
-      const tLyric = lyricResponse.data.tlyric || '';
-      
-      setLyricData({
-        rawLyric,
-        tLyric,
-        parsedLyric: parseLyric(rawLyric)
-      });
-
-      setPlayerUrl('');
+      // 使用新的musicApiService获取音频URL和歌词
       setIsPlaying(false);
-
-      const response = await axios.get(`${API_BASE}`, {
-        params: {
-          types: 'url',
-          source: track.source,
-          id: track.id,
-          br: quality
-        }
+      setPlayerUrl('');
+      
+      // 调用播放服务获取所有所需数据
+      const musicData = await playMusic(track, quality);
+      
+      // 处理歌词
+      setLyricData({
+        rawLyric: musicData.lyrics.raw,
+        tLyric: musicData.lyrics.translated,
+        parsedLyric: parseLyric(musicData.lyrics.raw)
       });
-
-      const url = response.data?.url?.replace(/\\/g, '');
-      if (!url) throw new Error('无效的音频链接');
-  
-      // 确保状态更新顺序
+      
+      // 更新播放状态
       setCurrentTrack(track);
-      setPlayerUrl(url);
+      setPlayerUrl(musicData.url);
       setIsPlaying(true);
       
       // 添加到播放历史
@@ -664,123 +490,43 @@ const fetchCover = async (source, picId, size = 300) => {
       setDownloading(true); // 添加下载状态
       setCurrentDownloadingTrack(track);
       
-      const response = await axios.get(`${API_BASE}`, {
-        params: {
-          types: 'url',
-          source: track.source,
-          id: track.id,
-          br: quality
+      // 使用下载服务模块处理下载
+      await downloadTrack(
+        track, 
+        quality, 
+        () => {
+          // 下载开始回调，这里已经设置了状态，无需额外操作
+        },
+        () => {
+          // 下载结束回调
+          setDownloading(false);
+          setCurrentDownloadingTrack(null);
         }
-      });
-      
-      // 通过后端获取音频数据来下载
-      const downloadUrl = response.data.url.replace(/\\/g, '');
-      
-      // 设置下载文件名
-      const extension = getFileExtension(downloadUrl);
-      const fileName = `${track.name} - ${track.artist}.${extension}`;
-      
-      // 确定音质描述
-      let qualityDesc = "";
-      if (quality >= 999) {
-        qualityDesc = "无损音质";
-      } else if (quality >= 700) {
-        qualityDesc = "Hi-Res";
-      } else if (quality >= 320) {
-        qualityDesc = "高品质";
-      } else {
-        qualityDesc = `${quality}kbps`;
-      }
-      
-      toast.info(`正在准备下载${qualityDesc}音频: ${fileName}`, {
-        icon: '⏬',
-        duration: 2000
-      });
-      
-      // 直接下载
-      try {
-        // 使用fetch获取音频内容
-        const audioResponse = await fetch(downloadUrl);
-        const blob = await audioResponse.blob();
-        
-        // 创建blob URL
-        const blobUrl = window.URL.createObjectURL(blob);
-        
-        // 创建下载链接并点击
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = fileName; 
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        
-        // 清理
-        setTimeout(() => {
-          document.body.removeChild(link);
-          window.URL.revokeObjectURL(blobUrl);
-        }, 100);
-        
-        toast.success('下载成功！', {
-          icon: '✅',
-          duration: 3000
-        });
-      } catch (fetchError) {
-        console.error('Fetch error:', fetchError);
-        
-        // 备用下载方法
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.setAttribute('download', fileName);
-        link.setAttribute('target', '_blank');
-        link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      }
-      
+      );
     } catch (error) {
       console.error('Download error:', error);
       toast.error('下载失败，请稍后重试', {
         icon: '❌',
         duration: 3000
       });
-    } finally {
-      setDownloading(false); // 重置下载状态
+      setDownloading(false);
       setCurrentDownloadingTrack(null);
     }
   };
 
-  // 处理文件名后缀
-  const getFileExtension = (url) => {
-    try {
-      // 处理可能包含反斜杠的URL
-      const cleanUrl = url.replace(/\\/g, '');
-      const fileName = new URL(cleanUrl).pathname
-        .split('/')
-        .pop()
-        .split(/[#?]/)[0]; // 移除可能的哈希和查询参数
-      
-      // 使用正则表达式提取后缀
-      const extensionMatch = fileName.match(/\.([a-z0-9]+)$/i);
-      return extensionMatch ? extensionMatch[1] : 'audio';
-    } catch {
-      return 'audio'; // 默认后缀
+  // 添加滚动效果
+  useEffect(() => {
+    if (lyricExpanded && currentLyricIndex >= 0 && lyricsContainerRef.current) {
+      const activeLines = lyricsContainerRef.current.getElementsByClassName('active');
+      if (activeLines.length > 0) {
+        activeLines[0].scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'nearest'
+        });
+      }
     }
-  };
-
-// 添加滚动效果
-useEffect(() => {
-  if (lyricExpanded && currentLyricIndex >= 0 && lyricsContainerRef.current) {
-    const activeLines = lyricsContainerRef.current.getElementsByClassName('active');
-    if (activeLines.length > 0) {
-      activeLines[0].scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-        inline: 'nearest'
-      });
-    }
-  }
-}, [currentLyricIndex, lyricExpanded]);
+  }, [currentLyricIndex, lyricExpanded]);
 
   // 渲染加载中状态
   // eslint-disable-next-line no-unused-vars
@@ -913,17 +659,37 @@ useEffect(() => {
     );
   };
 
-  // 修改renderContent函数，添加设置页面
+  // 修改renderContent函数，添加Suspense包装
   const renderContent = () => {
+    // 懒加载页面的加载状态显示
+    const loadingFallback = (
+      <div className="text-center my-5">
+        <Spinner animation="border" variant="primary" />
+        <p className="mt-3">加载中...</p>
+      </div>
+    );
+
     switch (activeTab) {
       case 'home':
         return renderHomePage();
       case 'favorites':
-        return <Favorites onPlay={handlePlay} />;
+        return (
+          <Suspense fallback={loadingFallback}>
+            <Favorites onPlay={handlePlay} />
+          </Suspense>
+        );
       case 'history':
-        return <History onPlay={handlePlay} />;
+        return (
+          <Suspense fallback={loadingFallback}>
+            <History onPlay={handlePlay} />
+          </Suspense>
+        );
       case 'user':
-        return <User onTabChange={handleTabChange} />;
+        return (
+          <Suspense fallback={loadingFallback}>
+            <User onTabChange={handleTabChange} />
+          </Suspense>
+        );
       default:
         return renderHomePage();
     }
@@ -1218,6 +984,33 @@ useEffect(() => {
       });
     }
   }, [deviceInfo.isMobile, deviceInfo.isTablet]);
+
+  // 初始化应用
+  useEffect(() => {
+    // ... existing code ...
+    
+    // 初始化函数
+    const initialize = async () => {
+      try {
+        console.log("应用初始化中...");
+        
+        // 加载持久化的网络和区域状态
+        // 网络状态已由useNetworkStatus Hook加载
+        
+        // ... existing code ...
+        
+        // setIsInitialized(true);
+        // setIsLoading(false);
+      } catch (error) {
+        console.error("初始化失败:", error);
+        // setIsLoading(false);
+      }
+    };
+    
+    initialize();
+    
+    // ... existing code ...
+  }, []);
 
   return (
     <RegionProvider>
