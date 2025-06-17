@@ -13,13 +13,15 @@ const STORAGE_KEYS = {
   IP_REGION: 'user_ip_region',       // 用户IP区域 ('CN' 或 'INTERNATIONAL')
   IP_TIMESTAMP: 'user_ip_timestamp', // 上次IP检测时间戳
   APP_MODE: 'app_mode',              // 应用模式
-  IP_RECORDS: 'ip_records'           // IP记录历史
+  IP_RECORDS: 'ip_records',          // IP记录历史
+  NETWORK_CHANGE_TIMESTAMP: 'network_change_timestamp' // 上次网络状态变化时间戳
 };
 
 // 检测间隔时间 (毫秒)
 const DETECTION_INTERVAL = {
   CHINA_OFFLINE_MODE: 10 * 1000,     // 中国模式或离线模式: 10秒
   FULL_MODE: 30 * 1000,              // 完整模式: 30秒
+  NETWORK_CHANGE: 5 * 1000,          // 网络状态变化: 5秒
 };
 
 // 应用模式
@@ -95,9 +97,11 @@ const recordIpData = (ipData) => {
 
 /**
  * 检查是否需要重新检测IP
+ * @param {boolean} isRefresh 是否由页面刷新触发
+ * @param {boolean} isNetworkChange 是否由网络状态变化触发
  * @returns {boolean} 是否需要重新检测
  */
-export const shouldCheckIp = () => {
+export const shouldCheckIp = (isRefresh = false, isNetworkChange = false) => {
   const now = Date.now();
   const timestamp = localStorage.getItem(STORAGE_KEYS.IP_TIMESTAMP);
   const currentMode = localStorage.getItem(STORAGE_KEYS.APP_MODE);
@@ -105,13 +109,29 @@ export const shouldCheckIp = () => {
   // 如果没有时间戳，需要检测
   if (!timestamp) return true;
   
-  // 根据当前模式决定检测间隔
-  const interval = (currentMode === APP_MODES.FULL) 
-    ? DETECTION_INTERVAL.FULL_MODE 
-    : DETECTION_INTERVAL.CHINA_OFFLINE_MODE;
+  // 如果是网络状态变化触发，检查距上次网络变化是否超过5秒
+  if (isNetworkChange) {
+    const lastNetworkChange = localStorage.getItem(STORAGE_KEYS.NETWORK_CHANGE_TIMESTAMP);
+    if (!lastNetworkChange || (now - parseInt(lastNetworkChange)) > DETECTION_INTERVAL.NETWORK_CHANGE) {
+      // 更新网络变化时间戳
+      localStorage.setItem(STORAGE_KEYS.NETWORK_CHANGE_TIMESTAMP, now.toString());
+      return true;
+    }
+    return false;
+  }
   
-  // 检查是否已经超过了间隔时间
-  return (now - parseInt(timestamp)) > interval;
+  // 如果是页面刷新触发，根据当前模式决定检测间隔
+  if (isRefresh) {
+    const interval = (currentMode === APP_MODES.FULL) 
+      ? DETECTION_INTERVAL.FULL_MODE 
+      : DETECTION_INTERVAL.CHINA_OFFLINE_MODE;
+    
+    // 检查是否已经超过了间隔时间
+    return (now - parseInt(timestamp)) > interval;
+  }
+  
+  // 默认不触发检测
+  return false;
 };
 
 /**
@@ -119,17 +139,20 @@ export const shouldCheckIp = () => {
  * @param {boolean} isOnline 浏览器报告的网络状态
  * @returns {Promise<string>} 应用模式
  */
-export const determineAppMode = async (isOnline = navigator.onLine) => {
+export const determineAppMode = async (isOnline = navigator.onLine, isRefresh = true, isNetworkChange = false) => {
   try {
     console.log(`确定应用模式，当前网络状态: ${isOnline ? '在线' : '离线'}`);
     
     // 检查是否需要重新检测IP
-    if (shouldCheckIp()) {
+    if (shouldCheckIp(isRefresh, isNetworkChange)) {
       try {
         // 无论网络状态如何，都尝试检测IP
         await detectIpRegion();
       } catch (error) {
-        // IP检测失败，如果网络也离线，则进入离线模式
+        // IP检测失败逻辑
+        console.log('IP检测失败');
+        
+        // 网络离线且IP检测失败，则进入离线模式
         if (!isOnline) {
           console.log('网络离线且IP检测失败，设置为离线模式');
           localStorage.setItem(STORAGE_KEYS.APP_MODE, APP_MODES.OFFLINE);
@@ -198,24 +221,37 @@ export const determineAppMode = async (isOnline = navigator.onLine) => {
       return APP_MODES.CHINA;
     }
     
-    // 如果是国际区域，检查Firebase连接
+    // 如果是国际区域，检查网络状态
+    // 如果网络离线，直接进入完整模式
+    if (!isOnline) {
+      console.log('检测到国际区域且网络离线，设置为完整模式');
+      localStorage.setItem(STORAGE_KEYS.APP_MODE, APP_MODES.FULL);
+      return APP_MODES.FULL;
+    }
+    
+    // 网络在线，检查Firebase连接
     // 注意：只有国际IP才检查Firebase
     try {
       console.log('检测到国际区域，正在检查Firebase连接...');
       const firebaseAvailable = await checkFirebaseAvailability();
       console.log(`Firebase连接状态: ${firebaseAvailable ? '可用' : '不可用'}`);
       
-      // 无论Firebase是否可用，都进入完整模式
-      console.log('设置为完整模式');
-      localStorage.setItem(STORAGE_KEYS.APP_MODE, APP_MODES.FULL);
-      return APP_MODES.FULL;
+      if (firebaseAvailable) {
+        console.log('Firebase连接成功，设置为完整模式');
+        localStorage.setItem(STORAGE_KEYS.APP_MODE, APP_MODES.FULL);
+        return APP_MODES.FULL;
+      } else {
+        console.log('Firebase连接失败，设置为中国模式');
+        localStorage.setItem(STORAGE_KEYS.APP_MODE, APP_MODES.CHINA);
+        return APP_MODES.CHINA;
+      }
     } catch (error) {
       console.error("Firebase连接检查失败:", error);
       
-      // Firebase检测失败，也进入完整模式
-      console.log('Firebase连接检查失败，仍然设置为完整模式');
-      localStorage.setItem(STORAGE_KEYS.APP_MODE, APP_MODES.FULL);
-      return APP_MODES.FULL;
+      // Firebase检测失败，设置为中国模式
+      console.log('Firebase连接检查失败，设置为中国模式');
+      localStorage.setItem(STORAGE_KEYS.APP_MODE, APP_MODES.CHINA);
+      return APP_MODES.CHINA;
     }
   } catch (error) {
     console.error("确定应用模式失败:", error);
@@ -246,11 +282,8 @@ export const handleNetworkStatusChange = async (isOnline) => {
     // 更新网络状态存储
     await saveNetworkStatus({ online: isOnline, lastChecked: Date.now() });
     
-    // 强制进行IP检测（通过重置时间戳）
-    localStorage.removeItem(STORAGE_KEYS.IP_TIMESTAMP);
-    
-    // 确定新的应用模式
-    const newMode = await determineAppMode(isOnline);
+    // 确定新的应用模式，将isNetworkChange设为true
+    const newMode = await determineAppMode(isOnline, false, true);
     console.log(`网络状态变化: ${isOnline ? '在线' : '离线'}, 新模式: ${newMode}`);
     
     return newMode;
@@ -313,11 +346,8 @@ export const initRegionDetection = async () => {
     // 保存当前网络状态
     await saveNetworkStatus({ online: isOnline, lastChecked: Date.now() });
     
-    // 强制进行IP检测（通过重置时间戳）
-    localStorage.removeItem(STORAGE_KEYS.IP_TIMESTAMP);
-    
-    // 确定初始应用模式
-    const initialMode = await determineAppMode(isOnline);
+    // 确定初始应用模式（应用启动算作刷新触发）
+    const initialMode = await determineAppMode(isOnline, true, false);
     console.log(`初始应用模式: ${initialMode}`);
     
     return initialMode;
