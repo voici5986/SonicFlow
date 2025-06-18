@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRegion } from '../contexts/RegionContext';
 import { Button } from 'react-bootstrap';
 import { FaGlobe, FaGlobeAsia, FaWifi, FaExclamationTriangle } from 'react-icons/fa';
@@ -12,6 +12,26 @@ import '../styles/RegionStatus.css';
  */
 const RegionStatus = ({ showDetails = false, iconOnly = false }) => {
   const { appMode, isLoading, refreshRegionDetection, APP_MODES } = useRegion();
+  const [showBanner, setShowBanner] = useState(true);
+  
+  // 添加调试日志，查看当前模式
+  useEffect(() => {
+    console.log(`RegionStatus: 当前模式 = ${appMode}`);
+  }, [appMode]);
+  
+  // 当应用模式改变时，显示状态栏
+  useEffect(() => {
+    setShowBanner(true);
+    
+    // 如果是完整模式，5秒后自动隐藏
+    if (appMode === APP_MODES.FULL) {
+      const timer = setTimeout(() => {
+        setShowBanner(false);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [appMode, APP_MODES.FULL]);
   
   // 获取模式图标
   const getModeIcon = () => {
@@ -49,7 +69,7 @@ const RegionStatus = ({ showDetails = false, iconOnly = false }) => {
       case APP_MODES.CHINA:
         return '账号功能不可用';
       case APP_MODES.OFFLINE:
-        return '仅本地功能可用';
+        return '当前处于离线模式，仅可访问已缓存的内容';
       default:
         return '正在检测区域...';
     }
@@ -67,9 +87,20 @@ const RegionStatus = ({ showDetails = false, iconOnly = false }) => {
   // 简洁模式（图标和名称）
   if (!showDetails) {
     return (
-      <div className={`region-status-compact ${appMode}`}>
+      <div className={`region-status-compact ${appMode} ${showBanner ? 'visible' : 'hidden'}`}
+           onMouseEnter={() => setShowBanner(true)}
+           onMouseLeave={() => { 
+             if (appMode === APP_MODES.FULL) {
+               const timer = setTimeout(() => setShowBanner(false), 3000);
+               return () => clearTimeout(timer);
+             }
+           }}
+      >
         {getModeIcon()}
         <span className="mode-name">{getModeName()}</span>
+        {appMode === APP_MODES.OFFLINE && 
+          <span className="mode-description">当前处于离线模式，仅可访问已缓存的内容</span>
+        }
       </div>
     );
   }

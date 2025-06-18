@@ -5,6 +5,12 @@
 import { checkFirebaseAvailability } from './firebase';
 import { saveNetworkStatus } from './storage';
 
+// 自定义事件名称
+export const APP_EVENTS = {
+  MODE_CHANGED: 'app_mode_changed',
+  NETWORK_CHANGE: 'networkStatusChange',
+};
+
 // IPinfo.io API令牌
 const IPINFO_TOKEN = 'f0e3677a212cc4';
 
@@ -155,7 +161,7 @@ export const determineAppMode = async (isOnline = navigator.onLine, isRefresh = 
         // 网络离线且IP检测失败，则进入离线模式
         if (!isOnline) {
           console.log('网络离线且IP检测失败，设置为离线模式');
-          localStorage.setItem(STORAGE_KEYS.APP_MODE, APP_MODES.OFFLINE);
+          setAppMode(APP_MODES.OFFLINE);
           return APP_MODES.OFFLINE;
         }
         
@@ -174,22 +180,22 @@ export const determineAppMode = async (isOnline = navigator.onLine, isRefresh = 
             
             if (firebaseAvailable) {
               console.log('Firebase连接成功，设置为完整模式');
-              localStorage.setItem(STORAGE_KEYS.APP_MODE, APP_MODES.FULL);
+              setAppMode(APP_MODES.FULL);
               return APP_MODES.FULL;
             } else {
               console.log('Firebase连接失败，设置为中国模式');
-              localStorage.setItem(STORAGE_KEYS.APP_MODE, APP_MODES.CHINA);
+              setAppMode(APP_MODES.CHINA);
               return APP_MODES.CHINA;
             }
           } catch (error) {
             console.error('Firebase连接检测出错:', error);
             console.log('Firebase连接检测出错，设置为中国模式');
-            localStorage.setItem(STORAGE_KEYS.APP_MODE, APP_MODES.CHINA);
+            setAppMode(APP_MODES.CHINA);
             return APP_MODES.CHINA;
           }
         } else {
           console.log('IP历史记录中无国际IP或无记录，默认设置为中国模式');
-          localStorage.setItem(STORAGE_KEYS.APP_MODE, APP_MODES.CHINA);
+          setAppMode(APP_MODES.CHINA);
           return APP_MODES.CHINA;
         }
       }
@@ -205,11 +211,11 @@ export const determineAppMode = async (isOnline = navigator.onLine, isRefresh = 
     if (!region) {
       if (!isOnline) {
         console.log('无法获取区域信息且网络离线，设置为离线模式');
-        localStorage.setItem(STORAGE_KEYS.APP_MODE, APP_MODES.OFFLINE);
+        setAppMode(APP_MODES.OFFLINE);
         return APP_MODES.OFFLINE;
       } else {
         console.log('无法获取区域信息但网络在线，默认设置为中国模式');
-        localStorage.setItem(STORAGE_KEYS.APP_MODE, APP_MODES.CHINA);
+        setAppMode(APP_MODES.CHINA);
         return APP_MODES.CHINA;
       }
     }
@@ -217,7 +223,7 @@ export const determineAppMode = async (isOnline = navigator.onLine, isRefresh = 
     // 如果是中国区域，直接进入中国模式，不检测Firebase
     if (isChina) {
       console.log('检测到中国区域，设置为中国模式');
-      localStorage.setItem(STORAGE_KEYS.APP_MODE, APP_MODES.CHINA);
+      setAppMode(APP_MODES.CHINA);
       return APP_MODES.CHINA;
     }
     
@@ -225,7 +231,7 @@ export const determineAppMode = async (isOnline = navigator.onLine, isRefresh = 
     // 如果网络离线，直接进入完整模式
     if (!isOnline) {
       console.log('检测到国际区域且网络离线，设置为完整模式');
-      localStorage.setItem(STORAGE_KEYS.APP_MODE, APP_MODES.FULL);
+      setAppMode(APP_MODES.FULL);
       return APP_MODES.FULL;
     }
     
@@ -238,11 +244,11 @@ export const determineAppMode = async (isOnline = navigator.onLine, isRefresh = 
       
       if (firebaseAvailable) {
         console.log('Firebase连接成功，设置为完整模式');
-        localStorage.setItem(STORAGE_KEYS.APP_MODE, APP_MODES.FULL);
+        setAppMode(APP_MODES.FULL);
         return APP_MODES.FULL;
       } else {
         console.log('Firebase连接失败，设置为中国模式');
-        localStorage.setItem(STORAGE_KEYS.APP_MODE, APP_MODES.CHINA);
+        setAppMode(APP_MODES.CHINA);
         return APP_MODES.CHINA;
       }
     } catch (error) {
@@ -250,7 +256,7 @@ export const determineAppMode = async (isOnline = navigator.onLine, isRefresh = 
       
       // Firebase检测失败，设置为中国模式
       console.log('Firebase连接检查失败，设置为中国模式');
-      localStorage.setItem(STORAGE_KEYS.APP_MODE, APP_MODES.CHINA);
+      setAppMode(APP_MODES.CHINA);
       return APP_MODES.CHINA;
     }
   } catch (error) {
@@ -306,6 +312,33 @@ export const handleNetworkStatusChange = async (isOnline) => {
  */
 export const getCurrentAppMode = () => {
   return localStorage.getItem(STORAGE_KEYS.APP_MODE) || APP_MODES.LOADING;
+};
+
+/**
+ * 设置应用模式并触发事件
+ * @param {string} mode 应用模式
+ */
+export const setAppMode = (mode) => {
+  const currentMode = localStorage.getItem(STORAGE_KEYS.APP_MODE);
+  
+  console.log(`setAppMode: 当前模式=${currentMode}, 新模式=${mode}`);
+  
+  // 存储新模式，即使没有变化也存储，确保状态一致
+  localStorage.setItem(STORAGE_KEYS.APP_MODE, mode);
+  
+  // 只有当模式变化时才触发事件
+  if (currentMode !== mode) {
+    console.log(`触发模式变更事件: ${mode}`);
+    
+    // 触发模式变更事件
+    window.dispatchEvent(new CustomEvent(APP_EVENTS.MODE_CHANGED, {
+      detail: { mode }
+    }));
+    
+    console.log(`应用模式已更新为: ${mode}`);
+  } else {
+    console.log(`模式未变化，保持为: ${mode}`);
+  }
 };
 
 /**

@@ -11,9 +11,15 @@ import { FaHeart, FaHistory } from 'react-icons/fa';
 
 const User = ({ onTabChange }) => {
   const { currentUser } = useAuth();
+  const { appMode } = useRegion(); // 添加appMode，确保组件能够响应模式变化
   const [isLogin, setIsLogin] = useState(true);
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [historyCount, setHistoryCount] = useState(0);
+  
+  // 添加调试日志，查看当前模式
+  useEffect(() => {
+    console.log(`User页面: 当前应用模式 = ${appMode}`);
+  }, [appMode]);
   
   // 加载统计数据
   useEffect(() => {
@@ -113,10 +119,10 @@ const User = ({ onTabChange }) => {
                 </Card.Body>
               </Card>
               
-              {/* 应用模式区域 - 直接显示RegionStatus */}
+              {/* 应用模式区域 - 使用key强制重新渲染 */}
               <div className="region-status-wrapper">
                 <div className="d-flex flex-column">
-                  <RegionStatus showDetails={true} />
+                  <RegionStatus showDetails={true} key={`region-status-${appMode}`} />
                   <div className="text-muted small mt-2 region-note">
                     <p className="mb-1">登录账号需要完整模式，中国地区用户可能无法登录</p>
                   </div>

@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Nav, Navbar, Container, Button } from 'react-bootstrap';
 import { FaHome, FaHeart, FaHistory, FaUser } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
-import NetworkStatus from './NetworkStatus';
 import RegionStatus from './RegionStatus';
-import { useRegion } from '../contexts/RegionContext';
 import '../styles/NavigationFix.css';
 
 const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
@@ -15,7 +13,6 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
   // 检测窗口宽度用于响应式设计
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const { currentUser } = useAuth();
-  const { isFeatureAvailable } = useRegion();
   
   // 监听滚动事件
   useEffect(() => {
@@ -92,10 +89,9 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
           <span style={logoStyle}>SonicFlow</span>
         </Navbar.Brand>
 
-        {/* 网络状态和区域状态指示器 */}
+        {/* 区域状态指示器 */}
         <div className="d-flex align-items-center">
-          <NetworkStatus inNavbar={true} />
-          <RegionStatus showDetails={false} iconOnly={isMobile} />
+          <RegionStatus showDetails={false} iconOnly={true} />
         </div>
 
         {/* 用户头像/登录按钮 */}

@@ -12,6 +12,7 @@ import DeviceDebugger from './components/DeviceDebugger';
 import OrientationPrompt from './components/OrientationPrompt';
 import InstallPWA from './components/InstallPWA';
 import UpdateNotification from './components/UpdateNotification';
+import AudioPlayer from './components/AudioPlayer'; // 导入新的AudioPlayer组件
 import { useAuth } from './contexts/AuthContext';
 import { useDevice } from './contexts/DeviceContext';
 import { RegionProvider } from './contexts/RegionContext';
@@ -21,14 +22,13 @@ import { downloadTrack } from './services/downloadService';
 import { searchMusic, playMusic, getCoverImage } from './services/musicApiService';
 import useNetworkStatus from './hooks/useNetworkStatus';
 import useFirebaseStatus from './hooks/useFirebaseStatus';
+import { useThrottle, useDebounce, useDebouncedValue } from './utils/throttleDebounce';
 // 导入导航样式修复
 import './styles/NavigationFix.css';
 // 导入音频播放器样式
 import './styles/AudioPlayer.css';
 // 导入屏幕方向样式
 import './styles/Orientation.css';
-// 导入网络状态样式
-import './styles/NetworkStatus.css';
 
 // 改为懒加载
 const Favorites = React.lazy(() => import('./pages/Favorites'));
@@ -137,6 +137,14 @@ const App = () => {
     }).filter(Boolean);
   };
 
+  // 新增防抖查询状态
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  
+  // 创建防抖处理函数
+  const handleQueryChange = useDebounce((value) => {
+    setDebouncedQuery(value);
+  }, 300);
+
   const handleSearch = async (e) => {
     e.preventDefault();
     
@@ -146,7 +154,8 @@ const App = () => {
       return;
     }
     
-    if (!query) {
+    // 使用debouncedQuery而不是query进行搜索
+    if (!debouncedQuery) {
       toast.warning('请输入搜索关键词');
       return;
     }
@@ -154,7 +163,7 @@ const App = () => {
     setLoading(true);
     try {
       // 使用新的musicApiService进行搜索
-      const searchResults = await searchMusic(query, source, 20, 1);
+      const searchResults = await searchMusic(debouncedQuery, source, 20, 1);
       
       // 获取结果后处理封面
       const resultsWithCover = await Promise.all(
@@ -439,18 +448,6 @@ const fetchCover = async (source, picId, size = 300) => {
     }
   };
 
-  const useThrottle = (callback, delay) => {
-    const lastCall = useRef(0);
-    
-    return useCallback((...args) => {
-      const now = new Date().getTime();
-      if (now - lastCall.current >= delay) {
-        lastCall.current = now;
-        callback(...args);
-      }
-    }, [callback, delay]);
-  };
-
   // 格式化时间显示
   const formatTime = (seconds) => {
     if (isNaN(seconds)) return '0:00';
@@ -550,7 +547,10 @@ const fetchCover = async (source, picId, size = 300) => {
             <Form.Control
                   type="text"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                handleQueryChange(e.target.value);
+              }}
                   placeholder="输入歌曲名、艺术家或专辑"
                   autoFocus
             />
@@ -706,255 +706,6 @@ const fetchCover = async (source, picId, size = 300) => {
     }
   };
 
-  // 优化renderAudioPlayer函数
-  const renderAudioPlayer = () => {
-    // 如果没有当前音轨，不渲染任何内容
-    if (!currentTrack) return null;
-    
-    // 增加播放器展开状态的类名
-    const playerClassName = `audio-player ${lyricExpanded ? 'expanded' : 'collapsed'}`;
-    
-    return (
-      <>
-        {/* 背景遮罩 - 仅在展开状态显示 */}
-        <div className={`player-backdrop ${lyricExpanded ? 'visible' : ''}`} 
-             onClick={() => setLyricExpanded(false)}></div>
-        
-        <div className={playerClassName}>
-          {/* 添加内部容器以控制溢出 */}
-          <div className="player-inner">
-            <div className="player-content">
-              {/* 基础播放控制区域 - 在收起和展开状态都显示 */}
-              <Row className="align-items-center player-info-controls">
-          {/* 左侧：歌曲信息 */}
-                <Col xs={6} md={3} className="d-flex align-items-center mb-2 mb-md-0">
-              <div className="d-flex align-items-center">
-                <img 
-                  src={coverCache[`${currentTrack.source}-${currentTrack.pic_id}-300`] || 'default_cover.png'}
-                  alt="当前播放"
-                  style={{ width: '50px', height: '50px' }}
-                  className="me-2 rounded"
-                />
-                <div>
-                      <h6 className="mb-0 text-truncate" style={{maxWidth: 'calc(30vw - 20px)'}}>{currentTrack.name}</h6>
-                      <small className="text-muted text-truncate" style={{maxWidth: 'calc(30vw - 20px)', display: 'block'}}>{currentTrack.artist}</small>
-                </div>
-              </div>
-          </Col>
-          
-                {/* 移动端和平板：进度条在歌曲信息右侧 */}
-                <Col xs={6} className="d-flex d-md-none align-items-center">
-                  <div className="mobile-progress-container">
-              <ProgressBar 
-                currentTrack={currentTrack}
-                playProgress={playProgress}
-                totalSeconds={totalSeconds}
-                playerRef={playerRef}
-                formatTime={formatTime}
-                      deviceType={deviceInfo.deviceType}
-              />
-            </div>
-                </Col>
-            
-                {/* 中间空白区域 - 仅在桌面端显示 */}
-                <Col md={6} className="d-none d-md-block">
-                  {/* 此区域故意留空，为进度条底部定位留出空间 */}
-                </Col>
-                
-                {/* 右侧：播放控制 */}
-                <Col xs={12} md={3} className="d-flex justify-content-center justify-content-md-end mt-2 mt-md-0 control-buttons-container">
-                  {/* 歌词切换按钮 */}
-                  <Button
-                    variant="link"
-                    onClick={() => setLyricExpanded(!lyricExpanded)}
-                    className="p-2 control-button text-info control-icon-btn"
-                    aria-label={lyricExpanded ? "收起歌词" : "展开歌词"}
-                    title={lyricExpanded ? "收起歌词" : "展开歌词"}
-                  >
-                    <span style={{ 
-                      fontWeight: 'bold', 
-                      fontSize: '1.1rem',
-                      fontFamily: 'SimSun, "宋体", serif' 
-                    }}>
-                      词
-                    </span>
-                  </Button>
-                  
-                  {currentTrack && (
-                    <HeartButton 
-                      track={currentTrack} 
-                      size={20} 
-                      variant="link"
-                      className="p-2 control-button control-icon-btn" 
-                      onFavoritesChange={loadFavorites}
-                    />
-                  )}
-                  
-              <Button 
-                variant="link" 
-                onClick={handlePrevious}
-                disabled={!currentTrack || currentPlaylist.length <= 1}
-                className="mx-1 p-2 control-button text-secondary control-icon-btn" 
-                aria-label="上一首"
-              >
-                <FaStepBackward size={20} />
-              </Button>
-              
-              <Button
-                variant="link"
-                onClick={() => setIsPlaying(!isPlaying)}
-                disabled={!currentTrack || !playerUrl}
-                className="mx-1 p-1 control-button control-icon-btn" 
-                aria-label={isPlaying ? "暂停" : "播放"}
-              >
-                {!currentTrack ? 
-                  <FaMusic size={24} className="text-muted" /> 
-                 : isPlaying ? 
-                  <FaPause size={24} className="text-primary" />
-                 : 
-                  <FaPlay size={24} className="text-primary" />
-                }
-              </Button>
-              
-              <Button 
-                variant="link" 
-                onClick={handleNext}
-                disabled={!currentTrack || currentPlaylist.length <= 1}
-                className="mx-1 p-2 control-button text-secondary control-icon-btn" 
-                aria-label="下一首"
-              >
-                <FaStepForward size={20} />
-              </Button>
-              
-              <Button
-                variant="link"
-                onClick={handleTogglePlayMode}
-                className="mx-1 p-2 text-secondary control-button control-icon-btn" 
-                aria-label="播放模式"
-              >
-                {getPlayModeIcon()}
-              </Button>
-              
-              {/* 添加下载按钮 */}
-              {currentTrack && (
-                <Button
-                  variant="link"
-                  onClick={() => handleDownload(currentTrack)}
-                  className="mx-1 p-2 text-success control-button control-icon-btn" 
-                  aria-label="下载"
-                  title="下载歌曲"
-                  disabled={downloading && currentDownloadingTrack?.id === currentTrack.id}
-                >
-                  {downloading && currentDownloadingTrack?.id === currentTrack.id ? 
-                    <Spinner animation="border" size="sm" /> : 
-                    <FaDownload size={20} />
-                  }
-                </Button>
-              )}
-                </Col>
-              </Row>
-              
-              {/* 桌面端：进度条和时间 - 绝对定位在底部 */}
-              {deviceInfo.isDesktop && (
-                <div className="d-none d-md-block progress-control-container">
-                  {/* 收起状态下的单行歌词显示 */}
-                  {!lyricExpanded && currentTrack && (
-                    <div className="current-lyric-line text-left">
-                      {lyricData.parsedLyric.length > 0 && currentLyricIndex >= 0 ? 
-                        lyricData.parsedLyric[currentLyricIndex]?.text || "暂无歌词" 
-                        : "暂无歌词"}
-            </div>
-                  )}
-                  <div className="d-flex align-items-center">
-                    <div className="progress-bar-container">
-                      <ProgressBar 
-                        currentTrack={currentTrack}
-                        playProgress={playProgress}
-                        totalSeconds={totalSeconds}
-                        playerRef={playerRef}
-                        formatTime={formatTime}
-                        deviceType={deviceInfo.deviceType}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* 恢复ReactPlayer组件 */}
-            <ReactPlayer
-              ref={playerRef}
-              onProgress={handleProgress}
-              url={playerUrl}
-              playing={isPlaying}
-              onReady={() => console.log('播放器就绪')}
-              onError={(e) => {
-                console.error('播放错误:', e);
-                setIsPlaying(false);
-              }}
-              onEnded={handleEnded}
-              config={{ file: { forceAudio: true } }}
-              height={0}
-                style={{ display: playerUrl ? 'block' : 'none' }} 
-            />
-
-              {/* 展开状态下的额外内容 */}
-              {lyricExpanded && currentTrack && (
-                <div className="player-expanded-view">
-                  {/* 左侧：大封面 */}
-                  <img 
-                    src={coverCache[`${currentTrack.source}-${currentTrack.pic_id}-300`] || 'default_cover.png'}
-                    alt="专辑封面"
-                    className="album-cover-large"
-                  />
-                  
-                  {/* 右侧：详细信息和歌词 */}
-                  <div className="track-info-expanded">
-                    <h2>{currentTrack.name}</h2>
-                    <h4>{currentTrack.artist} - {currentTrack.album}</h4>
-          
-                    {/* 歌词滚动区域 */}
-            <div 
-                      className="lyrics-scroll-container" 
-            ref={lyricsContainerRef}
-            onScroll={(e) => {
-              sessionStorage.setItem('userScrolled', true);
-            }}
-            >
-                      {lyricData.parsedLyric.length > 0 ? (
-                        lyricData.parsedLyric.map((line, index) => (
-              <div
-                key={index}
-                className={`lyric-line ${index === currentLyricIndex ? 'active' : ''} ${index === currentLyricIndex + 1 ? 'next-active' : ''}`}
-                data-time={line.time}
-                    style={{
-                              padding: '8px 0',
-                      color: index === currentLyricIndex ? '#333333' : (index === currentLyricIndex + 1 ? '#666666' : '#999999'),
-                      fontWeight: index === currentLyricIndex ? '500' : 'normal',
-                      transition: 'all 0.3s'
-                    }}
-              >
-                  <div>{line.text}</div>
-                  {lyricData.tLyric && (
-                              <div className="translated-lyric" style={{ fontSize: '0.9em', marginTop: '4px' }}>
-                      {parseLyric(lyricData.tLyric)[index]?.text}
-                    </div>
-                  )}
-                </div>
-                        ))
-                      ) : (
-                        <div className="text-center text-muted py-5">暂无歌词</div>
-              )}
-                </div>
-                  </div>
-                </div>
-        )}
-      </div>
-          </div>
-        </div>
-      </>
-    );
-  };
-
   // 使用设备检测功能
   const deviceInfo = useDevice();
   
@@ -1031,7 +782,37 @@ const fetchCover = async (source, picId, size = 300) => {
           {renderContent()}
         </Container>
         
-        {currentTrack && renderAudioPlayer()}
+        {currentTrack && (
+          <AudioPlayer
+            currentTrack={currentTrack}
+            playerUrl={playerUrl}
+            isPlaying={isPlaying}
+            lyricExpanded={lyricExpanded}
+            lyricData={lyricData}
+            currentLyricIndex={currentLyricIndex}
+            playProgress={playProgress}
+            totalSeconds={totalSeconds}
+            playMode={playMode}
+            downloading={downloading}
+            currentDownloadingTrack={currentDownloadingTrack}
+            coverCache={coverCache}
+            currentPlaylist={currentPlaylist}
+            setIsPlaying={setIsPlaying}
+            setLyricExpanded={setLyricExpanded}
+            handleProgress={handleProgress}
+            handleEnded={handleEnded}
+            handlePrevious={handlePrevious}
+            handleNext={handleNext}
+            handleTogglePlayMode={handleTogglePlayMode}
+            handleDownload={handleDownload}
+            loadFavorites={loadFavorites}
+            formatTime={formatTime}
+            deviceInfo={deviceInfo}
+            playerRef={playerRef}
+            lyricsContainerRef={lyricsContainerRef}
+            parseLyric={parseLyric}
+          />
+        )}
         
         <InstallPWA />
         <UpdateNotification />

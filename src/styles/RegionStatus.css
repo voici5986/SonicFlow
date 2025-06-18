@@ -5,170 +5,179 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
-  padding: 0.4rem;
-  border-radius: 50%;
   width: 36px;
   height: 36px;
-  background-color: rgba(0, 0, 0, 0.05);
-  margin-right: 0.5rem;
-  transition: all 0.3s ease;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.1);  /* 添加轻微背景，确保图标可见 */
+  border: 2px solid transparent; /* 默认透明边框 */
+  position: relative;  /* 添加相对定位 */
 }
 
+/* 确保图标在圆形容器中居中 */
 .region-status-icon-only .mode-icon {
-  font-size: 1rem;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
 }
 
 /* 紧凑模式 - 用于导航栏 */
 .region-status-compact {
   display: flex;
   align-items: center;
-  font-size: 0.85rem;
-  padding: 0.3rem 0.6rem;
-  border-radius: 16px;
-  background-color: rgba(0, 0, 0, 0.05);
-  margin-right: 0.5rem;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 14px;
   transition: all 0.3s ease;
+  position: relative;
+  opacity: 1;
+  visibility: visible;
 }
 
-.region-status-compact .mode-icon {
-  margin-right: 0.4rem;
-  font-size: 0.9rem;
+/* 可见性控制 */
+.region-status-compact.visible {
+  opacity: 1;
+  visibility: visible;
 }
 
-.region-status-compact .mode-name {
-  font-weight: 500;
+.region-status-compact.hidden {
+  opacity: 0;
+  visibility: hidden;
 }
 
 /* 详细模式 - 用于设置页面或模态框 */
 .region-status-detailed {
-  padding: 0.5rem;
+  padding: 15px;
   border-radius: 8px;
-  margin-bottom: 0.25rem;
-  background-color: rgba(0, 0, 0, 0.03);
-  transition: all 0.3s ease;
-  font-size: 0.85rem;
+  margin-bottom: 20px;
 }
 
-.region-status-detailed .status-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 0.25rem;
+/* 状态图标 */
+.mode-icon {
+  font-size: 16px;
+  margin-right: 8px;
 }
 
-.region-status-detailed .mode-icon {
-  margin-right: 0.4rem;
-  font-size: 1rem;
-}
-
-.region-status-detailed .mode-name {
-  font-weight: 600;
+/* 状态文本 */
+.mode-name {
   margin: 0;
-  font-size: 0.95rem;
+  font-weight: 500;
 }
 
-.region-status-detailed .mode-description {
-  margin-bottom: 0.4rem;
-  font-size: 0.8rem;
+.mode-description {
+  font-size: 0.9rem;
+  margin: 8px 0;
+  opacity: 0.8;
 }
 
-.region-status-detailed .region-note {
-  font-size: 0.75rem;
-  margin-bottom: 0.4rem;
-  color: #666;
-  line-height: 1.3;
+/* 状态颜色 */
+.region-status-compact.full, .region-status-icon-only.full, .region-status-detailed.full {
+  background-color: rgba(0, 128, 0, 0.2);
+  color: #006400;
 }
 
-.region-status-detailed .refresh-button {
-  padding: 0.15rem 0.5rem;
-  font-size: 0.75rem;
+.region-status-compact.china, .region-status-icon-only.china, .region-status-detailed.china {
+  background-color: rgba(255, 165, 0, 0.2);
+  color: #cc7000;
 }
 
-/* 模式特定样式 */
-/* 完整模式 */
-.region-status-icon-only.full,
-.region-status-compact.full,
-.region-status-detailed.full {
-  border-left: 3px solid #28a745;
+.region-status-compact.offline, .region-status-icon-only.offline, .region-status-detailed.offline {
+  background-color: rgba(220, 53, 69, 0.2);
+  color: #b02a37;
 }
 
-/* 在仅图标模式下使用圆形边框 */
-.region-status-icon-only.full {
-  border-left: none;
-  border: 2px solid #28a745;
+.region-status-compact.loading, .region-status-icon-only.loading, .region-status-detailed.loading {
+  background-color: rgba(13, 110, 253, 0.2);
+  color: #0a58ca;
 }
 
+/* 图标颜色 */
 .mode-icon.full {
   color: #28a745;
-}
-
-/* 中国模式 */
-.region-status-icon-only.china,
-.region-status-compact.china,
-.region-status-detailed.china {
-  border-left: 3px solid #007bff;
-}
-
-/* 在仅图标模式下使用圆形边框 */
-.region-status-icon-only.china {
-  border-left: none;
-  border: 2px solid #007bff;
 }
 
 .mode-icon.china {
   color: #007bff;
 }
 
-/* 离线模式 */
-.region-status-icon-only.offline,
-.region-status-compact.offline,
-.region-status-detailed.offline {
-  border-left: 3px solid #dc3545;
-}
-
-/* 在仅图标模式下使用圆形边框 */
-.region-status-icon-only.offline {
-  border-left: none;
-  border: 2px solid #dc3545;
-}
-
 .mode-icon.offline {
   color: #dc3545;
-}
-
-/* 加载中模式 */
-.region-status-icon-only.loading,
-.region-status-compact.loading,
-.region-status-detailed.loading {
-  border-left: 3px solid #6c757d;
-}
-
-/* 在仅图标模式下使用圆形边框 */
-.region-status-icon-only.loading {
-  border-left: none;
-  border: 2px solid #6c757d;
 }
 
 .mode-icon.loading {
   color: #6c757d;
 }
 
+/* 脉冲动画 */
+.pulse {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.region-note {
+  font-size: 0.85rem;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.refresh-button {
+  margin-top: 10px;
+}
+
+/* 模式特定样式 */
+/* 完整模式 */
+.region-status-icon-only.full {
+  border: 2px solid #28a745;
+  background-color: rgba(40, 167, 69, 0.1);
+}
+
+/* 中国模式 */
+.region-status-icon-only.china {
+  border: 2px solid #007bff;
+  background-color: rgba(0, 123, 255, 0.1);
+}
+
+/* 离线模式 */
+.region-status-icon-only.offline {
+  border: 2px solid #dc3545;
+  background-color: rgba(220, 53, 69, 0.1);
+}
+
+/* 加载中模式 */
+.region-status-icon-only.loading {
+  border: 2px solid #6c757d;
+  background-color: rgba(108, 117, 125, 0.1);
+}
+
 /* 脉冲动画 - 用于加载状态 */
 @keyframes pulse {
   0% {
-    transform: scale(0.95);
     opacity: 0.7;
   }
   50% {
-    transform: scale(1.05);
     opacity: 1;
   }
   100% {
-    transform: scale(0.95);
     opacity: 0.7;
   }
 }
 
-.mode-icon.pulse {
+/* 修改脉冲动画，确保不影响居中定位 */
+.region-status-icon-only .mode-icon.pulse {
   animation: pulse 1.5s infinite;
+  /* 保持居中，不使用scale变换 */
 } 

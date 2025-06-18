@@ -1,34 +1,99 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
+import { useRegion } from '../contexts/RegionContext';
+import { useDebounce } from '../utils/throttleDebounce';
 import { FaGoogle } from 'react-icons/fa';
 
+/**
+ * 登录表单组件
+ * @param {function} onToggleForm - 切换到注册表单的回调
+ * @param {function} onLoginSuccess - 登录成功的回调
+ */
 const LoginForm = ({ onToggleForm, onLoginSuccess }) => {
+  // 状态
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
   
+  // 防抖处理后的状态
+  const [debouncedEmail, setDebouncedEmail] = useState('');
+  const [debouncedPassword, setDebouncedPassword] = useState('');
+  
+  // 创建防抖处理函数
+  const handleEmailChange = useDebounce((value) => {
+    setDebouncedEmail(value);
+  }, 300);
+  
+  const handlePasswordChange = useDebounce((value) => {
+    setDebouncedPassword(value);
+  }, 300);
+  
+  // 获取认证上下文
   const { login, signInWithGoogle, resetPassword } = useAuth();
-
+  
+  // 获取区域上下文
+  const { isFeatureAvailable } = useRegion();
+  
+  // 检查账号功能是否可用
+  const accountFeatureAvailable = isFeatureAvailable('account');
+  
+  // 当账号功能不可用时显示警告
+  useEffect(() => {
+    if (!accountFeatureAvailable) {
+      setError('当前区域无法使用账号功能，请尝试使用VPN或代理服务');
+    } else {
+      setError('');
+    }
+  }, [accountFeatureAvailable]);
+  
+  // 处理表单提交
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setLoading(true);
     
-    try {
-      const { success, error } = await login(email, password);
-      if (success) {
-        onLoginSuccess && onLoginSuccess();
-      } else if (error) {
-        setError(error.message);
-      }
-    } catch (err) {
-      setError('登录失败，请稍后重试');
+    // 清除之前的错误
+    setError('');
+    
+    // 验证输入
+    if (!debouncedEmail || !debouncedPassword) {
+      setError('请填写所有必填字段');
+      return;
     }
     
-    setLoading(false);
+    // 检查账号功能是否可用
+    if (!accountFeatureAvailable) {
+      setError('当前区域无法使用账号功能，请尝试使用VPN或代理服务');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      // 调用认证服务进行登录
+      await login(debouncedEmail, debouncedPassword);
+      
+      // 登录成功，调用回调
+      if (onLoginSuccess) {
+        onLoginSuccess();
+      }
+    } catch (error) {
+      console.error('登录失败:', error);
+      
+      // 设置错误消息
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        setError('邮箱或密码错误');
+      } else if (error.code === 'auth/invalid-email') {
+        setError('无效的邮箱格式');
+      } else if (error.code === 'auth/too-many-requests') {
+        setError('登录尝试次数过多，请稍后再试');
+      } else {
+        setError('登录失败，请稍后再试');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
   
   const handleGoogleLogin = async () => {
@@ -80,8 +145,12 @@ const LoginForm = ({ onToggleForm, onLoginSuccess }) => {
             type="email"
             placeholder="请输入邮箱地址"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              handleEmailChange(e.target.value);
+            }}
             required
+            disabled={loading || !accountFeatureAvailable}
           />
         </Form.Group>
 
@@ -91,8 +160,12 @@ const LoginForm = ({ onToggleForm, onLoginSuccess }) => {
             type="password"
             placeholder="请输入密码"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              handlePasswordChange(e.target.value);
+            }}
             required
+            disabled={loading || !accountFeatureAvailable}
           />
         </Form.Group>
 
@@ -113,10 +186,22 @@ const LoginForm = ({ onToggleForm, onLoginSuccess }) => {
         <Button
           variant="primary"
           type="submit"
-          disabled={loading}
+          disabled={loading || !accountFeatureAvailable}
           className="w-100 mb-3"
         >
-          {loading ? <Spinner animation="border" size="sm" /> : "登录"}
+          {loading ? (
+            <>
+              <Spinner
+                as="span"
+                animation="border"
+                size="sm"
+                role="status"
+                aria-hidden="true"
+                className="me-2"
+              />
+              登录中...
+            </>
+          ) : "登录"}
         </Button>
 
         <div className="text-center mb-3">或</div>
@@ -124,7 +209,7 @@ const LoginForm = ({ onToggleForm, onLoginSuccess }) => {
         <Button
           variant="outline-danger"
           onClick={handleGoogleLogin}
-          disabled={loading}
+          disabled={loading || !accountFeatureAvailable}
           className="w-100 mb-3"
         >
           <FaGoogle className="me-2" /> Google登录

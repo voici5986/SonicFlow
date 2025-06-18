@@ -11,7 +11,7 @@ import {
 import { initialSync } from '../services/syncService';
 import { toast } from 'react-toastify';
 import { saveSyncStatus, getLocalUser, saveLocalUser, getNetworkStatus } from '../services/storage';
-import { APP_MODES } from '../services/regionDetection';
+import { APP_MODES, APP_EVENTS } from '../services/regionDetection';
 import useFirebaseStatus from '../hooks/useFirebaseStatus';
 
 // 创建认证上下文
@@ -65,10 +65,10 @@ export const AuthProvider = ({ children }) => {
     };
     
     // 监听应用模式变化事件
-    window.addEventListener('appModeChange', handleAppModeChange);
+    window.addEventListener(APP_EVENTS.MODE_CHANGED, handleAppModeChange);
     
     return () => {
-      window.removeEventListener('appModeChange', handleAppModeChange);
+      window.removeEventListener(APP_EVENTS.MODE_CHANGED, handleAppModeChange);
     };
   }, [currentUser, checkAvailability]);
 

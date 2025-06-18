@@ -4,7 +4,8 @@ import {
   APP_MODES, 
   handleNetworkStatusChange, 
   isChinaUser,
-  getCurrentAppMode
+  getCurrentAppMode,
+  APP_EVENTS
 } from '../services/regionDetection';
 import useNetworkStatus from '../hooks/useNetworkStatus';
 
@@ -29,19 +30,15 @@ export const RegionProvider = ({ children }) => {
       try {
         setIsLoading(true);
         const mode = await initRegionDetection();
+        console.log(`RegionContext: 初始化完成，应用模式 = ${mode}`);
         setAppMode(mode);
         setIsChina(isChinaUser());
-        
-        // 发送应用模式变化事件
-        dispatchAppModeChangeEvent(mode);
       } catch (error) {
         console.error("区域初始化失败:", error);
         // 失败时使用默认模式
         const fallbackMode = getCurrentAppMode() || APP_MODES.CHINA;
+        console.log(`RegionContext: 初始化失败，使用默认模式 = ${fallbackMode}`);
         setAppMode(fallbackMode);
-        
-        // 发送应用模式变化事件
-        dispatchAppModeChangeEvent(fallbackMode);
       } finally {
         setIsLoading(false);
       }
@@ -49,18 +46,40 @@ export const RegionProvider = ({ children }) => {
     
     initRegion();
   }, []);
+
+  // 监听应用模式变化事件
+  useEffect(() => {
+    const handleAppModeChange = (event) => {
+      if (event.detail && event.detail.mode) {
+        const newMode = event.detail.mode;
+        console.log(`RegionContext: 接收到应用模式变化事件 ${newMode}`);
+        
+        // 强制更新状态，即使值相同
+        setAppMode(prevMode => {
+          console.log(`RegionContext: 更新模式 ${prevMode} -> ${newMode}`);
+          return newMode;
+        });
+        
+        setIsChina(isChinaUser());
+      }
+    };
+    
+    console.log(`RegionContext: 添加模式变化事件监听器`);
+    window.addEventListener(APP_EVENTS.MODE_CHANGED, handleAppModeChange);
+    
+    return () => {
+      console.log(`RegionContext: 移除模式变化事件监听器`);
+      window.removeEventListener(APP_EVENTS.MODE_CHANGED, handleAppModeChange);
+    };
+  }, []);
   
   // 监听网络状态变化，更新应用模式
   useEffect(() => {
     const updateAppMode = async () => {
       try {
         console.log(`RegionContext: 网络状态变为 ${isOnline ? '在线' : '离线'}, 更新应用模式`);
-        const newMode = await handleNetworkStatusChange(isOnline);
-        setAppMode(newMode);
-        setIsChina(isChinaUser());
-        
-        // 发送应用模式变化事件
-        dispatchAppModeChangeEvent(newMode);
+        await handleNetworkStatusChange(isOnline);
+        // 不再设置appMode，由事件监听处理
       } catch (error) {
         console.error("处理网络状态变化失败:", error);
       }
@@ -70,12 +89,22 @@ export const RegionProvider = ({ children }) => {
     updateAppMode();
   }, [isOnline]);
   
-  // 发送应用模式变化事件
-  const dispatchAppModeChangeEvent = (mode) => {
-    const event = new CustomEvent('appModeChange', {
-      detail: { mode }
-    });
-    window.dispatchEvent(event);
+  // 手动刷新区域检测
+  const refreshRegionDetection = async () => {
+    try {
+      console.log(`RegionContext: 手动刷新区域检测`);
+      setIsLoading(true);
+      await initRegionDetection();
+      // 不再设置appMode，由事件监听处理
+      const currentMode = getCurrentAppMode();
+      console.log(`RegionContext: 刷新完成，当前模式 = ${currentMode}`);
+      return currentMode;
+    } catch (error) {
+      console.error("手动刷新区域检测失败:", error);
+      return appMode;
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   // 检查功能是否可用
@@ -102,26 +131,6 @@ export const RegionProvider = ({ children }) => {
     }
     
     return false;
-  };
-  
-  // 手动刷新区域检测
-  const refreshRegionDetection = async () => {
-    try {
-      setIsLoading(true);
-      const mode = await initRegionDetection();
-      setAppMode(mode);
-      setIsChina(isChinaUser());
-      
-      // 发送应用模式变化事件
-      dispatchAppModeChangeEvent(mode);
-      
-      return mode;
-    } catch (error) {
-      console.error("手动刷新区域检测失败:", error);
-      return appMode;
-    } finally {
-      setIsLoading(false);
-    }
   };
   
   // 上下文值
