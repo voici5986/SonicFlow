@@ -146,7 +146,7 @@
   border: none !important;
   box-shadow: none !important;
   display: flex;
-  justify-content: center;
+  justify-content: center !important; /* 强制居中 */
   align-items: center;
   padding: 0 !important;
   margin: 0 !important;
@@ -358,6 +358,8 @@
   .audio-player .col-md-3:last-child {
     flex: 0 0 auto;
     width: 25%;
+    display: flex;
+    justify-content: center;
   }
   
   .audio-player.collapsed .control-button {
@@ -376,7 +378,9 @@
   }
   
   /* 收紧按钮之间的间距并确保水平居中 - 适用于收起和展开状态 */
-  .audio-player .justify-content-end {
+  .audio-player .justify-content-end,
+  .audio-player .justify-content-center,
+  .audio-player .control-buttons-container {
     justify-content: center !important;
   }
   

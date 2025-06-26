@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Row, Col, Button, Spinner } from 'react-bootstrap';
 import ReactPlayer from 'react-player';
 import { FaPlay, FaPause, FaDownload, FaMusic, 
@@ -149,13 +149,15 @@ const AudioPlayer = ({
                   aria-label={lyricExpanded ? "收起歌词" : "展开歌词"}
                   title={lyricExpanded ? "收起歌词" : "展开歌词"}
                 >
-                  <span style={{ 
-                    fontWeight: 'bold', 
-                    fontSize: '1.1rem',
-                    fontFamily: 'SimSun, "宋体", serif' 
-                  }}>
-                    词
-                  </span>
+                  <img 
+                    src="/lyric.svg" 
+                    alt="歌词" 
+                    width="20" 
+                    height="20" 
+                    style={{ 
+                      filter: 'drop-shadow(0 0 1px rgba(0, 153, 255, 0.5))'
+                    }}
+                  />
                 </Button>
                 
                 {currentTrack && (

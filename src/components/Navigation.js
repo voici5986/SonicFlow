@@ -59,17 +59,18 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
     { id: 'history', title: '历史记录', icon: <FaHistory /> },
   ];
 
-  // SonicFlow标志样式
+  // SonicFlow标志样式 - 调整更紧凑
   const logoStyle = {
     fontFamily: "'Montserrat', sans-serif",
     fontWeight: 700,
-    fontSize: '1.5rem',
+    fontSize: '1.6rem',
     background: 'linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     backgroundClip: 'text',
     textFillColor: 'transparent',
-    letterSpacing: '1px'
+    letterSpacing: '-0.5px', // 减小字间距，使文字更紧凑
+    marginLeft: '-2px' // 微调文字位置
   };
 
   // 用户初始头像
@@ -89,11 +90,12 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
           <img 
             src="/logo.svg" 
             alt="SonicFlow Logo" 
-            width="32" 
-            height="32" 
-            className="logo-pulse me-2" 
+            width="38" 
+            height="38" 
+            className="logo-pulse me-1" 
             style={{
-              filter: 'drop-shadow(0 0 2px rgba(106, 17, 203, 0.3))',
+              filter: 'drop-shadow(0 0 3px rgba(106, 17, 203, 0.4))',
+              marginBottom: '2px' // 微调垂直对齐
             }}
           />
           <span style={logoStyle}>SonicFlow</span>

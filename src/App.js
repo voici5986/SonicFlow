@@ -151,6 +151,11 @@ const App = () => {
   const handleSearch = async (e) => {
     e.preventDefault();
     
+    // 在移动设备上，主动模糊搜索框，关闭虚拟键盘
+    if (deviceInfo.isMobile || deviceInfo.isTablet) {
+      document.activeElement?.blur();
+    }
+    
     // 如果离线，显示提示
     if (!isOnline) {
       toast.error('您当前处于离线状态，无法搜索音乐');
@@ -435,7 +440,8 @@ const fetchCover = async (source, picId, size = 300) => {
     });
   };
   
-  // 播放模式图标获取函数
+  // 播放模式图标获取函数 - 现在由AudioPlayer组件处理
+  // eslint-disable-next-line no-unused-vars
   const getPlayModeIcon = () => {
     switch (playMode) {
       case 'repeat-one':
@@ -540,19 +546,39 @@ const fetchCover = async (source, picId, size = 300) => {
   const renderHomePage = () => {
   return (
       <Container className="my-4">
-      <Form onSubmit={handleSearch} className="mb-4">
+      <Form 
+        onSubmit={handleSearch} 
+        className="mb-4"
+        autoComplete="off" // 禁用自动完成，避免干扰
+        // 确保在移动设备上也能正确提交表单
+        action="javascript:void(0);"
+      >
           <Row className="align-items-end g-2">
             <Col xs={12} md={6}>
               <Form.Group>
-            <Form.Control
+                          <Form.Control
                   type="text"
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                handleQueryChange(e.target.value);
-              }}
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    handleQueryChange(e.target.value);
+                  }}
                   placeholder="输入歌曲名、艺术家或专辑"
                   autoFocus
+                  onKeyDown={(e) => {
+                    // 当按下回车键时，阻止默认行为并触发搜索
+                    if (e.key === 'Enter' || e.keyCode === 13) {
+                      e.preventDefault();
+                      handleSearch(e);
+                    }
+                  }}
+                  // 添加onKeyPress事件处理，兼容更多移动设备
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' || e.keyCode === 13) {
+                      e.preventDefault();
+                      handleSearch(e);
+                    }
+                  }}
             />
               </Form.Group>
           </Col>
@@ -561,6 +587,13 @@ const fetchCover = async (source, picId, size = 300) => {
             <Form.Select 
               value={source}
               onChange={(e) => setSource(e.target.value)}
+              // 防止在移动端上获取焦点时自动弹出键盘
+              onFocus={(e) => {
+                if (window.innerWidth < 768) {
+                  e.target.blur();
+                  setTimeout(() => e.target.focus(), 10);
+                }
+              }}
             >
                   {sources.map((src) => (
                     <option key={src} value={src}>
@@ -575,6 +608,13 @@ const fetchCover = async (source, picId, size = 300) => {
                 <Form.Select
                   value={quality}
                   onChange={(e) => setQuality(parseInt(e.target.value))}
+                  // 防止在移动端上获取焦点时自动弹出键盘
+                  onFocus={(e) => {
+                    if (window.innerWidth < 768) {
+                      e.target.blur();
+                      setTimeout(() => e.target.focus(), 10);
+                    }
+                  }}
                 >
                   {qualities.map((q) => (
                     <option key={q} value={q}>
@@ -585,10 +625,20 @@ const fetchCover = async (source, picId, size = 300) => {
               </Form.Group>
           </Col>
             <Col xs={12} md={2}>
-              <Button type="submit" variant="primary" className="w-100" disabled={loading}>
+              <Button 
+                type="submit" 
+                variant="primary" 
+                className="w-100" 
+                disabled={loading}
+                onClick={(e) => {
+                  if (!loading) {
+                    handleSearch(e);
+                  }
+                }}
+              >
                 {loading ? <Spinner animation="border" size="sm" /> : '搜索'}
-            </Button>
-          </Col>
+              </Button>
+            </Col>
         </Row>
       </Form>
 
@@ -736,38 +786,40 @@ const fetchCover = async (source, picId, size = 300) => {
     }
   }, [deviceInfo.isMobile, deviceInfo.isTablet]);
 
+  // 唤醒锁请求函数 - 移动到使用它的useEffect之前
+  const requestWakeLock = useCallback(async () => {
+    if ('wakeLock' in navigator && isPlaying) {
+      try {
+        const lock = await navigator.wakeLock.request('screen');
+        console.log('Wake Lock已激活');
+        
+        setWakeLock(lock);
+        
+        // 监听锁失效事件
+        lock.addEventListener('release', () => {
+          console.log('Wake Lock已释放');
+          setWakeLock(null);
+        });
+      } catch (err) {
+        console.error(`无法获取Wake Lock: ${err.name}, ${err.message}`);
+      }
+    }
+  }, [isPlaying]);
+
   // 实现Wake Lock API，防止设备在播放音乐时休眠
   useEffect(() => {
-    // 只有当浏览器支持Wake Lock API且有歌曲在播放时才请求唤醒锁
-    const requestWakeLock = async () => {
-      if ('wakeLock' in navigator && isPlaying) {
-        try {
-          const lock = await navigator.wakeLock.request('screen');
-          console.log('Wake Lock已激活');
-          
-          setWakeLock(lock);
-          
-          // 监听锁失效事件
-          lock.addEventListener('release', () => {
-            console.log('Wake Lock已释放');
-            setWakeLock(null);
-          });
-        } catch (err) {
-          console.error(`无法获取Wake Lock: ${err.name}, ${err.message}`);
-        }
-      }
-    };
-    
-    // 如果当前没有唤醒锁但需要播放，则请求锁
-    if (!wakeLock && isPlaying) {
+    // 只在有音乐播放时请求唤醒锁
+    if (isPlaying && playerUrl) {
       requestWakeLock();
-    }
-    // 如果有唤醒锁但停止播放，则释放锁
-    else if (wakeLock && !isPlaying) {
-      wakeLock.release().then(() => {
-        console.log('手动释放Wake Lock');
+    } else if (wakeLock) {
+      // 当音乐暂停时释放唤醒锁
+      try {
+        wakeLock.release();
+        console.log('唤醒锁已释放');
         setWakeLock(null);
-      });
+      } catch (err) {
+        console.error('无法释放唤醒锁:', err);
+      }
     }
     
     // 添加页面可见性变化的监听器
@@ -783,8 +835,40 @@ const fetchCover = async (source, picId, size = 300) => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [isPlaying, wakeLock]);
-
+  }, [isPlaying, playerUrl, wakeLock, requestWakeLock]);
+  
+  // 添加空格键控制播放/暂停的功能
+  useEffect(() => {
+    // 只在桌面端添加空格键控制
+    if (!deviceInfo.isDesktop) return;
+    
+    // 只在有当前音轨时添加空格键控制
+    if (!currentTrack) return;
+    
+    const handleKeyDown = (e) => {
+      // 如果用户正在输入框中输入，不触发空格键控制
+      if (e.target.tagName === 'INPUT' || 
+          e.target.tagName === 'TEXTAREA' || 
+          e.target.isContentEditable) {
+        return;
+      }
+      
+      // 空格键控制播放/暂停
+      if (e.code === 'Space' || e.keyCode === 32) {
+        e.preventDefault(); // 阻止页面滚动
+        setIsPlaying(!isPlaying);
+      }
+    };
+    
+    // 添加事件监听器
+    window.addEventListener('keydown', handleKeyDown);
+    
+    // 清理函数
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [currentTrack, isPlaying, deviceInfo.isDesktop]);
+  
   // 初始化应用
   useEffect(() => {
     // ... existing code ...
