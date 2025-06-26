@@ -67,7 +67,7 @@ const RegionStatus = ({ showDetails = false, iconOnly = false }) => {
       case APP_MODES.FULL:
         return '所有功能可用';
       case APP_MODES.CHINA:
-        return '账号功能不可用';
+        return '服务不可用';
       case APP_MODES.OFFLINE:
         return '当前处于离线模式，仅可访问已缓存的内容';
       default:
@@ -117,7 +117,7 @@ const RegionStatus = ({ showDetails = false, iconOnly = false }) => {
       
       {appMode === APP_MODES.CHINA && (
         <p className="region-note">
-          检测到您位于中国大陆地区，账号功能不可用，但您仍可使用音乐搜索、播放和本地收藏功能。
+          因法律风险，本服务不对IP为中国大陆地区的用户开放。
           {navigator.onLine && (
             <span> 如果您正在使用VPN，可以尝试刷新检测。</span>
           )}

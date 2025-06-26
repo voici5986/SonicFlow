@@ -9,15 +9,9 @@
       "type": "image/x-icon"
     },
     {
-      "src": "logo192.png",
-      "type": "image/png",
-      "sizes": "192x192",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "logo512.png",
-      "type": "image/png",
-      "sizes": "512x512",
+      "src": "logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
       "purpose": "any maskable"
     }
   ],
@@ -34,14 +28,14 @@
       "short_name": "搜索",
       "description": "快速搜索音乐",
       "url": "/?action=search",
-      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "logo.svg", "sizes": "any" }]
     },
     {
       "name": "我的收藏",
       "short_name": "收藏",
       "description": "查看收藏的音乐",
       "url": "/?tab=favorites",
-      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "logo.svg", "sizes": "any" }]
     }
   ]
 }

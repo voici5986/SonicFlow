@@ -3,9 +3,22 @@
  * 统一处理音乐相关API调用，包括搜索、获取URL、歌词和封面
  */
 import axios from 'axios';
+import { getCurrentAppMode, APP_MODES } from '../services/regionDetection';
 
 // API地址配置
 const API_BASE = process.env.REACT_APP_API_BASE || '/api';
+
+/**
+ * 检查是否允许API请求
+ * @returns {boolean} 是否允许API请求
+ */
+const checkApiAccess = () => {
+  const currentMode = getCurrentAppMode();
+  if (currentMode === APP_MODES.CHINA) {
+    throw new Error('因法律风险，本服务不对IP为中国大陆地区的用户开放');
+  }
+  return true;
+};
 
 /**
  * 搜索音乐
@@ -17,6 +30,7 @@ const API_BASE = process.env.REACT_APP_API_BASE || '/api';
  */
 export const searchMusic = async (query, source, count = 20, page = 1) => {
   try {
+    checkApiAccess();
     const response = await axios.get(`${API_BASE}`, {
       params: {
         types: 'search',
@@ -41,6 +55,7 @@ export const searchMusic = async (query, source, count = 20, page = 1) => {
  */
 export const getAudioUrl = async (track, quality = 999) => {
   try {
+    checkApiAccess();
     const response = await axios.get(`${API_BASE}`, {
       params: {
         types: 'url',
@@ -63,6 +78,7 @@ export const getAudioUrl = async (track, quality = 999) => {
  */
 export const getLyrics = async (track) => {
   try {
+    checkApiAccess();
     const response = await axios.get(`${API_BASE}`, {
       params: {
         types: 'lyric',
@@ -89,6 +105,7 @@ export const getLyrics = async (track) => {
  */
 export const getCoverImage = async (source, picId, size = 300) => {
   try {
+    checkApiAccess();
     const cacheKey = `${source}-${picId}-${size}`;
     
     // 检查sessionStorage缓存
@@ -128,6 +145,7 @@ export const getCoverImage = async (source, picId, size = 300) => {
  */
 export const playMusic = async (track, quality = 999) => {
   try {
+    checkApiAccess();
     // 并行请求URL和歌词
     const [audioData, lyrics] = await Promise.all([
       getAudioUrl(track, quality),

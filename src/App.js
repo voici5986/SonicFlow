@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { Container, Row, Col, Form, Button, Card, Spinner } from 'react-bootstrap';
-import ReactPlayer from 'react-player';
-import { FaPlay, FaPause, FaDownload, FaMusic, 
-         FaStepBackward, FaStepForward, FaRandom, FaRetweet } from 'react-icons/fa';
+import { FaPlay, FaPause, FaDownload, FaRandom, FaRetweet } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 // import { RiRepeatOneLine } from 'react-icons/ri';
 import HeartButton from './components/HeartButton';
 import Navigation from './components/Navigation';
-import ProgressBar from './components/ProgressBar';
+// import ProgressBar from './components/ProgressBar';
 import DeviceDebugger from './components/DeviceDebugger';
 import OrientationPrompt from './components/OrientationPrompt';
 import InstallPWA from './components/InstallPWA';
@@ -22,7 +20,7 @@ import { downloadTrack } from './services/downloadService';
 import { searchMusic, playMusic, getCoverImage } from './services/musicApiService';
 import useNetworkStatus from './hooks/useNetworkStatus';
 import useFirebaseStatus from './hooks/useFirebaseStatus';
-import { useThrottle, useDebounce, useDebouncedValue } from './utils/throttleDebounce';
+import { useThrottle, useDebounce } from './utils/throttleDebounce';
 // 导入导航样式修复
 import './styles/NavigationFix.css';
 // 导入音频播放器样式
@@ -112,9 +110,13 @@ const App = () => {
   const [downloading, setDownloading] = useState(false);
   const [currentDownloadingTrack, setCurrentDownloadingTrack] = useState(null);
   
+  // 添加唤醒锁状态
+  const [wakeLock, setWakeLock] = useState(null);
+  
   const sources = [
-    'netease', 'joox', 'tencent', 'tidal', 'spotify',
-    'korean', 'kuwo', 'migu', 'kugou', 'qq',
+    'netease', 'tencent', 'tidal', 'spotify', 'ytmusic',
+    'qobuz', 'joox', 'deezer', 'migu', 'kugou', 
+    'kuwo', 'ximalaya', 'apple',
   ];
 
   const qualities = [128, 192, 320, 740, 999];
@@ -138,6 +140,7 @@ const App = () => {
   };
 
   // 新增防抖查询状态
+  // eslint-disable-next-line no-unused-vars
   const [debouncedQuery, setDebouncedQuery] = useState('');
   
   // 创建防抖处理函数
@@ -154,16 +157,20 @@ const App = () => {
       return;
     }
     
-    // 使用debouncedQuery而不是query进行搜索
-    if (!debouncedQuery) {
+    // 直接使用当前输入框的query值，而不是debouncedQuery
+    // 这样可以立即响应用户按下回车键的操作
+    if (!query) {
       toast.warning('请输入搜索关键词');
       return;
     }
+    
+    // 同时更新debouncedQuery，保持状态一致
+    setDebouncedQuery(query);
 
     setLoading(true);
     try {
-      // 使用新的musicApiService进行搜索
-      const searchResults = await searchMusic(debouncedQuery, source, 20, 1);
+      // 使用当前query值进行搜索，确保立即响应
+      const searchResults = await searchMusic(query, source, 20, 1);
       
       // 获取结果后处理封面
       const resultsWithCover = await Promise.all(
@@ -428,23 +435,16 @@ const fetchCover = async (source, picId, size = 300) => {
     });
   };
   
-  // 获取当前播放模式图标
+  // 播放模式图标获取函数
   const getPlayModeIcon = () => {
     switch (playMode) {
       case 'repeat-one':
-        return (
-          <div className="position-relative" style={{ width: "24px", height: "24px", display: "inline-block" }} title="单曲循环">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M7 7H17V10L21 6L17 2V5H5V11H7V7Z" fill="currentColor"/>
-              <path d="M17 17H7V14L3 18L7 22V19H19V13H17V17Z" fill="currentColor"/>
-              <text x="12" y="15" fontSize="9" fontWeight="bold" fill="currentColor" textAnchor="middle">1</text>
-            </svg>
-          </div>
-        );
+        return <FaRetweet />;
       case 'random':
-        return <FaRandom size={18} title="随机播放" />;
-      default: // repeat-all
-        return <FaRetweet size={18} title="列表循环" />;
+        return <FaRandom />;
+      case 'repeat-all':
+      default:
+        return <FaRetweet />;
     }
   };
 
@@ -735,6 +735,55 @@ const fetchCover = async (source, picId, size = 300) => {
       });
     }
   }, [deviceInfo.isMobile, deviceInfo.isTablet]);
+
+  // 实现Wake Lock API，防止设备在播放音乐时休眠
+  useEffect(() => {
+    // 只有当浏览器支持Wake Lock API且有歌曲在播放时才请求唤醒锁
+    const requestWakeLock = async () => {
+      if ('wakeLock' in navigator && isPlaying) {
+        try {
+          const lock = await navigator.wakeLock.request('screen');
+          console.log('Wake Lock已激活');
+          
+          setWakeLock(lock);
+          
+          // 监听锁失效事件
+          lock.addEventListener('release', () => {
+            console.log('Wake Lock已释放');
+            setWakeLock(null);
+          });
+        } catch (err) {
+          console.error(`无法获取Wake Lock: ${err.name}, ${err.message}`);
+        }
+      }
+    };
+    
+    // 如果当前没有唤醒锁但需要播放，则请求锁
+    if (!wakeLock && isPlaying) {
+      requestWakeLock();
+    }
+    // 如果有唤醒锁但停止播放，则释放锁
+    else if (wakeLock && !isPlaying) {
+      wakeLock.release().then(() => {
+        console.log('手动释放Wake Lock');
+        setWakeLock(null);
+      });
+    }
+    
+    // 添加页面可见性变化的监听器
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isPlaying && !wakeLock) {
+        requestWakeLock();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // 清理函数
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isPlaying, wakeLock]);
 
   // 初始化应用
   useEffect(() => {

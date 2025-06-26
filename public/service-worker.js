@@ -13,6 +13,7 @@ const STATIC_CACHE_URLS = [
   '/index.html',
   '/manifest.json',
   '/favicon.ico',
+  '/logo.svg',
   '/offline.html', // 离线页面
 ];
 
@@ -158,8 +159,8 @@ self.addEventListener('push', (event) => {
     
     const options = {
       body: data.body || '有新消息',
-      icon: '/logo192.png',
-      badge: '/logo192.png',
+      icon: '/logo.svg',
+      badge: '/logo.svg',
       data: {
         url: data.url || '/'
       }

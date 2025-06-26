@@ -86,6 +86,16 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
     >
       <Container fluid>
         <Navbar.Brand className="d-flex align-items-center">
+          <img 
+            src="/logo.svg" 
+            alt="SonicFlow Logo" 
+            width="32" 
+            height="32" 
+            className="logo-pulse me-2" 
+            style={{
+              filter: 'drop-shadow(0 0 2px rgba(106, 17, 203, 0.3))',
+            }}
+          />
           <span style={logoStyle}>SonicFlow</span>
         </Navbar.Brand>
 
