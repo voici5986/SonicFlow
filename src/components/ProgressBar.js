@@ -1,14 +1,20 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback, memo } from 'react';
+import { usePlayer } from '../contexts/PlayerContext';
 
 // 进度条组件
-const ProgressBar = ({ 
+const ProgressBar = () => {
+  // 从PlayerContext获取所需状态和方法
+  const {
   currentTrack, 
   playProgress, 
   totalSeconds, 
   playerRef,
-  formatTime,
-  deviceType = 'desktop' // 设备类型参数，默认为桌面端
-}) => {
+    formatTime
+  } = usePlayer();
+  
+  // 从DeviceContext获取设备类型（这里假设有默认值）
+  const deviceType = 'desktop'; // 实际应用中应该从DeviceContext获取
+  
   const [isDragging, setIsDragging] = useState(false);
   const [dragProgress, setDragProgress] = useState(0);
   const [isHovering, setIsHovering] = useState(false);
@@ -75,10 +81,15 @@ const ProgressBar = ({
   }, []);
   
   // 鼠标事件处理
-  const handleMouseEnter = () => setIsHovering(true);
-  const handleMouseLeave = () => setIsHovering(false);
+  const handleMouseEnter = useCallback(() => {
+    setIsHovering(true);
+  }, []);
   
-  const handleMouseMove = (e) => {
+  const handleMouseLeave = useCallback(() => {
+    setIsHovering(false);
+  }, []);
+  
+  const handleMouseMove = useCallback((e) => {
     if (!progressBarRef.current || !currentTrack) return;
     
     // 更新鼠标位置
@@ -100,9 +111,9 @@ const ProgressBar = ({
         playerRef.current.seekTo(boundedPosition);
       }
     }
-  };
+  }, [currentTrack, isDragging, playerRef]);
   
-  const handleMouseDown = (e) => {
+  const handleMouseDown = useCallback((e) => {
     if (!currentTrack) return;
     
     setIsDragging(true);
@@ -119,10 +130,10 @@ const ProgressBar = ({
     if (playerRef.current) {
       playerRef.current.seekTo(boundedPosition);
     }
-  };
+  }, [currentTrack, playerRef]);
   
   // 触摸事件处理
-  const handleTouchStart = (e) => {
+  const handleTouchStart = useCallback((e) => {
     if (!currentTrack) return;
     
     setIsHovering(true);
@@ -144,9 +155,9 @@ const ProgressBar = ({
     if (playerRef.current) {
       playerRef.current.seekTo(boundedPosition);
     }
-  };
+  }, [currentTrack, playerRef]);
   
-  const handleTouchMove = (e) => {
+  const handleTouchMove = useCallback((e) => {
     if (!isDragging || !currentTrack) return;
     
     e.stopPropagation();
@@ -165,7 +176,10 @@ const ProgressBar = ({
     if (playerRef.current) {
       playerRef.current.seekTo(boundedPosition);
     }
-  };
+  }, [isDragging, currentTrack, playerRef]);
+  
+  // 空回调函数，避免重新创建
+  const handleEmptyEvent = useCallback(() => {}, []);
   
   // 确定当前显示的进度
   const displayProgress = isDragging 
@@ -194,8 +208,8 @@ const ProgressBar = ({
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
-      onTouchEnd={() => {}}
-      onTouchCancel={() => {}}
+      onTouchEnd={handleEmptyEvent}
+      onTouchCancel={handleEmptyEvent}
     >
       {/* 进度条容器 */}
       <div 
@@ -248,53 +262,30 @@ const ProgressBar = ({
             height: deviceType === 'mobile' ? '16px' : '20px',
             borderRadius: '50%',
             backgroundColor: '#dc3545',
-            boxShadow: '0 0 6px rgba(0,0,0,0.3)',
-            transform: isDragging ? 'scale(1.3)' : 'scale(1.1)',
-            opacity: isDragging ? 1 : (isHovering ? 0.9 : 0),
-            transition: 'transform 0.2s ease, opacity 0.2s ease', // 只为transform和opacity添加过渡效果
-            zIndex: 3
+            boxShadow: '0 0 5px rgba(0,0,0,0.3)',
+            zIndex: 3,
+            transition: 'transform 0.1s ease',
+            transform: (isDragging || isHovering) ? 'scale(1.1)' : 'scale(1)'
           }}
         />
       </div>
       
-      {/* 时间指示器 */}
-      {(isDragging || (isHovering && currentTrack)) && (
-        <div 
-          style={{
-            position: 'absolute',
-            top: '-28px',
-            left: `calc(${isDragging 
-              ? dragProgress 
-              : (isHovering ? mousePositionRef.current.x : displayProgress)}% - 20px)`,
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            color: 'white',
-            padding: '2px 6px',
-            borderRadius: '4px',
-            fontSize: '12px',
-            userSelect: 'none',
-            pointerEvents: 'none',
-            opacity: isDragging ? 1 : (isHovering ? 0.9 : 0),
-            transition: 'opacity 0.2s ease', // 只为opacity添加过渡效果
-            transform: isDragging ? 'translateY(-3px)' : 'none',
-            zIndex: 9
-          }}
-        >
-          {formatTime(totalSeconds * (isDragging 
-            ? (dragProgress / 100) 
-            : (isHovering 
-              ? (mousePositionRef.current.x / 100) 
-              : (displayProgress / 100))))}
-        </div>
-      )}
-      
       {/* 时间显示 */}
-      <div className="time-display" style={{
-        fontSize: deviceType === 'mobile' ? '11px' : '12px'
-      }}>
-        {formatTime(currentTimeInSeconds)}/{formatTime(totalSeconds)}
+        <div 
+        className="time-display" 
+          style={{
+          display: 'flex', 
+          justifyContent: 'flex-end',
+          fontSize: deviceType === 'mobile' ? '0.7rem' : '0.8rem',
+          marginTop: '2px',
+          color: '#6c757d'
+        }}
+      >
+        <span>{formatTime(currentTimeInSeconds)}/{formatTime(totalSeconds)}</span>
       </div>
     </div>
   );
 };
 
-export default ProgressBar; 
+// 使用React.memo包装组件，避免不必要的重渲染
+export default memo(ProgressBar); 

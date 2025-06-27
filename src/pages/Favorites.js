@@ -6,10 +6,14 @@ import { toast } from 'react-toastify';
 import axios from 'axios';
 import { downloadTrack, downloadTracks } from '../services/downloadService';
 import { searchMusic } from '../services/musicApiService';
+import { usePlayer } from '../contexts/PlayerContext';
 
 const API_BASE = process.env.REACT_APP_API_BASE || '/api';
 
-const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
+const Favorites = () => {
+  // 从PlayerContext获取状态和方法
+  const { handlePlay, currentTrack, isPlaying, fetchCover, coverCache } = usePlayer();
+  
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -37,7 +41,26 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
     setLoading(true);
     try {
       const favItems = await getFavorites();
-      setFavorites(favItems);
+      
+      // 使用PlayerContext的fetchCover方法获取封面
+      const itemsWithCover = await Promise.all(
+        favItems.map(async (item) => {
+          if (item.pic_id && !item.picUrl) {
+            // 先检查PlayerContext的缓存
+            const cacheKey = `${item.source}-${item.pic_id}-300`;
+            if (coverCache[cacheKey]) {
+              return { ...item, picUrl: coverCache[cacheKey] };
+            }
+            
+            // 如果缓存中没有，则使用fetchCover获取
+            const coverUrl = await fetchCover(item.source, item.pic_id);
+            return { ...item, picUrl: coverUrl };
+          }
+          return item;
+        })
+      );
+      
+      setFavorites(itemsWithCover);
     } catch (error) {
       console.error('加载收藏失败:', error);
       toast.error('加载收藏失败，请重试', { icon: '⚠️' });
@@ -59,10 +82,6 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
   };
 
   const handleDownload = async (track) => {
-    // 使用从props传入的onDownload函数
-    if (typeof onDownload === 'function') {
-      onDownload(track);
-    } else {
       try {
         console.log('使用内部下载逻辑');
         
@@ -88,7 +107,6 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
         });
         setDownloading(false);
         setCurrentDownloadingTrack(null);
-      }
     }
   };
 
@@ -436,25 +454,6 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
     setImportProgress(100);
     setIsImporting(false);
   };
-  
-  // 辅助函数：获取歌曲封面URL
-  const fetchCover = async (source, picId, size = 300) => {
-    if (!picId) return null;
-    try {
-      const response = await axios.get(`${API_BASE}`, {
-        params: {
-          types: 'pic',
-          source: source,
-          id: picId,
-          size: size
-        }
-      });
-      return response.data.url.replace(/\\/g, '');
-    } catch (error) {
-      console.error('获取封面失败:', error);
-      return null;
-    }
-  };
 
   // 关闭导入窗口
   const handleCloseImport = () => {
@@ -466,18 +465,6 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  };
-
-  // 处理批量下载
-  const handleBulkDownload = async () => {
-    if (favorites.length === 0) {
-      toast.info('没有收藏的歌曲可下载', { icon: 'ℹ️' });
-      return;
-    }
-    
-    setShowDownloadModal(true);
-    setDownloadStatus(favorites.map(() => ({ status: 'pending', message: '等待下载' })));
-    setDownloadQuality('999'); // 重置为无损音质
   };
   
   // 开始批量下载过程
@@ -523,61 +510,59 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
 
   return (
     <Container className="my-4">
-      <div className="d-md-flex justify-content-between align-items-center mb-4">
-        <div className="d-flex align-items-center mb-3 mb-md-0">
-          <h1 className="mb-0">我的收藏</h1>
-          <span className="ms-3 badge bg-primary">
-            {favorites.length}/{MAX_FAVORITES_ITEMS}
-          </span>
-          <a 
-            href="https://github.com/voici5986/cl_music_X" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="ms-3 text-dark"
-          >
-            <FaGithub size={24} />
-          </a>
-        </div>
-        <div className="d-flex flex-wrap justify-content-center justify-content-md-end">
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h1>我的收藏</h1>
+        <div>
           <Button
-            variant="outline-danger" 
+            variant="outline-primary" 
             size="sm"
-            className="me-2 mb-2 mb-md-0 d-flex align-items-center"
-            style={{ height: '38px' }}
-            onClick={handleBulkDownload}
+            className="me-2"
+            onClick={() => setShowDownloadModal(true)}
             disabled={favorites.length === 0}
           >
-            <FaCloudDownloadAlt className="me-1" /> <span>下载全部</span>
+            <FaCloudDownloadAlt className="me-1" /> 批量下载
           </Button>
           <Button
             variant="outline-success" 
             size="sm"
-            className="me-2 mb-2 mb-md-0 d-flex align-items-center"
-            style={{ height: '38px' }}
+            className="me-2"
             onClick={handleExport}
             disabled={favorites.length === 0}
           >
-            <FaFileExport className="me-1" /> <span>导出收藏</span>
+            <FaFileExport className="me-1" /> 导出
           </Button>
           <Button
-            variant="outline-primary" 
+            variant="outline-info" 
             size="sm"
-            className="d-flex align-items-center"
-            style={{ height: '38px' }}
-            onClick={() => setShowImportModal(true)}
+            onClick={() => fileInputRef.current.click()}
           >
-            <FaFileImport className="me-1" /> <span>导入收藏</span>
+            <FaFileImport className="me-1" /> 导入
+            <input 
+              type="file" 
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              accept=".json"
+              onChange={handleFileSelect}
+            />
           </Button>
         </div>
       </div>
+      
+      {/* 显示收藏上限提示 */}
+      <Alert variant="info" className="mb-3">
+        <small>收藏上限: {favorites.length}/{MAX_FAVORITES_ITEMS} 首</small>
+      </Alert>
       
       {loading ? (
         <div className="text-center my-5">
           <Spinner animation="border" />
         </div>
       ) : favorites.length === 0 ? (
-        <Alert variant="info" className="text-center">
-          <p className="mb-0">暂无收藏的歌曲</p>
+        <Alert variant="light" className="text-center">
+          <p className="mb-0">暂无收藏歌曲</p>
+          <small className="text-muted">
+            您可以在搜索结果中点击❤️收藏歌曲，或者通过导入功能批量添加
+          </small>
         </Alert>
       ) : (
         <Row className="g-4">
@@ -612,8 +597,8 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
                       variant="outline-primary" 
                       size="sm"
                       className="me-1"
-                      onClick={() => onPlay(track)}
-                      disabled={currentTrack?.id === track.id && !onPlay}
+                      onClick={() => handlePlay(track)}
+                      disabled={currentTrack?.id === track.id && !currentTrack?.url}
                     >
                       {currentTrack?.id === track.id && isPlaying ? <FaPause /> : <FaPlay />}
                     </Button>
@@ -645,78 +630,34 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
       )}
 
       {/* 导入模态框 */}
-      <Modal show={showImportModal} onHide={handleCloseImport} centered size="lg">
+      <Modal show={showImportModal} onHide={handleCloseImport} backdrop="static" size="lg">
         <Modal.Header closeButton>
           <Modal.Title>导入收藏</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <Form>
-            <Form.Group className="mb-3">
-              <Form.Label>选择收藏文件 (.json)</Form.Label>
-              <Form.Control 
-                type="file" 
-                accept=".json"
-                ref={fileInputRef}
-                onChange={handleFileSelect}
-                disabled={isImporting}
+          {importData && (
+            <>
+              <Alert variant="info">
+                <div>检测到 {importData.favorites.length} 首歌曲</div>
+                <div>数据版本: {importData.version || '1.0'}</div>
+                <div>导出时间: {new Date(importData.timestamp).toLocaleString()}</div>
+              </Alert>
+              
+              <ProgressBar 
+                now={importProgress} 
+                label={`${importProgress}%`} 
+                className="mb-3" 
               />
-              <Form.Text className="text-muted">
-                选择之前导出的收藏列表文件
-              </Form.Text>
-            </Form.Group>
-            
-            {importData && (
-              <div className="mt-3">
-                <p>找到 {importData.favorites.length} 首歌曲</p>
-                
-                {isImporting && (
-                  <div className="mb-3">
-                    <div className="d-flex justify-content-between mb-1">
-                      <small>正在导入...</small>
-                      <small>{importProgress}%</small>
-                    </div>
-                    <div className="progress" style={{ height: '10px' }}>
-                      <div 
-                        className="progress-bar" 
-                        style={{ width: `${importProgress}%` }}
-                        role="progressbar" 
-                        aria-valuenow={importProgress} 
-                        aria-valuemin="0" 
-                        aria-valuemax="100"
-                      ></div>
-                    </div>
-                  </div>
-                )}
-                
-                {importStatus.some(item => item.status !== 'pending') && (
-                  <div 
-                    style={{ 
-                      maxHeight: '200px', 
-                      overflowY: 'auto',
-                      fontSize: '0.875rem'
-                    }}
-                  >
+              
+              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                     {importStatus.map((status, index) => (
-                      <div 
-                        key={index} 
-                        className={`d-flex justify-content-between p-1 ${
-                          status.status === 'pending' ? 'text-muted' :
-                          status.status === 'success' ? 'text-success' :
-                          status.status === 'exists' ? 'text-warning' :
-                          'text-danger'
-                        }`}
-                      >
-                        <span>
-                          {importData.favorites[index].name} - {importData.favorites[index].artist}
-                        </span>
-                        <span>{status.message}</span>
+                  <div key={index} className={`mb-1 ${status.success ? 'text-success' : 'text-danger'}`}>
+                    {status.success ? '✓' : '✗'} {status.name} - {status.artist} ({status.message})
                       </div>
                     ))}
-                  </div>
-                )}
               </div>
+            </>
             )}
-          </Form>
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={handleCloseImport} disabled={isImporting}>
@@ -727,91 +668,56 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
             onClick={startImport}
             disabled={!importData || isImporting}
           >
-            {isImporting ? <><Spinner size="sm" className="me-1" /> 导入中...</> : '开始导入'}
+            {isImporting ? (
+              <>
+                <Spinner animation="border" size="sm" className="me-1" />
+                导入中...
+              </>
+            ) : '开始导入'}
           </Button>
         </Modal.Footer>
       </Modal>
 
       {/* 批量下载模态框 */}
-      <Modal show={showDownloadModal} onHide={handleCloseDownload} centered size="lg">
-        <Modal.Header closeButton={!isDownloading}>
+      <Modal show={showDownloadModal} onHide={handleCloseDownload} backdrop="static" size="lg">
+        <Modal.Header closeButton>
           <Modal.Title>批量下载收藏歌曲</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <p>准备下载 {favorites.length} 首歌曲</p>
+          <Alert variant="info">
+            将下载您收藏的 {favorites.length} 首歌曲。请选择音质并确认下载。
+          </Alert>
           
-          {/* 音质选择 */}
-          {!isDownloading && (
-            <div className="mb-3">
-              <p className="mb-2">选择下载音质：</p>
-              <div className="d-flex flex-column">
-                <Form.Check
-                  type="radio"
-                  id="quality-999"
-                  name="download-quality"
-                  label="无损音质 (FLAC格式，音质更佳，文件更大)"
-                  checked={downloadQuality === '999'}
-                  onChange={() => setDownloadQuality('999')}
-                  className="mb-3"
-                />
-                <Form.Check
-                  type="radio"
-                  id="quality-320"
-                  name="download-quality"
-                  label="标准高音质 (320kbps，体积适中，直接下载)"
-                  checked={downloadQuality === '320'}
-                  onChange={() => setDownloadQuality('320')}
-                  disabled={false}
-                />
-              </div>
-            </div>
-          )}
+          <Form.Group className="mb-3">
+            <Form.Label>选择音质</Form.Label>
+            <Form.Select 
+              value={downloadQuality}
+              onChange={(e) => setDownloadQuality(e.target.value)}
+            >
+              <option value="128">128kbps</option>
+              <option value="192">192kbps</option>
+              <option value="320">320kbps</option>
+              <option value="999">无损音质</option>
+            </Form.Select>
+          </Form.Group>
           
           {isDownloading && (
-            <div className="mb-3">
-              <div className="d-flex justify-content-between mb-1">
-                <small>正在下载，请不要关闭窗口...</small>
-                <small>{downloadProgress}%</small>
-              </div>
+            <>
               <ProgressBar 
                 now={downloadProgress} 
-                style={{ height: '10px' }} 
-                variant="success"
-                animated={isDownloading}
+                label={`${downloadProgress}%`} 
+                className="mb-3" 
               />
-            </div>
-          )}
-          
-          <div 
-            style={{ 
-              maxHeight: '300px', 
-              overflowY: 'auto',
-              fontSize: '0.875rem'
-            }}
-          >
+              
+              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
             {downloadStatus.map((status, index) => (
-              <div 
-                key={index} 
-                className={`d-flex justify-content-between p-1 ${
-                  status.status === 'pending' ? 'text-muted' :
-                  status.status === 'downloading' ? 'text-primary' :
-                  status.status === 'success' ? 'text-success' :
-                  'text-danger'
-                }`}
-              >
-                <span>
-                  {favorites[index].name} - {favorites[index].artist}
-                </span>
-                <span>{status.message}</span>
+                  <div key={index} className={`mb-1 ${status.success ? 'text-success' : 'text-danger'}`}>
+                    {status.success ? '✓' : '✗'} {status.name} - {status.artist} ({status.message})
               </div>
             ))}
           </div>
-          
-          <Alert variant="warning" className="mt-3">
-            <small>
-              注意：批量下载可能会被浏览器视为弹窗拦截。如果下载不开始，请检查浏览器设置并允许弹窗。
-            </small>
-          </Alert>
+            </>
+          )}
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={handleCloseDownload} disabled={isDownloading}>
@@ -822,13 +728,28 @@ const Favorites = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
             onClick={startBulkDownload}
             disabled={isDownloading}
           >
-            {isDownloading ? 
-              <><Spinner size="sm" className="me-1" /> 下载中...</> : 
-              `开始下载 (${downloadQuality === '999' ? '无损音质' : '高音质'})`
-            }
+            {isDownloading ? (
+              <>
+                <Spinner animation="border" size="sm" className="me-1" />
+                下载中...
+              </>
+            ) : '开始下载'}
           </Button>
         </Modal.Footer>
       </Modal>
+      
+      {/* GitHub链接 */}
+      <div className="text-center mt-5">
+        <a 
+          href="https://github.com/yourusername/cl-music" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-muted text-decoration-none"
+        >
+          <FaGithub size={20} className="me-1" />
+          <small>GitHub</small>
+        </a>
+      </div>
     </Container>
   );
 };

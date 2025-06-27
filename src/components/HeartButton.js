@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { Button } from 'react-bootstrap';
 import { FaHeart, FaRegHeart } from 'react-icons/fa';
 import { isFavorite, toggleFavorite, isFavoritesFull } from '../services/storage';
@@ -25,7 +25,7 @@ const HeartButton = ({
   }, [track.id]);
 
   // 切换收藏状态
-  const handleToggleFavorite = async () => {
+  const handleToggleFavorite = useCallback(async () => {
     try {
       // 如果当前不是收藏状态，先检查是否已满
       if (!isFav) {
@@ -61,7 +61,7 @@ const HeartButton = ({
       console.error('收藏操作失败:', error);
       toast.error('操作失败，请重试', { icon: '⚠️', className: 'custom-toast error-toast' });
     }
-  };
+  }, [isFav, track, onFavoritesChange]);
 
   // 检查size是否为数字，用于图标尺寸
   const iconSize = typeof size === 'number' ? size : undefined;
@@ -86,4 +86,15 @@ const HeartButton = ({
   );
 };
 
-export default HeartButton; 
+// 使用自定义比较函数，只在关键props变化时重新渲染
+const areEqual = (prevProps, nextProps) => {
+  // 检查关键props是否变化
+  return (
+    prevProps.track.id === nextProps.track.id &&
+    prevProps.size === nextProps.size &&
+    prevProps.showText === nextProps.showText &&
+    prevProps.variant === nextProps.variant
+  );
+};
+
+export default memo(HeartButton, areEqual); 

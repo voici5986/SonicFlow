@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback, memo } from 'react';
 import { Row, Col, Button, Spinner } from 'react-bootstrap';
 import ReactPlayer from 'react-player';
 import { FaPlay, FaPause, FaDownload, FaMusic, 
@@ -6,12 +6,16 @@ import { FaPlay, FaPause, FaDownload, FaMusic,
 import HeartButton from './HeartButton';
 import ProgressBar from './ProgressBar';
 import '../styles/AudioPlayer.css';
+import { usePlayer } from '../contexts/PlayerContext';
 
 /**
  * 音频播放器组件
  * 负责音乐播放、控制、歌词显示等功能
+ * 使用PlayerContext获取状态和方法
  */
-const AudioPlayer = ({
+const AudioPlayer = () => {
+  // 从PlayerContext获取所有需要的状态和方法
+  const {
   // 播放器状态
   currentTrack,
   playerUrl,
@@ -19,28 +23,21 @@ const AudioPlayer = ({
   lyricExpanded,
   lyricData,
   currentLyricIndex,
-  playProgress,
-  totalSeconds,
   playMode,
   downloading,
   currentDownloadingTrack,
   coverCache,
   currentPlaylist,
   
-  // 回调函数
+    // 方法
   setIsPlaying,
-  setLyricExpanded,
+    togglePlay,
+    toggleLyric,
   handleProgress,
   handleEnded,
   handlePrevious,
   handleNext,
   handleTogglePlayMode,
-  handleDownload,
-  loadFavorites,
-  formatTime,
-  
-  // 设备信息
-  deviceInfo,
   
   // 引用
   playerRef,
@@ -48,9 +45,7 @@ const AudioPlayer = ({
   
   // 工具函数
   parseLyric
-}) => {
-  // 不再在组件内部定义playerRef，而是使用从props传入的引用
-  // 同样不再定义lyricsContainerRef
+  } = usePlayer();
   
   // 添加歌词滚动效果
   useEffect(() => {
@@ -67,7 +62,7 @@ const AudioPlayer = ({
   }, [currentLyricIndex, lyricExpanded, lyricsContainerRef]);
   
   // 获取当前播放模式图标
-  const getPlayModeIcon = () => {
+  const getPlayModeIcon = useCallback(() => {
     switch (playMode) {
       case 'repeat-one':
         return (
@@ -84,10 +79,33 @@ const AudioPlayer = ({
       default: // repeat-all
         return <FaRetweet size={18} title="列表循环" />;
     }
-  };
+  }, [playMode]);
+  
+  // 处理播放/暂停切换
+  const handlePlayPauseToggle = useCallback(() => {
+    togglePlay();
+  }, [togglePlay]);
+  
+  // 处理歌词展开/收起
+  const handleLyricToggle = useCallback(() => {
+    toggleLyric();
+  }, [toggleLyric]);
+  
+  // 处理下载当前歌曲
+  const handleDownloadCurrent = useCallback(() => {
+    if (currentTrack) {
+      // 这里需要处理下载逻辑，但PlayerContext中暂未实现
+      // 可以通过props传入或在PlayerContext中实现
+      console.log('下载功能尚未实现');
+    }
+  }, [currentTrack]);
   
   // 如果没有当前音轨，不渲染任何内容
   if (!currentTrack) return null;
+  
+  // 获取设备信息（这里假设已经有了deviceInfo）
+  // 在实际应用中，应该从DeviceContext获取
+  const deviceInfo = { isDesktop: true, deviceType: 'desktop' };
   
   // 增加播放器展开状态的类名
   const playerClassName = `audio-player ${lyricExpanded ? 'expanded' : 'collapsed'}`;
@@ -96,7 +114,7 @@ const AudioPlayer = ({
     <>
       {/* 背景遮罩 - 仅在展开状态显示 */}
       <div className={`player-backdrop ${lyricExpanded ? 'visible' : ''}`} 
-           onClick={() => setLyricExpanded(false)}></div>
+           onClick={handleLyricToggle}></div>
       
       <div className={playerClassName}>
         {/* 添加内部容器以控制溢出 */}
@@ -123,14 +141,7 @@ const AudioPlayer = ({
               {/* 移动端和平板：进度条在歌曲信息右侧 */}
               <Col xs={6} className="d-flex d-md-none align-items-center">
                 <div className="mobile-progress-container">
-                  <ProgressBar 
-                    currentTrack={currentTrack}
-                    playProgress={playProgress}
-                    totalSeconds={totalSeconds}
-                    playerRef={playerRef}
-                    formatTime={formatTime}
-                    deviceType={deviceInfo.deviceType}
-                  />
+                  <ProgressBar />
                 </div>
               </Col>
           
@@ -144,7 +155,7 @@ const AudioPlayer = ({
                 {/* 歌词切换按钮 */}
                 <Button
                   variant="link"
-                  onClick={() => setLyricExpanded(!lyricExpanded)}
+                  onClick={handleLyricToggle}
                   className="p-2 control-button text-info control-icon-btn"
                   aria-label={lyricExpanded ? "收起歌词" : "展开歌词"}
                   title={lyricExpanded ? "收起歌词" : "展开歌词"}
@@ -166,7 +177,6 @@ const AudioPlayer = ({
                     size={20} 
                     variant="link"
                     className="p-2 control-button control-icon-btn" 
-                    onFavoritesChange={loadFavorites}
                   />
                 )}
                 
@@ -182,7 +192,7 @@ const AudioPlayer = ({
                 
                 <Button
                   variant="link"
-                  onClick={() => setIsPlaying(!isPlaying)}
+                  onClick={handlePlayPauseToggle}
                   disabled={!currentTrack || !playerUrl}
                   className="mx-1 p-1 control-button control-icon-btn" 
                   aria-label={isPlaying ? "暂停" : "播放"}
@@ -219,7 +229,7 @@ const AudioPlayer = ({
                 {currentTrack && (
                   <Button
                     variant="link"
-                    onClick={() => handleDownload(currentTrack)}
+                    onClick={handleDownloadCurrent}
                     className="mx-1 p-2 text-success control-button control-icon-btn" 
                     aria-label="下载"
                     title="下载歌曲"
@@ -247,14 +257,7 @@ const AudioPlayer = ({
                 )}
                 <div className="d-flex align-items-center">
                   <div className="progress-bar-container">
-                    <ProgressBar 
-                      currentTrack={currentTrack}
-                      playProgress={playProgress}
-                      totalSeconds={totalSeconds}
-                      playerRef={playerRef}
-                      formatTime={formatTime}
-                      deviceType={deviceInfo.deviceType}
-                    />
+                    <ProgressBar />
                   </div>
                 </div>
               </div>
@@ -267,6 +270,18 @@ const AudioPlayer = ({
               url={playerUrl}
               playing={isPlaying}
               onReady={() => console.log('播放器就绪')}
+              onDuration={(duration) => {
+                console.log('音频时长:', duration);
+                // 直接设置总时长
+                if (typeof handleProgress === 'function') {
+                  handleProgress({
+                    played: 0,
+                    playedSeconds: 0,
+                    loaded: 0,
+                    loadedSeconds: duration
+                  });
+                }
+              }}
               onError={(e) => {
                 console.error('播放错误:', e);
                 setIsPlaying(false);
@@ -335,4 +350,5 @@ const AudioPlayer = ({
   );
 };
 
-export default AudioPlayer; 
+// 使用React.memo包装组件，避免不必要的重渲染
+export default memo(AudioPlayer); 

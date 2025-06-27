@@ -266,22 +266,48 @@ const UserProfile = ({ onTabChange }) => {
             </Card.Body>
           </Card>
           
-          {/* 4. 应用模式卡片 - 简化版 */}
+          {/* 4. 应用模式卡片 */}
           <Card className="app-mode-card">
             <Card.Body className="d-flex flex-column align-items-center">
-              <div className="app-mode-content">
+              <div className="mode-status">
+                <div className="mode-icon-container">
                 {getModeIcon()}
-                <h3 className="app-mode-name">{getModeName()}</h3>
-                <p className="app-mode-description">所有功能可用</p>
+                </div>
+                <div className="mode-info">
+                  <h5>{getModeName()}</h5>
+                  <p className="mode-description">
+                    {appMode === APP_MODES.FULL && '所有功能可用'}
+                    {appMode === APP_MODES.CHINA && '因法律风险，部分功能不可用'}
+                    {appMode === APP_MODES.OFFLINE && '离线模式，部分功能不可用'}
+                    {!appMode && '正在检测您的地区...'}
+                  </p>
+                </div>
+              </div>
+              
                 <Button 
-                  variant="primary" 
-                  className="refresh-button"
+                variant="outline-primary" 
+                className="refresh-region-btn mt-2"
                   onClick={refreshRegionDetection}
                   disabled={isLoading}
                 >
-                  {isLoading ? '检测中...' : '刷新检测'}
+                {isLoading ? (
+                  <>
+                    <Spinner
+                      as="span"
+                      animation="border"
+                      size="sm"
+                      role="status"
+                      aria-hidden="true"
+                      className="me-1"
+                    />
+                    检测中...
+                  </>
+                ) : (
+                  <>
+                    <FaSync className="me-1" /> 刷新检测
+                  </>
+                )}
                 </Button>
-              </div>
             </Card.Body>
           </Card>
         </div>

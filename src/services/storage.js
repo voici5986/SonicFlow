@@ -11,6 +11,12 @@ export const historyStore = localforage.createInstance({
   storeName: 'history'
 });
 
+// 添加搜索历史存储实例
+export const searchHistoryStore = localforage.createInstance({
+  name: 'clMusicApp',
+  storeName: 'searchHistory'
+});
+
 // 添加同步状态存储实例
 export const syncStore = localforage.createInstance({
   name: 'clMusicApp',
@@ -128,7 +134,14 @@ export async function removeLocalUser() {
 // 保存网络状态
 export async function saveNetworkStatus(status) {
   try {
-    await networkStore.setItem('status', status);
+    // 确保包含所有必要的字段
+    const completeStatus = {
+      online: status.online || navigator.onLine,
+      lastChecked: status.lastChecked || Date.now(),
+      connectionType: status.connectionType || 'unknown'
+    };
+    
+    await networkStore.setItem('status', completeStatus);
     return true;
   } catch (error) {
     console.error("保存网络状态失败:", error);
@@ -140,22 +153,47 @@ export async function saveNetworkStatus(status) {
 export async function getNetworkStatus() {
   try {
     const status = await networkStore.getItem('status');
-    return status || { online: navigator.onLine, lastChecked: Date.now() };
+    if (!status) {
+      // 默认状态
+      return { 
+        online: navigator.onLine, 
+        lastChecked: Date.now(),
+        connectionType: navigator.onLine ? 'unknown' : 'offline'
+      };
+    }
+    
+    // 确保返回的对象包含connectionType字段
+    if (!status.connectionType) {
+      status.connectionType = status.online ? 'unknown' : 'offline';
+    }
+    
+    return status;
   } catch (error) {
     console.error("获取网络状态失败:", error);
-    return { online: navigator.onLine, lastChecked: Date.now() };
+    return { 
+      online: navigator.onLine, 
+      lastChecked: Date.now(),
+      connectionType: navigator.onLine ? 'unknown' : 'offline'
+    };
   }
 }
 
 /**
- * 播放历史操作
+ * 通用历史记录操作
+ * 用于处理播放历史、搜索历史等
  */
-// 修改最大历史记录数为100条
-export const MAX_HISTORY_ITEMS = 100; // 最大历史记录数量
+// 定义最大记录数
+export const MAX_HISTORY_ITEMS = 100; // 播放历史记录数量
+export const MAX_SEARCH_HISTORY_ITEMS = 20; // 搜索历史记录数量
 
-export async function getHistory() {
+/**
+ * 获取历史记录
+ * @param {Object} store - 存储实例
+ * @returns {Promise<Array>} - 历史记录数组
+ */
+async function getHistoryGeneric(store) {
   try {
-    const data = await historyStore.getItem('items');
+    const data = await store.getItem('items');
     return data || [];
   } catch (error) {
     console.error("Error getting history:", error);
@@ -163,11 +201,18 @@ export async function getHistory() {
   }
 }
 
-export async function saveHistory(historyArray) {
+/**
+ * 保存历史记录
+ * @param {Object} store - 存储实例
+ * @param {Array} historyArray - 历史记录数组
+ * @param {number} maxItems - 最大记录数
+ * @returns {Promise<boolean>} - 是否成功
+ */
+async function saveHistoryGeneric(store, historyArray, maxItems) {
   try {
     // 确保历史记录不超过最大数量
-    const limitedHistory = historyArray.slice(0, MAX_HISTORY_ITEMS);
-    await historyStore.setItem('items', limitedHistory);
+    const limitedHistory = historyArray.slice(0, maxItems);
+    await store.setItem('items', limitedHistory);
     return true;
   } catch (error) {
     console.error("Error saving history:", error);
@@ -175,12 +220,21 @@ export async function saveHistory(historyArray) {
   }
 }
 
-export async function addToHistory(track) {
+/**
+ * 添加记录到历史
+ * @param {Object} store - 存储实例
+ * @param {Object|string} item - 要添加的项目
+ * @param {number} maxItems - 最大记录数
+ * @param {Function} findExistingFn - 查找已存在项的函数
+ * @param {Function} createItemFn - 创建新项的函数
+ * @returns {Promise<boolean>} - 是否成功
+ */
+async function addToHistoryGeneric(store, item, maxItems, findExistingFn, createItemFn) {
   try {
-    const history = await getHistory();
+    const history = await getHistoryGeneric(store);
     
-    // 检查是否已经存在相同歌曲
-    const existingIndex = history.findIndex(item => item.song.id === track.id);
+    // 检查是否已经存在
+    const existingIndex = history.findIndex(findExistingFn);
     
     if (existingIndex !== -1) {
       // 如果存在，从原位置删除
@@ -188,33 +242,98 @@ export async function addToHistory(track) {
     }
     
     // 添加到历史记录的顶部
-    history.unshift({
-      timestamp: Date.now(),
-      song: track
-    });
+    history.unshift(createItemFn(item));
     
     // 如果超过最大记录数，删除最旧的
-    if (history.length > MAX_HISTORY_ITEMS) {
-      history.length = MAX_HISTORY_ITEMS; // 直接截断数组
+    if (history.length > maxItems) {
+      history.length = maxItems; // 直接截断数组
     }
     
-    await historyStore.setItem('items', history);
-    return true;
+    return await saveHistoryGeneric(store, history, maxItems);
   } catch (error) {
     console.error("Error adding to history:", error);
     return false;
   }
 }
 
-// 清空历史记录
-export async function clearHistory() {
+/**
+ * 清空历史记录
+ * @param {Object} store - 存储实例
+ * @returns {Promise<boolean>} - 是否成功
+ */
+async function clearHistoryGeneric(store) {
   try {
-    await historyStore.setItem('items', []);
+    await store.setItem('items', []);
     return true;
   } catch (error) {
     console.error("Error clearing history:", error);
     return false;
   }
+}
+
+/**
+ * 播放历史操作
+ */
+// 获取播放历史
+export async function getHistory() {
+  return getHistoryGeneric(historyStore);
+}
+
+// 保存播放历史
+export async function saveHistory(historyArray) {
+  return saveHistoryGeneric(historyStore, historyArray, MAX_HISTORY_ITEMS);
+}
+
+// 添加到播放历史
+export async function addToHistory(track) {
+  return addToHistoryGeneric(
+    historyStore,
+    track,
+    MAX_HISTORY_ITEMS,
+    item => item.song.id === track.id,
+    track => ({
+      timestamp: Date.now(),
+      song: track
+    })
+  );
+}
+
+// 清空播放历史
+export async function clearHistory() {
+  return clearHistoryGeneric(historyStore);
+}
+
+/**
+ * 搜索历史操作
+ */
+// 获取搜索历史
+export async function getSearchHistory() {
+  return getHistoryGeneric(searchHistoryStore);
+}
+
+// 保存搜索历史
+export async function saveSearchHistory(historyArray) {
+  return saveHistoryGeneric(searchHistoryStore, historyArray, MAX_SEARCH_HISTORY_ITEMS);
+}
+
+// 添加搜索历史
+export async function addSearchHistory(query, source) {
+  return addToHistoryGeneric(
+    searchHistoryStore,
+    { query, source },
+    MAX_SEARCH_HISTORY_ITEMS,
+    item => item.query.toLowerCase() === query.toLowerCase() && item.source === source,
+    ({ query, source }) => ({
+      timestamp: Date.now(),
+      query: query,
+      source: source
+    })
+  );
+}
+
+// 清空搜索历史
+export async function clearSearchHistory() {
+  return clearHistoryGeneric(searchHistoryStore);
 }
 
 /**

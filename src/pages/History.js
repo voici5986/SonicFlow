@@ -8,15 +8,19 @@ import 'moment/locale/zh-cn';
 import HeartButton from '../components/HeartButton';
 import './History.css';
 import { downloadTrack } from '../services/downloadService';
+import { usePlayer } from '../contexts/PlayerContext';
 
 // 设置moment为中文
 moment.locale('zh-cn');
 
-const History = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
+const History = () => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [currentDownloadingTrack, setCurrentDownloadingTrack] = useState(null);
+  
+  // 从PlayerContext获取状态和方法
+  const { handlePlay, currentTrack, isPlaying, fetchCover, coverCache } = usePlayer();
 
   useEffect(() => {
     loadHistory();
@@ -26,7 +30,32 @@ const History = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
     setLoading(true);
     try {
       const historyItems = await getHistory();
-      setHistory(historyItems);
+      
+      // 使用PlayerContext的fetchCover方法获取封面
+      const itemsWithCover = await Promise.all(
+        historyItems.map(async (item) => {
+          if (item.song.pic_id && !item.song.picUrl) {
+            // 先检查PlayerContext的缓存
+            const cacheKey = `${item.song.source}-${item.song.pic_id}-300`;
+            if (coverCache[cacheKey]) {
+              return { 
+                ...item, 
+                song: { ...item.song, picUrl: coverCache[cacheKey] } 
+              };
+            }
+            
+            // 如果缓存中没有，则使用fetchCover获取
+            const coverUrl = await fetchCover(item.song.source, item.song.pic_id);
+            return { 
+              ...item, 
+              song: { ...item.song, picUrl: coverUrl } 
+            };
+          }
+          return item;
+        })
+      );
+      
+      setHistory(itemsWithCover);
     } catch (error) {
       console.error('加载历史记录失败:', error);
       toast.error('加载历史记录失败，请重试', { icon: '⚠️' });
@@ -56,12 +85,6 @@ const History = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
   // 处理下载功能
   const handleDownload = async (track) => {
     try {
-      // 如果提供了外部的onDownload函数，优先使用
-      if (typeof onDownload === 'function') {
-        onDownload(track);
-        return;
-      }
-      
       // 使用下载服务模块处理下载
       setDownloading(true);
       setCurrentDownloadingTrack(track);
@@ -147,7 +170,7 @@ const History = ({ onPlay, currentTrack, isPlaying, onDownload }) => {
                         variant="outline-primary" 
                         size="sm"
                         className="me-1"
-                        onClick={() => onPlay(item.song)}
+                        onClick={() => handlePlay(item.song)}
                         disabled={currentTrack?.id === item.song.id && !currentTrack?.url}
                       >
                         {currentTrack?.id === item.song.id && isPlaying ? <FaPause /> : <FaPlay />}
