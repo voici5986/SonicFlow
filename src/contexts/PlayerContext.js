@@ -4,6 +4,7 @@ import { playMusic, getCoverImage } from '../services/musicApiService';
 import { addToHistory } from '../services/storage';
 import { handleError, ErrorTypes, ErrorSeverity } from '../utils/errorHandler';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { getCachedCoverImageData, cacheCoverImageData } from '../services/cacheService';
 
 // 创建Context
 const PlayerContext = createContext();
@@ -84,24 +85,68 @@ export const PlayerProvider = ({ children }) => {
       // 生成缓存键
       const cacheKey = `${source}-${picId}-${size}`;
       
-      // 检查内存缓存
-      if (coverCache[cacheKey]) {
-        return coverCache[cacheKey];
+      // 1. 首先检查是否有图片数据缓存
+      const cachedImageData = await getCachedCoverImageData(source, picId, size);
+      if (cachedImageData) {
+        // 如果有图片数据缓存，更新内存缓存并返回Base64数据
+        setCoverCache(prev => ({
+          ...prev,
+          [cacheKey]: cachedImageData
+        }));
+        return cachedImageData;
       }
       
-      // 获取封面
+      // 2. 检查内存缓存中是否有URL
+      if (coverCache[cacheKey]) {
+        // 如果内存中有URL缓存，尝试获取并缓存图片数据
+        try {
+          const imageData = await cacheCoverImageData(source, picId, coverCache[cacheKey], size);
+          if (imageData) {
+            // 更新内存缓存
+            setCoverCache(prev => ({
+              ...prev,
+              [cacheKey]: imageData
+            }));
+            return imageData;
+          }
+          // 如果图片数据获取失败，继续使用URL
+          return coverCache[cacheKey];
+        } catch (error) {
+          console.warn('图片数据缓存失败，使用URL:', error);
+          return coverCache[cacheKey];
+        }
+      }
+      
+      // 3. 如果没有任何缓存，从API获取封面URL
       const coverUrl = await getCoverImage(source, picId, size);
       
-      // 更新缓存
+      // 更新URL内存缓存
       setCoverCache(prev => ({
         ...prev,
         [cacheKey]: coverUrl
       }));
       
+      // 4. 尝试缓存图片数据
+      try {
+        const imageData = await cacheCoverImageData(source, picId, coverUrl, size);
+        if (imageData) {
+          // 更新内存缓存为Base64数据
+          setCoverCache(prev => ({
+            ...prev,
+            [cacheKey]: imageData
+          }));
+          return imageData;
+        }
+      } catch (error) {
+        console.warn('获取图片数据失败，使用URL:', error);
+      }
+      
       return coverUrl;
     } catch (error) {
       console.error('获取封面失败:', error);
-      return 'default_cover.png';
+      // 确保返回绝对路径的默认封面
+      const defaultCover = '/default_cover.png';
+      return defaultCover;
     }
   }, [coverCache]);
   
@@ -262,8 +307,14 @@ export const PlayerProvider = ({ children }) => {
       addToHistory(track);
       
       // 获取封面（如果还没有）
-      if (!coverCache[`${track.source}-${track.pic_id}-300`]) {
-        fetchCover(track.source, track.pic_id);
+      const cacheKey = `${track.source}-${track.pic_id}-300`;
+      if (!coverCache[cacheKey]) {
+        const coverData = await fetchCover(track.source, track.pic_id);
+        // 确保封面数据被正确缓存
+        setCoverCache(prev => ({
+          ...prev,
+          [cacheKey]: coverData
+        }));
       }
       
     } catch (error) {

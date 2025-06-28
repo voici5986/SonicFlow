@@ -1,14 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Container, Row, Col, Card, Button, Spinner, Modal, Form, Alert, ProgressBar } from 'react-bootstrap';
-import { FaPlay, FaPause, FaDownload, FaTrash, FaFileExport, FaFileImport, FaCloudDownloadAlt, FaGithub } from 'react-icons/fa';
+import { Container, Row, Col, Card, Button, Spinner, Modal, Form, Alert, ProgressBar, Dropdown } from 'react-bootstrap';
+import { FaPlay, FaPause, FaDownload, FaTrash, FaFileExport, FaFileImport, FaCloudDownloadAlt, FaGithub, FaExchangeAlt } from 'react-icons/fa';
 import { getFavorites, toggleFavorite, saveFavorites, MAX_FAVORITES_ITEMS } from '../services/storage';
 import { toast } from 'react-toastify';
-import axios from 'axios';
 import { downloadTrack, downloadTracks } from '../services/downloadService';
 import { searchMusic } from '../services/musicApiService';
 import { usePlayer } from '../contexts/PlayerContext';
-
-const API_BASE = process.env.REACT_APP_API_BASE || '/api';
 
 const Favorites = () => {
   // 从PlayerContext获取状态和方法
@@ -74,7 +71,6 @@ const Favorites = () => {
       await toggleFavorite(track);
       // 从当前列表中移除
       setFavorites(prevFavorites => prevFavorites.filter(item => item.id !== track.id));
-      toast.success('已从收藏中移除', { icon: '💔' });
     } catch (error) {
       console.error('移除收藏失败:', error);
       toast.error('操作失败，请重试', { icon: '⚠️' });
@@ -511,12 +507,15 @@ const Favorites = () => {
   return (
     <Container className="my-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1>我的收藏</h1>
-        <div>
+        <div className="d-flex align-items-center">
+          <h1 className="mb-0">我的收藏</h1>
+          <span className="ms-3 badge bg-info">{favorites.length}/{MAX_FAVORITES_ITEMS}</span>
+        </div>
+        <div className="d-flex justify-content-end">
           <Button
             variant="outline-primary" 
             size="sm"
-            className="me-2"
+            className="me-2 d-none d-md-inline-flex"
             onClick={() => setShowDownloadModal(true)}
             disabled={favorites.length === 0}
           >
@@ -525,7 +524,7 @@ const Favorites = () => {
           <Button
             variant="outline-success" 
             size="sm"
-            className="me-2"
+            className="me-2 d-none d-md-inline-flex"
             onClick={handleExport}
             disabled={favorites.length === 0}
           >
@@ -534,24 +533,52 @@ const Favorites = () => {
           <Button
             variant="outline-info" 
             size="sm"
+            className="d-none d-md-inline-flex"
             onClick={() => fileInputRef.current.click()}
           >
             <FaFileImport className="me-1" /> 导入
-            <input 
-              type="file" 
-              ref={fileInputRef}
-              style={{ display: 'none' }}
-              accept=".json"
-              onChange={handleFileSelect}
-            />
           </Button>
+          
+          {/* 移动端显示的按钮组 */}
+          <div className="d-flex d-md-none">
+            <Button
+              variant="outline-primary" 
+              size="sm"
+              className="me-2"
+              onClick={() => setShowDownloadModal(true)}
+              disabled={favorites.length === 0}
+            >
+              <FaCloudDownloadAlt /> <span className="d-none d-sm-inline">批量下载</span>
+            </Button>
+            
+            <Dropdown>
+              <Dropdown.Toggle variant="outline-secondary" size="sm" id="dropdown-import-export">
+                <FaExchangeAlt /> <span className="d-none d-sm-inline">导入导出</span>
+              </Dropdown.Toggle>
+              <Dropdown.Menu align="end">
+                <Dropdown.Item 
+                  onClick={handleExport}
+                  disabled={favorites.length === 0}
+                >
+                  <FaFileExport className="me-2" /> 导出收藏
+                </Dropdown.Item>
+                <Dropdown.Item onClick={() => fileInputRef.current.click()}>
+                  <FaFileImport className="me-2" /> 导入收藏
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+          </div>
         </div>
       </div>
       
-      {/* 显示收藏上限提示 */}
-      <Alert variant="info" className="mb-3">
-        <small>收藏上限: {favorites.length}/{MAX_FAVORITES_ITEMS} 首</small>
-      </Alert>
+      {/* 隐藏的文件输入框，用于导入功能 */}
+      <input 
+        type="file" 
+        ref={fileInputRef}
+        style={{ display: 'none' }}
+        accept=".json"
+        onChange={handleFileSelect}
+      />
       
       {loading ? (
         <div className="text-center my-5">
@@ -741,7 +768,7 @@ const Favorites = () => {
       {/* GitHub链接 */}
       <div className="text-center mt-5">
         <a 
-          href="https://github.com/yourusername/cl-music" 
+          href="https://github.com/voici5986/SonicFlow" 
           target="_blank" 
           rel="noopener noreferrer"
           className="text-muted text-decoration-none"

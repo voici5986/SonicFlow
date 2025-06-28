@@ -1,15 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button, Card, Image, Spinner, Container } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
 import { getFavorites, getHistory, getSyncStatus, saveSyncStatus } from '../services/storage';
-import { FaHeart, FaHistory, FaSignOutAlt, FaSync, FaGlobe, FaGlobeAsia, FaExclamationTriangle, FaWifi } from 'react-icons/fa';
+import { FaHeart, FaHistory, FaSignOutAlt, FaSync } from 'react-icons/fa';
 import FirebaseStatus from './FirebaseStatus';
-import { useRegion } from '../contexts/RegionContext';
 import '../styles/UserProfile.css';
 
 const UserProfile = ({ onTabChange }) => {
   const { currentUser, signOut } = useAuth();
-  const { appMode, refreshRegionDetection, APP_MODES, isLoading } = useRegion();
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [historyCount, setHistoryCount] = useState(0);
   const [syncStatus, setSyncStatus] = useState({ 
@@ -19,46 +17,25 @@ const UserProfile = ({ onTabChange }) => {
     timestamp: null 
   });
   
-  // 获取模式图标
-  const getModeIcon = () => {
-    switch (appMode) {
-      case APP_MODES.FULL:
-        return <FaGlobe className="mode-icon full" />;
-      case APP_MODES.CHINA:
-        return <FaGlobeAsia className="mode-icon china" />;
-      case APP_MODES.OFFLINE:
-        return <FaExclamationTriangle className="mode-icon offline" />;
-      default:
-        return <FaWifi className="mode-icon loading pulse" />;
-    }
-  };
-  
-  // 获取模式名称
-  const getModeName = () => {
-    switch (appMode) {
-      case APP_MODES.FULL:
-        return '完整模式';
-      case APP_MODES.CHINA:
-        return '中国模式';
-      case APP_MODES.OFFLINE:
-        return '离线模式';
-      default:
-        return '加载中...';
-    }
-  };
-  
   // 加载同步状态
-  const loadSyncStatus = async () => {
+  const loadSyncStatus = useCallback(async () => {
     if (currentUser) {
       const savedStatus = await getSyncStatus(currentUser.uid);
       setSyncStatus(savedStatus);
     }
-  };
+  }, [currentUser]);
+  
+  const loadCounts = useCallback(async () => {
+    const favorites = await getFavorites();
+    const history = await getHistory();
+    setFavoritesCount(favorites.length);
+    setHistoryCount(history.length);
+  }, []);
   
   useEffect(() => {
     loadCounts();
     loadSyncStatus();
-  }, [currentUser]); // 添加currentUser作为依赖
+  }, [loadCounts, loadSyncStatus]); // 更新依赖数组
   
   // 更新同步状态并保存到缓存
   const updateSyncStatus = async (newStatus) => {
@@ -66,13 +43,6 @@ const UserProfile = ({ onTabChange }) => {
     if (currentUser) {
       await saveSyncStatus(newStatus, currentUser.uid);
     }
-  };
-  
-  const loadCounts = async () => {
-    const favorites = await getFavorites();
-    const history = await getHistory();
-    setFavoritesCount(favorites.length);
-    setHistoryCount(history.length);
   };
   
   const handleManualSync = async () => {
@@ -263,51 +233,6 @@ const UserProfile = ({ onTabChange }) => {
                   <><FaSync className="me-2" /> 同步数据</>
                 )}
               </Button>
-            </Card.Body>
-          </Card>
-          
-          {/* 4. 应用模式卡片 */}
-          <Card className="app-mode-card">
-            <Card.Body className="d-flex flex-column align-items-center">
-              <div className="mode-status">
-                <div className="mode-icon-container">
-                {getModeIcon()}
-                </div>
-                <div className="mode-info">
-                  <h5>{getModeName()}</h5>
-                  <p className="mode-description">
-                    {appMode === APP_MODES.FULL && '所有功能可用'}
-                    {appMode === APP_MODES.CHINA && '因法律风险，部分功能不可用'}
-                    {appMode === APP_MODES.OFFLINE && '离线模式，部分功能不可用'}
-                    {!appMode && '正在检测您的地区...'}
-                  </p>
-                </div>
-              </div>
-              
-                <Button 
-                variant="outline-primary" 
-                className="refresh-region-btn mt-2"
-                  onClick={refreshRegionDetection}
-                  disabled={isLoading}
-                >
-                {isLoading ? (
-                  <>
-                    <Spinner
-                      as="span"
-                      animation="border"
-                      size="sm"
-                      role="status"
-                      aria-hidden="true"
-                      className="me-1"
-                    />
-                    检测中...
-                  </>
-                ) : (
-                  <>
-                    <FaSync className="me-1" /> 刷新检测
-                  </>
-                )}
-                </Button>
             </Card.Body>
           </Card>
         </div>

@@ -243,6 +243,11 @@
   color: white;
 }
 
+.stats-icon.cache {
+  background: linear-gradient(45deg, #6c757d, #868e96);
+  color: white;
+}
+
 .stats-content {
   flex: 1;
 }

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Nav, Navbar, Container, Button } from 'react-bootstrap';
 import { FaHome, FaHeart, FaHistory, FaUser } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
-import RegionStatus from './RegionStatus';
 import '../styles/NavigationFix.css';
 
 const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
@@ -100,11 +99,6 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
           />
           <span style={logoStyle}>SonicFlow</span>
         </Navbar.Brand>
-
-        {/* 区域状态指示器 */}
-        <div className="d-flex align-items-center">
-          <RegionStatus showDetails={false} iconOnly={true} />
-        </div>
 
         {/* 用户头像/登录按钮 */}
         <div className="order-lg-last ms-auto me-2">

@@ -109,10 +109,7 @@ export const downloadTrack = async (track, quality = 999, onStartDownload, onFin
         window.URL.revokeObjectURL(blobUrl);
       }, 100);
       
-      toast.success('下载成功！', {
-        icon: '✅',
-        duration: 3000
-      });
+
       
       return true;
     } catch (fetchError) {
@@ -296,7 +293,7 @@ export const downloadTracks = async (tracks, quality = 999, callbacks = {}) => {
     onFinish(successCount, tracks.length);
   }
   
-  toast.success(`成功下载 ${successCount} 首${qualityName}歌曲`, { icon: '✅' });
+
   
   return {
     success: true,

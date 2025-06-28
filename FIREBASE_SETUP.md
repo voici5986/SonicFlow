@@ -86,6 +86,24 @@ REACT_APP_FIREBASE_APP_ID=your-app-id
    - 下载：将云端数据覆盖本地
    - 双向同步：智能合并本地和云端数据
 
+### 增量同步机制
+
+SonicFlow现在使用增量同步机制，这种方式可以显著减少数据传输量和Firebase操作次数：
+
+1. **工作原理**：
+   - 系统记录上次同步的时间戳
+   - 只同步自上次同步后变化的数据
+   - 通过比较本地和云端的最后更新时间，跳过不必要的同步操作
+
+2. **优势**：
+   - 减少数据传输量，节省带宽
+   - 减少Firebase读写操作次数，降低资源消耗
+   - 提高同步速度，改善用户体验
+
+3. **数据结构要求**：
+   - 收藏项需要添加`modifiedAt`时间戳字段
+   - 用户文档需要添加`lastUpdated`全局时间戳字段
+
 ### 数据存储结构
 
 Firebase存储结构设计：
@@ -94,8 +112,27 @@ Firebase存储结构设计：
   - email: string
   - displayName: string
   - createdAt: timestamp
-  - favorites: array of track objects
-  - history: array of history items
+  - lastUpdated: timestamp  // 新增：文档最后更新时间
+  - favorites: array of track objects [
+    {
+      id: string,
+      name: string,
+      artist: string,
+      album: string,
+      cover: string,
+      modifiedAt: timestamp  // 新增：项目修改时间
+    }
+  ]
+  - history: array of history items [
+    {
+      song: {
+        id: string,
+        name: string,
+        // 其他歌曲信息
+      },
+      timestamp: number  // 播放时间戳
+    }
+  ]
 ```
 
 ## 故障排除
@@ -113,6 +150,26 @@ Firebase存储结构设计：
 3. **配置问题**：
    - 确保.env.local文件中的所有Firebase配置变量都已正确设置
    - 重启应用以加载新的环境变量
+
+4. **同步时间戳问题**：
+   - 如果同步行为异常，可以尝试清除本地存储中的同步时间戳
+   - 在浏览器控制台执行：`localStorage.removeItem('last_sync_timestamp_您的用户ID')`
+
+## 资源优化建议
+
+为了最大限度地减少Firebase资源消耗（特别是对免费账号），建议：
+
+1. **控制同步频率**：
+   - 避免频繁手动同步
+   - 可以在应用设置中添加"节省模式"选项，减少自动同步频率
+
+2. **监控用量**：
+   - 定期检查Firebase控制台中的用量统计
+   - 如果接近免费限额，考虑实施更严格的同步限制
+
+3. **数据精简**：
+   - 限制历史记录的最大数量
+   - 只存储必要的歌曲信息，减少文档大小
 
 ## 本地开发建议
 

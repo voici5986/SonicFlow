@@ -6,7 +6,6 @@ import RegisterForm from '../components/RegisterForm';
 import { useAuth } from '../contexts/AuthContext';
 import { getFavorites, getHistory } from '../services/storage';
 import { useRegion } from '../contexts/RegionContext';
-import RegionStatus from '../components/RegionStatus';
 import { FaHeart, FaHistory } from 'react-icons/fa';
 
 const User = ({ onTabChange }) => {
@@ -59,7 +58,7 @@ const User = ({ onTabChange }) => {
     );
   }
   
-  // 未登录状态下，显示登录表单、统计卡片和应用模式卡片
+  // 未登录状态下，显示登录表单和统计卡片
   return (
     <Container className="my-3">
       <div className="user-dashboard-guest">
@@ -81,7 +80,7 @@ const User = ({ onTabChange }) => {
             </div>
           </Col>
           
-          {/* 右侧：统计卡片和应用模式区域 */}
+          {/* 右侧：统计卡片 */}
           <Col lg={6} className="d-flex flex-column">
             <div className="d-flex flex-column" style={{ gap: '12px' }}>
               {/* 统计卡片 */}
@@ -118,16 +117,6 @@ const User = ({ onTabChange }) => {
                   </div>
                 </Card.Body>
               </Card>
-              
-              {/* 应用模式区域 - 使用key强制重新渲染 */}
-              <div className="region-status-wrapper">
-                <div className="d-flex flex-column">
-                  <RegionStatus showDetails={true} key={`region-status-${appMode}`} />
-                  <div className="text-muted small mt-2 region-note">
-                    <p className="mb-1">登录账号需要完整模式，中国地区用户可能无法登录</p>
-                  </div>
-                </div>
-              </div>
             </div>
           </Col>
         </Row>

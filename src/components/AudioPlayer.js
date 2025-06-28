@@ -156,7 +156,7 @@ const AudioPlayer = () => {
                 <Button
                   variant="link"
                   onClick={handleLyricToggle}
-                  className="p-2 control-button text-info control-icon-btn"
+                  className="p-2 control-button text-danger control-icon-btn"
                   aria-label={lyricExpanded ? "收起歌词" : "展开歌词"}
                   title={lyricExpanded ? "收起歌词" : "展开歌词"}
                 >
@@ -166,7 +166,7 @@ const AudioPlayer = () => {
                     width="20" 
                     height="20" 
                     style={{ 
-                      filter: 'drop-shadow(0 0 1px rgba(0, 153, 255, 0.5))'
+                      filter: 'drop-shadow(0 0 1px rgba(255, 0, 0, 0.5))'
                     }}
                   />
                 </Button>

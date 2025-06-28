@@ -139,10 +139,6 @@ const AppContent = () => {
       console.log('网络已连接，正常模式');
     } else {
       console.log('网络已断开，离线模式');
-      toast.info('您已进入离线模式，将使用缓存数据', {
-        icon: '📶',
-        autoClose: 3000
-      });
     }
   }, [isOnline]);
   
@@ -288,10 +284,7 @@ const AppContent = () => {
       
       await downloadTrack(track, quality);
       
-      toast.success('下载完成', {
-        autoClose: 2000,
-        hideProgressBar: true
-      });
+
     } catch (error) {
       handleError(
         error,

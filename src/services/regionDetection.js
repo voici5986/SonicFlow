@@ -4,6 +4,7 @@
  */
 import { checkFirebaseAvailability } from './firebase';
 import { saveNetworkStatus } from './storage';
+import { sendMessageToSW } from '../utils/serviceWorkerRegistration';
 
 // 自定义事件名称
 export const APP_EVENTS = {
@@ -25,7 +26,7 @@ const STORAGE_KEYS = {
 
 // 检测间隔时间 (毫秒)
 const DETECTION_INTERVAL = {
-  CHINA_OFFLINE_MODE: 10 * 1000,     // 中国模式或离线模式: 10秒
+  CHINA_OFFLINE_MODE: 10 * 1000,     // 离线模式: 10秒 (中国模式不自动检测)
   FULL_MODE: 30 * 1000,              // 完整模式: 30秒
   NETWORK_CHANGE: 5 * 1000,          // 网络状态变化: 5秒
 };
@@ -126,8 +127,14 @@ export const shouldCheckIp = (isRefresh = false, isNetworkChange = false) => {
     return false;
   }
   
-  // 如果是页面刷新触发，根据当前模式决定检测间隔
+  // 如果是页面刷新触发
   if (isRefresh) {
+    // 中国模式下不进行定期自动检测，只在用户手动刷新时检测
+    if (currentMode === APP_MODES.CHINA) {
+      return true; // 中国模式下手动刷新总是触发检测
+    }
+    
+    // 其他模式（完整模式或离线模式）根据间隔时间决定
     const interval = (currentMode === APP_MODES.FULL) 
       ? DETECTION_INTERVAL.FULL_MODE 
       : DETECTION_INTERVAL.CHINA_OFFLINE_MODE;
@@ -315,29 +322,47 @@ export const getCurrentAppMode = () => {
 };
 
 /**
- * 设置应用模式并触发事件
+ * 设置应用模式并保存到本地存储
  * @param {string} mode 应用模式
  */
 export const setAppMode = (mode) => {
-  const currentMode = localStorage.getItem(STORAGE_KEYS.APP_MODE);
-  
-  console.log(`setAppMode: 当前模式=${currentMode}, 新模式=${mode}`);
-  
-  // 存储新模式，即使没有变化也存储，确保状态一致
-  localStorage.setItem(STORAGE_KEYS.APP_MODE, mode);
-  
-  // 只有当模式变化时才触发事件
-  if (currentMode !== mode) {
-    console.log(`触发模式变更事件: ${mode}`);
+  try {
+    const previousMode = localStorage.getItem(STORAGE_KEYS.APP_MODE);
     
-    // 触发模式变更事件
-    window.dispatchEvent(new CustomEvent(APP_EVENTS.MODE_CHANGED, {
-      detail: { mode }
-    }));
+    // 如果模式没有变化，不做任何事情
+    if (previousMode === mode) {
+      return;
+    }
     
-    console.log(`应用模式已更新为: ${mode}`);
-  } else {
-    console.log(`模式未变化，保持为: ${mode}`);
+    // 保存新模式到本地存储
+    localStorage.setItem(STORAGE_KEYS.APP_MODE, mode);
+    console.log(`应用模式已更新: ${previousMode || '未设置'} -> ${mode}`);
+    
+    // 通知Service Worker应用模式变化
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      sendMessageToSW('APP_MODE_CHANGE', { mode });
+      console.log('已通知Service Worker应用模式变化');
+    }
+    
+    // 分发模式变化事件
+    const event = new CustomEvent(APP_EVENTS.MODE_CHANGED, {
+      detail: { mode, previousMode }
+    });
+    window.dispatchEvent(event);
+    
+    // 如果是中国模式，并且不是在特定路径下，重定向到china.html
+    if (mode === APP_MODES.CHINA) {
+      const currentPath = window.location.pathname;
+      // 排除已经在china.html页面的情况和静态资源请求
+      if (currentPath !== '/china.html' && 
+          !currentPath.match(/\.(js|css|png|jpg|jpeg|svg|gif|json|ico)$/)) {
+        console.log('检测到中国模式，重定向到区域限制页面');
+        window.location.href = '/china.html';
+      }
+    }
+    
+  } catch (error) {
+    console.error('设置应用模式失败:', error);
   }
 };
 

@@ -54,8 +54,10 @@ export async function getFavorites() {
 export async function saveFavorites(favoritesArray) {
   try {
     await favoritesStore.setItem('items', favoritesArray);
+    return true;
   } catch (error) {
-    console.error("Error saving favorites:", error);
+    console.error("保存收藏列表失败:", error);
+    return false;
   }
 }
 
@@ -86,8 +88,12 @@ export async function toggleFavorite(track) {
     if (favorites.length >= MAX_FAVORITES_ITEMS) {
       return { added: false, full: true };
     }
-    // 未收藏，则添加到列表开头
-    favorites.unshift(track);
+    // 未收藏，则添加到列表开头，并添加修改时间戳
+    const trackWithTimestamp = {
+      ...track,
+      modifiedAt: Date.now() // 添加修改时间戳
+    };
+    favorites.unshift(trackWithTimestamp);
     await saveFavorites(favorites);
     return { added: true, full: false };
   }

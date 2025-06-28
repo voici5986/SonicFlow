@@ -95,13 +95,7 @@ export const useNetworkStatus = (options = {}) => {
     // 分发网络状态变化事件
     dispatchNetworkStatusChange(true);
     
-    // 显示提示
-    if (showToasts) {
-      toast.success('网络已恢复连接', {
-        icon: '🌐',
-        autoClose: 3000
-      });
-    }
+    // 不显示网络恢复提示
   }, [showToasts, dispatchNetworkStatusChange, detectConnectionType, adjustCache]);
   
   // 处理网络离线事件
@@ -123,13 +117,7 @@ export const useNetworkStatus = (options = {}) => {
     // 分发网络状态变化事件
     dispatchNetworkStatusChange(false);
     
-    // 显示提示
-    if (showToasts) {
-      toast.error('网络连接已断开，部分功能可能受限', {
-        icon: '📵',
-        autoClose: 5000
-      });
-    }
+    // 不显示网络断开提示
   }, [showToasts, dispatchNetworkStatusChange, adjustCache]);
   
   // 手动检查网络状态

@@ -124,7 +124,6 @@ export const AuthProvider = ({ children }) => {
         // 保存本地用户
         saveLocalUser(localUser);
         setCurrentUser(localUser);
-        toast.success('本地账户创建成功');
         return { success: true, user: localUser };
       } catch (err) {
         toast.error('创建本地账户失败');
@@ -147,7 +146,6 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error };
       }
       
-      toast.success('注册成功！');
       return { success: true, user };
     } catch (err) {
       toast.error('注册过程中发生错误');
@@ -166,7 +164,6 @@ export const AuthProvider = ({ children }) => {
         if (localUser && localUser.email === email) {
           // 简单模拟密码检查，实际生产中应使用更安全的方式
           setCurrentUser(localUser);
-          toast.success('本地账户登录成功');
           return { success: true, user: localUser };
         } else {
           toast.error('邮箱或密码错误');
@@ -191,7 +188,6 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error };
       }
       
-      toast.success('登录成功！');
       return { success: true, user };
     } catch (err) {
       toast.error('登录过程中发生错误');
@@ -213,7 +209,6 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error };
       }
       
-      toast.success('登录成功！');
       return { success: true, user };
     } catch (err) {
       toast.error('登录过程中发生错误');

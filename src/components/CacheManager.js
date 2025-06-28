@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { Button, Modal, ListGroup, Badge } from 'react-bootstrap';
-import { FaTrash, FaSync, FaInfoCircle } from 'react-icons/fa';
+import { Button, Modal, ListGroup, Badge, Row, Col } from 'react-bootstrap';
+import { FaTrash, FaSync, FaInfoCircle, FaImage } from 'react-icons/fa';
 import { toast } from 'react-toastify';
-import { clearCache, CACHE_TYPES } from '../services/cacheService';
+import { clearCache, CACHE_TYPES, getCacheSize, formatBytes } from '../services/cacheService';
+import localforage from 'localforage';
 
 const CacheManager = () => {
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [cacheStats, setCacheStats] = useState(null);
+  const [imageCacheStats, setImageCacheStats] = useState(null);
 
   const handleClose = () => setShow(false);
   const handleShow = () => {
@@ -38,6 +40,22 @@ const CacheManager = () => {
           percent: 0
         });
       }
+
+      // 获取图片缓存统计
+      const imageCacheSize = await getCacheSize(CACHE_TYPES.COVER_IMAGES_DATA);
+      const store = await localforage.createInstance({
+        name: 'clMusicApp',
+        storeName: CACHE_TYPES.COVER_IMAGES_DATA
+      });
+      const keys = await store.keys();
+      
+      setImageCacheStats({
+        size: imageCacheSize,
+        formattedSize: formatBytes(imageCacheSize),
+        count: keys.length,
+        percent: (imageCacheSize / (100 * 1024 * 1024)) * 100 // 相对于100MB上限的百分比
+      });
+      
     } catch (error) {
       console.error('获取缓存统计失败:', error);
       setCacheStats({
@@ -45,22 +63,15 @@ const CacheManager = () => {
         total: '获取失败',
         percent: 0
       });
+      setImageCacheStats({
+        size: 0,
+        formattedSize: '获取失败',
+        count: 0,
+        percent: 0
+      });
     } finally {
       setLoading(false);
     }
-  };
-
-  // 格式化字节大小
-  const formatBytes = (bytes, decimals = 2) => {
-    if (bytes === 0) return '0 Bytes';
-
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   };
 
   // 清理特定类型的缓存
@@ -68,17 +79,9 @@ const CacheManager = () => {
     setLoading(true);
     try {
       await clearCache(type);
-      toast.success(`${getCacheTypeName(type)}缓存已清理`, {
-        icon: '🧹',
-        autoClose: 2000
-      });
       fetchCacheStats();
     } catch (error) {
       console.error('清理缓存失败:', error);
-      toast.error('清理缓存失败', {
-        icon: '❌',
-        autoClose: 3000
-      });
     } finally {
       setLoading(false);
     }
@@ -96,18 +99,9 @@ const CacheManager = () => {
           type: 'CLEAN_CACHE'
         });
       }
-      
-      toast.success('所有缓存已清理', {
-        icon: '🧹',
-        autoClose: 2000
-      });
       fetchCacheStats();
     } catch (error) {
       console.error('清理所有缓存失败:', error);
-      toast.error('清理所有缓存失败', {
-        icon: '❌',
-        autoClose: 3000
-      });
     } finally {
       setLoading(false);
     }
@@ -119,6 +113,8 @@ const CacheManager = () => {
       case CACHE_TYPES.SEARCH_RESULTS:
         return '搜索结果';
       case CACHE_TYPES.COVER_IMAGES:
+        return '封面URL';
+      case CACHE_TYPES.COVER_IMAGES_DATA:
         return '封面图片';
       case CACHE_TYPES.AUDIO_METADATA:
         return '音频元数据';
@@ -178,6 +174,45 @@ const CacheManager = () => {
                     </div>
                   </div>
                 )}
+                
+                {/* 图片缓存统计 */}
+                {imageCacheStats && (
+                  <div className="mb-3 mt-4">
+                    <h5 className="d-flex align-items-center">
+                      <FaImage className="me-2" /> 封面图片缓存
+                    </h5>
+                    <Row className="mb-1">
+                      <Col>
+                        <span>大小: {imageCacheStats.formattedSize}</span>
+                      </Col>
+                      <Col className="text-end">
+                        <span>图片数量: {imageCacheStats.count}</span>
+                      </Col>
+                    </Row>
+                    <div className="progress">
+                      <div 
+                        className="progress-bar bg-info" 
+                        role="progressbar" 
+                        style={{ width: `${imageCacheStats.percent}%` }}
+                        aria-valuenow={imageCacheStats.percent} 
+                        aria-valuemin="0" 
+                        aria-valuemax="100"
+                      >
+                        {imageCacheStats.percent.toFixed(1)}%
+                      </div>
+                    </div>
+                    <div className="text-end mt-2">
+                      <Button 
+                        variant="outline-info" 
+                        size="sm"
+                        onClick={() => handleClearCache(CACHE_TYPES.COVER_IMAGES_DATA)}
+                      >
+                        <FaTrash className="me-1" /> 清理图片缓存
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="alert alert-info d-flex align-items-center">
                   <FaInfoCircle className="me-2" />
                   <small>清理缓存可以释放存储空间，但会导致需要重新下载数据</small>
@@ -196,6 +231,7 @@ const CacheManager = () => {
                       <Badge bg="secondary" className="ms-2">
                         {type === CACHE_TYPES.SEARCH_RESULTS && '1小时'}
                         {type === CACHE_TYPES.COVER_IMAGES && '24小时'}
+                        {type === CACHE_TYPES.COVER_IMAGES_DATA && '7天'}
                         {type === CACHE_TYPES.AUDIO_METADATA && '12小时'}
                         {type === CACHE_TYPES.LYRICS && '24小时'}
                         {type === CACHE_TYPES.AUDIO_URLS && '6小时'}

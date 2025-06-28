@@ -19,6 +19,7 @@ const STATIC_CACHE_URLS = [
   '/logo.svg',
   '/lyric.svg',
   '/offline.html', // 离线页面
+  '/china.html',   // 中国模式页面
   '/default_cover.png', // 默认封面图
 ];
 
@@ -100,7 +101,23 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .catch(() => {
+          // 检查当前应用模式
+          return caches.match('app_mode')
+            .then((response) => {
+              if (response) {
+                return response.text().then((mode) => {
+                  // 根据应用模式返回不同的离线页面
+                  if (mode === 'china') {
+                    return caches.match('/china.html');
+                  } else {
+                    return caches.match('/offline.html');
+                  }
+                });
+              } else {
+                // 默认返回离线页面
           return caches.match('/offline.html');
+              }
+            });
         })
     );
     return;
@@ -187,24 +204,14 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 处理图片 - 缓存优先
+  // 处理图片 - 缓存优先，增量更新
   if (/\.(png|jpg|jpeg|svg|gif|webp)$/.test(url.href)) {
     event.respondWith(
       caches.match(event.request)
         .then((cachedResponse) => {
           if (cachedResponse) {
-            // 返回缓存的响应，同时在后台更新缓存
-            fetch(event.request)
-              .then((networkResponse) => {
-                if (networkResponse && networkResponse.ok) {
-                  caches.open(IMAGE_CACHE_NAME)
-                    .then((cache) => {
-                      cache.put(event.request, networkResponse);
-                    });
-                }
-              })
-              .catch(() => {});
-              
+            // 返回缓存的响应，同时在后台进行增量更新检查
+            incrementalCacheUpdate(event.request, cachedResponse, IMAGE_CACHE_NAME);
             return cachedResponse;
           }
           
@@ -236,31 +243,36 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 对于静态资源，使用缓存优先策略
+  // 对于静态资源，使用缓存优先策略，增量更新
   const isStaticAsset = RUNTIME_CACHE_REGEX.some(pattern => pattern.test(event.request.url));
   
   if (isStaticAsset) {
     event.respondWith(
       caches.match(event.request)
         .then((cachedResponse) => {
-          // 返回缓存的响应，同时在后台更新缓存
-          const fetchPromise = fetch(event.request)
-            .then((networkResponse) => {
-              // 确保响应有效
-              if (networkResponse && networkResponse.ok) {
-                const responseToCache = networkResponse.clone();
-                caches.open(STATIC_CACHE_NAME)
-                  .then((cache) => {
-                    cache.put(event.request, responseToCache);
-                  });
+          // 返回缓存的响应，同时在后台进行增量更新检查
+          if (cachedResponse) {
+            incrementalCacheUpdate(event.request, cachedResponse, STATIC_CACHE_NAME);
+            return cachedResponse;
+          }
+          
+          // 如果缓存中没有，则从网络获取并缓存
+          return fetch(event.request)
+            .then((response) => {
+              if (!response || !response.ok) {
+                return response;
               }
-              return networkResponse;
-            })
-            .catch(() => {
-              console.log('[Service Worker] 获取资源失败:', event.request.url);
+              
+              // 克隆响应以便缓存
+              const clonedResponse = response.clone();
+              
+              caches.open(STATIC_CACHE_NAME)
+                  .then((cache) => {
+                  cache.put(event.request, clonedResponse);
+                  });
+                
+              return response;
             });
-            
-          return cachedResponse || fetchPromise;
         })
     );
     return;
@@ -294,14 +306,32 @@ self.addEventListener('periodicsync', (event) => {
   }
 });
 
-// 手动触发缓存清理
+// 监听消息事件
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+  const data = event.data;
   
-  if (event.data && event.data.type === 'CLEAN_CACHE') {
-    event.waitUntil(cleanupExpiredCache());
+  if (data && data.type === 'APP_MODE_CHANGE') {
+    // 更新缓存中的应用模式
+    caches.open(STATIC_CACHE_NAME)
+      .then((cache) => {
+        // 创建一个响应对象，包含应用模式
+        const modeResponse = new Response(data.payload.mode, {
+          headers: {
+            'Content-Type': 'text/plain',
+            'Cache-Control': 'no-cache'
+          }
+        });
+        
+        // 缓存应用模式
+        cache.put('app_mode', modeResponse);
+        console.log(`[Service Worker] 应用模式已缓存: ${data.payload.mode}`);
+      });
+  } else if (data && data.type === 'SKIP_WAITING') {
+    // 跳过等待，立即激活新的Service Worker
+    self.skipWaiting();
+  } else if (data && data.type === 'CLEAN_CACHE') {
+    // 清理缓存
+    cleanupExpiredCache();
   }
 });
 
@@ -494,3 +524,86 @@ self.addEventListener('notificationclick', (event) => {
     );
   }
 }); 
+
+/**
+ * 增量缓存更新函数 - 使用条件请求检查资源是否已更新
+ * @param {Request} request 原始请求
+ * @param {Response} cachedResponse 缓存的响应
+ * @param {string} cacheName 缓存名称
+ */
+async function incrementalCacheUpdate(request, cachedResponse, cacheName) {
+  // 如果没有缓存响应，直接返回
+  if (!cachedResponse) return;
+  
+  try {
+    // 创建一个新的请求，添加条件头
+    const headers = new Headers(request.headers);
+    
+    // 获取缓存的ETag和Last-Modified
+    const etag = cachedResponse.headers.get('ETag');
+    const lastModified = cachedResponse.headers.get('Last-Modified');
+    
+    // 添加条件请求头
+    if (etag) {
+      headers.set('If-None-Match', etag);
+    }
+    if (lastModified) {
+      headers.set('If-Modified-Since', lastModified);
+    }
+    
+    // 如果没有ETag和Last-Modified，不进行增量更新
+    if (!etag && !lastModified) {
+      // 回退到普通更新，但添加缓存破坏参数避免使用浏览器缓存
+      const url = new URL(request.url);
+      url.searchParams.set('_sw_cache_bust', Date.now());
+      
+      fetch(new Request(url, {
+        method: request.method,
+        headers: request.headers,
+        mode: 'no-cors',
+        credentials: request.credentials
+      }))
+      .then((response) => {
+        if (response && response.ok) {
+          caches.open(cacheName).then((cache) => {
+            cache.put(request, response);
+          });
+        }
+      })
+      .catch(() => {});
+      
+      return;
+    }
+    
+    // 创建条件请求
+    const conditionalRequest = new Request(request.url, {
+      method: request.method,
+      headers: headers,
+      mode: 'no-cors',
+      credentials: request.credentials
+    });
+    
+    // 发送条件请求
+    fetch(conditionalRequest)
+      .then((response) => {
+        // 如果返回304 Not Modified，资源未变化，不需要更新缓存
+        if (response.status === 304) {
+          return;
+        }
+        
+        // 如果资源已更新，更新缓存
+        if (response.ok) {
+          caches.open(cacheName)
+            .then((cache) => {
+              cache.put(request, response);
+              console.log(`[Service Worker] 增量更新缓存: ${request.url}`);
+            });
+        }
+      })
+      .catch(() => {
+        // 忽略网络错误
+      });
+  } catch (error) {
+    console.error('[Service Worker] 增量更新失败:', error);
+  }
+} 

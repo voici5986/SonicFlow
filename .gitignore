@@ -10,14 +10,51 @@
 
 # production
 /build
+/dist
 
 # misc
 .DS_Store
+.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env*.local
 
+# logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+logs
+*.log
+
+# IDE/编辑器文件
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+.vs/
+
+# 操作系统文件
+Thumbs.db
+desktop.ini
+
+# 临时文件
+.tmp/
+.temp/
+*.tmp
+*.temp
+
+# 缓存文件
+.cache/
+.firebase/
+.netlify/
+.vercel/
+
+# 本地配置文件
+firebase-debug.log
+firebase-debug.*.log
+firestore-debug.log
+ui-debug.log
