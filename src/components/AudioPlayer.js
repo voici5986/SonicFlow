@@ -234,7 +234,7 @@ const AudioPlayer = () => {
                     track={currentTrack} 
                     size={20} 
                     variant="link"
-                    className="p-2 control-button control-icon-btn" 
+                    className="p-2 control-button text-danger control-icon-btn" 
                   />
                 )}
                 

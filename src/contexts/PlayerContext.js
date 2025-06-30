@@ -5,6 +5,8 @@ import { addToHistory } from '../services/storage';
 import { handleError, ErrorTypes, ErrorSeverity } from '../utils/errorHandler';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { getCachedCoverImageData, cacheCoverImageData } from '../services/cacheService';
+import { useAuth } from '../contexts/AuthContext';
+import { useSync } from '../contexts/SyncContext';
 
 // 创建Context
 const PlayerContext = createContext();
@@ -15,6 +17,10 @@ export const usePlayer = () => useContext(PlayerContext);
 export const PlayerProvider = ({ children }) => {
   // 获取网络状态
   const { isOnline } = useNetworkStatus();
+  // 获取当前用户
+  const { currentUser } = useAuth();
+  // 获取同步上下文
+  const { updatePendingChanges } = useSync();
   
   // 播放器基础状态
   const [currentTrack, setCurrentTrack] = useState(null);
@@ -306,6 +312,24 @@ export const PlayerProvider = ({ children }) => {
       // 添加到历史记录
       addToHistory(track);
       
+      // 如果用户已登录，增加历史记录待同步计数并可能触发延迟同步
+      try {
+        if (currentUser && !currentUser.isLocal) {
+          const { incrementPendingChanges } = await import('../services/storage');
+          const { triggerDelayedSync } = await import('../services/syncService');
+          
+          const changes = await incrementPendingChanges('history');
+          // 更新待同步项显示
+          updatePendingChanges();
+          // 如果历史记录变更达到阈值，触发延迟同步
+          if (changes && changes.history >= 5) {
+            triggerDelayedSync(currentUser.uid);
+          }
+        }
+      } catch (error) {
+        console.error('更新历史记录待同步计数失败:', error);
+      }
+      
       // 获取封面（如果还没有）
       const cacheKey = `${track.source}-${track.pic_id}-300`;
       if (!coverCache[cacheKey]) {
@@ -328,7 +352,7 @@ export const PlayerProvider = ({ children }) => {
       // 重置状态
       setIsPlaying(false);
     }
-  }, [isOnline, currentPlaylist, parseLyric, coverCache, fetchCover]);
+  }, [isOnline, currentPlaylist, parseLyric, coverCache, fetchCover, currentUser, updatePendingChanges]);
   
   // 处理下一首
   const handleNext = useCallback(() => {

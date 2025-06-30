@@ -27,6 +27,7 @@ import {
   checkDownloadStatus 
 } from './utils/errorHandler';
 import { adjustCacheForOffline } from './services/cacheService';
+import SyncProvider from './contexts/SyncContext';
 // 导入样式文件
 import './styles/NavigationFix.css';
 import './styles/AudioPlayer.css';
@@ -176,7 +177,7 @@ const AppContent = () => {
     }
     
     if (process.env.NODE_ENV === 'development') {
-      console.log('Search triggered with query:', query);
+    console.log('Search triggered with query:', query);
     }
     
     // 检查网络状态
@@ -207,7 +208,7 @@ const AppContent = () => {
               return { ...track, picUrl: coverUrl };
             } catch (error) {
               if (process.env.NODE_ENV === 'development') {
-                console.error('获取封面失败:', error);
+              console.error('获取封面失败:', error);
               }
               return { ...track, picUrl: 'default_cover.png' };
             }
@@ -229,7 +230,7 @@ const AppContent = () => {
         addSearchHistory(query, source);
       } catch (error) {
         if (process.env.NODE_ENV === 'development') {
-          console.error('添加搜索历史失败:', error);
+        console.error('添加搜索历史失败:', error);
         }
       }
       
@@ -262,7 +263,7 @@ const AppContent = () => {
       setCurrentDownloadingTrack(track);
       
       await downloadTrack(track, quality);
-      
+
     } catch (error) {
       handleError(
         error,
@@ -409,11 +410,11 @@ const AppContent = () => {
     const initialize = async () => {
       try {
         if (process.env.NODE_ENV === 'development') {
-          console.log("应用初始化中...");
+        console.log("应用初始化中...");
         }
       } catch (error) {
         if (process.env.NODE_ENV === 'development') {
-          console.error("初始化失败:", error);
+        console.error("初始化失败:", error);
         }
       }
     };
@@ -461,9 +462,11 @@ const AppContent = () => {
 const App = () => {
   return (
     <RegionProvider>
+      <SyncProvider>
       <PlayerProvider>
         <AppContent />
       </PlayerProvider>
+      </SyncProvider>
     </RegionProvider>
   );
 };

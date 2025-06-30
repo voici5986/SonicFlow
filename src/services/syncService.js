@@ -1,9 +1,65 @@
 import { db, isFirebaseAvailable, checkFirebaseAvailability } from './firebase';
 import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
-import { getFavorites, saveFavorites, getHistory, saveHistory, MAX_HISTORY_ITEMS, getNetworkStatus } from './storage';
+import { getFavorites, saveFavorites, getHistory, saveHistory, MAX_HISTORY_ITEMS, getNetworkStatus, getPendingSyncChanges, resetPendingChanges } from './storage';
 
 // 同步时间戳存储键
 const SYNC_TIMESTAMP_KEY = 'last_sync_timestamp';
+// 延迟同步定时器
+let delayedSyncTimer = null;
+// 延迟同步配置
+const DELAYED_SYNC_CONFIG = {
+  delayTime: 30000, // 30秒
+  historyThreshold: 5 // 历史记录变更阈值
+};
+
+// 定义事件类型
+export const SyncEvents = {
+  SYNC_STARTED: 'sync_started',
+  SYNC_COMPLETED: 'sync_completed',
+  SYNC_FAILED: 'sync_failed',
+  SYNC_PROGRESS: 'sync_progress'
+};
+
+// 事件监听器存储
+const listeners = {};
+
+/**
+ * 添加同步事件监听器
+ * @param {string} event 事件类型
+ * @param {Function} callback 回调函数
+ */
+export const addSyncListener = (event, callback) => {
+  if (!listeners[event]) {
+    listeners[event] = [];
+  }
+  listeners[event].push(callback);
+};
+
+/**
+ * 移除同步事件监听器
+ * @param {string} event 事件类型
+ * @param {Function} callback 回调函数
+ */
+export const removeSyncListener = (event, callback) => {
+  if (!listeners[event]) return;
+  listeners[event] = listeners[event].filter(cb => cb !== callback);
+};
+
+/**
+ * 触发同步事件
+ * @param {string} event 事件类型
+ * @param {Object} data 事件数据
+ */
+const triggerEvent = (event, data) => {
+  if (!listeners[event]) return;
+  listeners[event].forEach(callback => {
+    try {
+      callback(data);
+    } catch (error) {
+      console.error(`执行同步事件监听器错误 (${event}):`, error);
+    }
+  });
+};
 
 /**
  * 获取上次同步时间戳
@@ -110,15 +166,30 @@ const incrementalSync = async (uid) => {
   try {
     console.log('开始增量同步...');
     
+    // 触发同步开始事件
+    triggerEvent(SyncEvents.SYNC_STARTED, { uid, timestamp: Date.now() });
+    
     // 检查同步可用性
     const { canSync, error } = await checkSyncAvailability();
     if (!canSync) {
       console.warn(`增量同步失败: ${error}`);
+      
+      // 触发同步失败事件
+      triggerEvent(SyncEvents.SYNC_FAILED, { uid, error, timestamp: Date.now() });
+      
       return { success: false, error };
     }
     
     if (!uid) {
       console.warn('增量同步失败: 用户未登录');
+      
+      // 触发同步失败事件
+      triggerEvent(SyncEvents.SYNC_FAILED, { 
+        uid, 
+        error: '用户未登录', 
+        timestamp: Date.now() 
+      });
+      
       return { success: false, error: '用户未登录' };
     }
     
@@ -126,6 +197,14 @@ const incrementalSync = async (uid) => {
     const lastSyncTime = await getLastSyncTime(uid);
     const now = Date.now();
     console.log(`上次同步时间: ${new Date(lastSyncTime).toLocaleString()}`);
+    
+    // 触发同步进度事件
+    triggerEvent(SyncEvents.SYNC_PROGRESS, { 
+      uid, 
+      phase: 'check_changes',
+      message: '检查数据变更...',
+      timestamp: Date.now() 
+    });
     
     // 获取本地变更数据
     const localChanges = await getLocalChangesSince(lastSyncTime);
@@ -143,8 +222,31 @@ const incrementalSync = async (uid) => {
     // 如果本地没有变化且云端没有更新，跳过同步
     if (!localChanges.hasChanges && cloudLastUpdated <= lastSyncTime) {
       console.log('没有变化，跳过同步');
-      return { success: true, unchanged: true };
+      
+      // 获取当前时间用于更新同步时间戳
+      const currentTime = Date.now();
+      
+      // 更新同步时间戳为当前时间，即使没有实际同步
+      await saveLastSyncTime(uid, currentTime);
+      
+      // 触发同步完成事件
+      triggerEvent(SyncEvents.SYNC_COMPLETED, { 
+        uid, 
+        timestamp: currentTime,
+        syncType: 'incremental',
+        result: { success: true, unchanged: true }
+      });
+      
+      return { success: true, unchanged: true, timestamp: currentTime };
     }
+    
+    // 触发同步进度事件
+    triggerEvent(SyncEvents.SYNC_PROGRESS, { 
+      uid, 
+      phase: 'merge_data',
+      message: '合并数据...',
+      timestamp: Date.now() 
+    });
     
     // 获取云端数据
     const cloudFavorites = userData.favorites || [];
@@ -163,6 +265,14 @@ const incrementalSync = async (uid) => {
       localChanges.history
     );
     
+    // 触发同步进度事件
+    triggerEvent(SyncEvents.SYNC_PROGRESS, { 
+      uid, 
+      phase: 'update_cloud',
+      message: '更新云端数据...',
+      timestamp: Date.now() 
+    });
+    
     // 更新到云端
     if (userDoc.exists()) {
       await updateDoc(userRef, {
@@ -180,6 +290,14 @@ const incrementalSync = async (uid) => {
       console.log('已创建新的用户文档');
     }
     
+    // 触发同步进度事件
+    triggerEvent(SyncEvents.SYNC_PROGRESS, { 
+      uid, 
+      phase: 'update_local',
+      message: '更新本地数据...',
+      timestamp: Date.now() 
+    });
+    
     // 保存到本地
     await saveFavorites(mergedFavorites);
     await saveHistory(mergedHistory);
@@ -189,6 +307,18 @@ const incrementalSync = async (uid) => {
     await saveLastSyncTime(uid, now);
     console.log(`同步完成，新的同步时间: ${new Date(now).toLocaleString()}`);
     
+    // 触发同步完成事件
+    triggerEvent(SyncEvents.SYNC_COMPLETED, { 
+      uid, 
+      timestamp: now,
+      syncType: 'incremental',
+      result: { 
+        success: true, 
+        favorites: mergedFavorites.length,
+        history: mergedHistory.length
+      }
+    });
+    
     return { 
       success: true, 
       favorites: mergedFavorites,
@@ -196,6 +326,15 @@ const incrementalSync = async (uid) => {
     };
   } catch (error) {
     console.error('增量同步失败:', error);
+    
+    // 触发同步失败事件
+    triggerEvent(SyncEvents.SYNC_FAILED, { 
+      uid, 
+      error: error.message || '未知错误',
+      timestamp: Date.now(),
+      syncType: 'incremental'
+    });
+    
     return { success: false, error };
   }
 };
@@ -402,12 +541,24 @@ export const initialSync = async (uid) => {
   try {
     console.log("开始初始同步操作");
     
+    // 触发同步开始事件
+    triggerEvent(SyncEvents.SYNC_STARTED, { uid, timestamp: Date.now(), syncType: 'initial' });
+    
     // 直接调用增量同步
     const result = await incrementalSync(uid);
     
     // 如果没有变化，也算成功
     if (result.unchanged) {
       console.log("初始同步：没有变化需要同步");
+      
+      // 触发同步完成事件（虽然incrementalSync中已触发，但这里再次触发，带上更多上下文）
+      triggerEvent(SyncEvents.SYNC_COMPLETED, { 
+        uid, 
+        timestamp: Date.now(),
+        syncType: 'initial',
+        result: { success: true, unchanged: true }
+      });
+      
       return { 
         success: true,
         favorites: result.favorites,
@@ -419,6 +570,194 @@ export const initialSync = async (uid) => {
     return result;
   } catch (error) {
     console.error("初始同步失败:", error);
+    
+    // 触发同步失败事件
+    triggerEvent(SyncEvents.SYNC_FAILED, { 
+      uid, 
+      error: error.message || '未知错误',
+      timestamp: Date.now(),
+      syncType: 'initial'
+    });
+    
     return { success: false, error };
   }
+};
+
+// 导出其他辅助函数以供外部使用
+export {
+  getLastSyncTime,
+  getLocalChangesSince,
+  triggerEvent // 导出触发事件函数，以便外部代码可以触发事件
+};
+
+/**
+ * 登录时检查是否需要执行同步
+ * @param {string} uid 用户ID
+ * @returns {Promise<{shouldSync: boolean, reason: string, localChanges?: any, cloudLastUpdated?: number}>}
+ */
+export const shouldSyncOnLogin = async (uid) => {
+  try {
+    // 检查同步可用性
+    const { canSync, error } = await checkSyncAvailability();
+    if (!canSync) {
+      console.log('同步预检查: 同步条件不满足 -', error);
+      return { shouldSync: false, reason: error };
+    }
+    
+    // 获取上次同步时间
+    const lastSyncTime = await getLastSyncTime(uid);
+    
+    // 获取本地变更数据
+    const localChanges = await getLocalChangesSince(lastSyncTime);
+    const hasLocalChanges = localChanges.hasChanges;
+    
+    // 检查云端是否有更新
+    const userRef = doc(db, "users", uid);
+    const userDoc = await getDoc(userRef);
+    
+    // 如果用户文档不存在，需要创建
+    if (!userDoc.exists()) {
+      return { shouldSync: true, reason: '用户文档不存在，需要初始化' };
+    }
+    
+    const userData = userDoc.data();
+    const cloudLastUpdated = userData.lastUpdated || 0;
+    const hasCloudChanges = cloudLastUpdated > lastSyncTime;
+    
+    // 如果本地和云端都没有变化，不需要同步
+    if (!hasLocalChanges && !hasCloudChanges) {
+      console.log('同步预检查: 本地和云端数据均无变化，跳过同步');
+      return { shouldSync: false, reason: '数据无变化' };
+    }
+    
+    return { 
+      shouldSync: true, 
+      reason: hasLocalChanges ? '本地有数据变更' : '云端有数据变更',
+      localChanges: localChanges,
+      cloudLastUpdated: cloudLastUpdated
+    };
+  } catch (error) {
+    console.error('同步预检查失败:', error);
+    // 出错时保守处理，默认需要同步
+    return { shouldSync: true, reason: '预检查失败，默认执行同步' };
+  }
+};
+
+/**
+ * 触发延迟同步
+ * 当收藏或历史记录变更时调用此函数
+ * @param {string} uid 用户ID
+ * @param {string} type 变更类型 'favorites' | 'history'
+ * @returns {Promise<void>}
+ */
+export const triggerDelayedSync = async (uid) => {
+  // 如果已经有一个延迟同步定时器，取消它
+  if (delayedSyncTimer) {
+    clearTimeout(delayedSyncTimer);
+  }
+  
+  console.log('设置延迟同步定时器...');
+  
+  // 设置新的延迟同步定时器
+  delayedSyncTimer = setTimeout(async () => {
+    try {
+      // 检查同步可用性
+      const { canSync, error } = await checkSyncAvailability();
+      if (!canSync) {
+        console.warn(`延迟同步取消: ${error}`);
+        
+        // 触发同步失败事件
+        triggerEvent(SyncEvents.SYNC_FAILED, { 
+          uid, 
+          error: error,
+          timestamp: Date.now(),
+          syncType: 'delayed'
+        });
+        
+        return;
+      }
+      
+      // 获取变更计数
+      const changes = await getPendingSyncChanges();
+      console.log('延迟同步检查变更:', changes);
+      
+      // 检查是否有足够的变更触发同步
+      const shouldSync = 
+        changes.favorites > 0 || 
+        changes.history >= DELAYED_SYNC_CONFIG.historyThreshold;
+      
+      if (shouldSync) {
+        console.log('延迟同步开始执行...');
+        
+        // 触发同步开始事件
+        triggerEvent(SyncEvents.SYNC_STARTED, { 
+          uid, 
+          timestamp: Date.now(),
+          syncType: 'delayed',
+          trigger: {
+            favorites: changes.favorites,
+            history: changes.history
+          }
+        });
+        
+        // 执行增量同步
+        const result = await incrementalSync(uid);
+        
+        if (result.success) {
+          console.log('延迟同步成功');
+          // 重置变更计数
+          await resetPendingChanges();
+          
+          // 触发同步完成事件（即使是跳过的同步也显示为成功）
+          triggerEvent(SyncEvents.SYNC_COMPLETED, { 
+            uid, 
+            timestamp: Date.now(),
+            syncType: 'delayed',
+            result: { 
+              success: true,
+              unchanged: result.unchanged || false  // 传递unchanged标志
+            }
+          });
+        } else {
+          console.warn('延迟同步失败:', result.error);
+          
+          // 触发同步失败事件
+          triggerEvent(SyncEvents.SYNC_FAILED, { 
+            uid, 
+            error: result.error,
+            timestamp: Date.now(),
+            syncType: 'delayed'
+          });
+        }
+      } else {
+        console.log('变更不足，跳过延迟同步');
+        
+        // 即使跳过同步，也触发一个"同步成功"事件，类似于无变化的情况
+        const currentTime = Date.now();
+        triggerEvent(SyncEvents.SYNC_COMPLETED, { 
+          uid, 
+          timestamp: currentTime,
+          syncType: 'delayed',
+          result: { 
+            success: true, 
+            unchanged: true,
+            reason: '变更不足，跳过同步'
+          }
+        });
+      }
+    } catch (error) {
+      console.error('延迟同步失败:', error);
+      
+      // 触发同步失败事件
+      triggerEvent(SyncEvents.SYNC_FAILED, { 
+        uid, 
+        error: error.message || '未知错误',
+        timestamp: Date.now(),
+        syncType: 'delayed'
+      });
+    } finally {
+      // 清除定时器引用
+      delayedSyncTimer = null;
+    }
+  }, DELAYED_SYNC_CONFIG.delayTime);
 }; 

@@ -1,85 +1,104 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Card, Image, Spinner, Container } from 'react-bootstrap';
+import { Button, Card, Image, Spinner, Container, Badge } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
-import { getFavorites, getHistory, getSyncStatus, saveSyncStatus } from '../services/storage';
+import { getFavorites, getHistory } from '../services/storage';
 import { FaHeart, FaHistory, FaSignOutAlt, FaSync } from 'react-icons/fa';
 import FirebaseStatus from './FirebaseStatus';
+import { toast } from 'react-toastify';
+import { useSync } from '../contexts/SyncContext';
+import { initialSync } from '../services/syncService';
 import '../styles/UserProfile.css';
 
 const UserProfile = ({ onTabChange }) => {
   const { currentUser, signOut } = useAuth();
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [historyCount, setHistoryCount] = useState(0);
-  const [syncStatus, setSyncStatus] = useState({ 
-    loading: false, 
-    success: null, 
-    message: '', 
-    timestamp: null 
-  });
+  const [syncCooldown, setSyncCooldown] = useState(false);
   
-  // 加载同步状态
-  const loadSyncStatus = useCallback(async () => {
-    if (currentUser) {
-      const savedStatus = await getSyncStatus(currentUser.uid);
-      setSyncStatus(savedStatus);
-    }
-  }, [currentUser]);
+  // 使用同步上下文
+  const { 
+    pendingChanges, 
+    syncStatus, 
+    startSync,
+    handleSyncComplete,
+    updatePendingChanges
+  } = useSync();
   
+  // 加载收藏和历史记录计数
   const loadCounts = useCallback(async () => {
     const favorites = await getFavorites();
     const history = await getHistory();
     setFavoritesCount(favorites.length);
     setHistoryCount(history.length);
   }, []);
-  
+
+  // 组件挂载时加载数据
   useEffect(() => {
     loadCounts();
-    loadSyncStatus();
-  }, [loadCounts, loadSyncStatus]); // 更新依赖数组
+    updatePendingChanges();
+    
+    // 监听同步刷新事件
+    const handleDataRefreshed = () => {
+      loadCounts();
+    };
+    
+    window.addEventListener('sync:data_refreshed', handleDataRefreshed);
+    
+    return () => {
+      window.removeEventListener('sync:data_refreshed', handleDataRefreshed);
+    };
+  }, [loadCounts, updatePendingChanges]);
   
-  // 更新同步状态并保存到缓存
-  const updateSyncStatus = async (newStatus) => {
-    setSyncStatus(newStatus);
-    if (currentUser) {
-      await saveSyncStatus(newStatus, currentUser.uid);
-    }
-  };
-  
+  // 处理手动同步
   const handleManualSync = async () => {
     if (!currentUser) return;
     
-    await updateSyncStatus({ loading: true, success: null, message: '正在数据同步...', timestamp: null });
+    // 如果在冷却期，显示提示但不执行同步
+    if (syncCooldown) {
+      toast.info('请稍后再试，系统正在冷却中');
+      return;
+    }
+    
+    // 检查是否在短时间内（1分钟）已经同步过
+    if (syncStatus.timestamp) {
+      const lastSyncTime = new Date(syncStatus.timestamp).getTime();
+      const now = Date.now();
+      const timeDiff = now - lastSyncTime;
+      
+      // 如果在1分钟内已同步，提示并返回
+      if (timeDiff < 60000) { // 60000毫秒 = 1分钟
+        toast.info('刚刚已同步，无需再次同步');
+        return;
+      }
+    }
+    
+    // 设置冷却状态
+    setSyncCooldown(true);
+    
+    // 使用setTimeout在8秒后解除冷却状态
+    setTimeout(() => {
+      setSyncCooldown(false);
+    }, 8000); // 8秒冷却期
     
     try {
-      const { initialSync } = await import('../services/syncService');
+      // 开始同步
+      startSync();
+      
+      // 执行同步
       const result = await initialSync(currentUser.uid);
       
-      if (result.success) {
-        await updateSyncStatus({ 
-          loading: false, 
-          success: true, 
-          message: '数据同步成功', 
-          timestamp: new Date() 
-        });
-        loadCounts(); // 更新计数
-      } else {
-        await updateSyncStatus({ 
-          loading: false, 
-          success: false, 
-          message: `同步失败: ${result.error || '未知错误'}`, 
-          timestamp: new Date() 
-        });
+      // 处理同步结果（事件监听器将会自动更新UI）
+      if (!result.success) {
+        toast.error(`同步失败: ${result.error || '未知错误'}`);
       }
     } catch (error) {
-      await updateSyncStatus({ 
-        loading: false, 
-        success: false, 
-        message: `同步错误: ${error.message}`, 
-        timestamp: new Date() 
-      });
+      console.error('手动同步失败:', error);
+      handleSyncComplete(false, `同步错误: ${error.message}`);
+      toast.error(`同步错误: ${error.message}`);
     }
   };
   
+  // 处理退出登录
   const handleLogout = async () => {
     try {
       await signOut();
@@ -220,6 +239,17 @@ const UserProfile = ({ onTabChange }) => {
               {/* 同步状态 */}
               {renderSyncStatus()}
               
+              {/* 待同步项信息 */}
+              {!syncStatus.loading && pendingChanges.count > 0 && (
+                <div className="pending-changes-info mb-2 text-center">
+                  <Badge bg="warning" text="dark">
+                    {pendingChanges.count}项待同步
+                    {pendingChanges.details.favorites > 0 && ` (${pendingChanges.details.favorites}收藏)`}
+                    {pendingChanges.details.history > 0 && ` (${pendingChanges.details.history}历史)`}
+                  </Badge>
+                </div>
+              )}
+              
               {/* 同步按钮 */}
               <Button 
                 variant="primary" 
@@ -230,7 +260,15 @@ const UserProfile = ({ onTabChange }) => {
                 {syncStatus.loading ? (
                   <Spinner animation="border" size="sm" className="me-2" />
                 ) : (
-                  <><FaSync className="me-2" /> 同步数据</>
+                  <>
+                    <FaSync className="me-2" /> 
+                    同步数据
+                    {pendingChanges.count > 0 && !pendingChanges.loading && !syncStatus.loading && (
+                      <Badge className="ms-1" bg="light" text="dark" pill>
+                        {pendingChanges.count}
+                      </Badge>
+                    )}
+                  </>
                 )}
               </Button>
             </Card.Body>

@@ -368,3 +368,67 @@ export async function saveSyncStatus(status, userId) {
     return false;
   }
 } 
+
+/**
+ * 变更计数器操作 - 用于延迟同步
+ */
+// 变更计数器键名
+const CHANGES_COUNTER_KEY = 'pending_sync_changes';
+const CHANGES_TIMESTAMP_KEY = 'last_changes_timestamp';
+
+// 获取待同步变更计数
+export async function getPendingSyncChanges() {
+  try {
+    const counter = await syncStore.getItem(CHANGES_COUNTER_KEY);
+    const timestamp = await syncStore.getItem(CHANGES_TIMESTAMP_KEY);
+    return {
+      favorites: counter?.favorites || 0,
+      history: counter?.history || 0,
+      timestamp: timestamp || 0
+    };
+  } catch (error) {
+    console.error("获取待同步变更计数失败:", error);
+    return { favorites: 0, history: 0, timestamp: 0 };
+  }
+}
+
+// 保存待同步变更计数
+export async function savePendingSyncChanges(counter) {
+  try {
+    await syncStore.setItem(CHANGES_COUNTER_KEY, counter);
+    await syncStore.setItem(CHANGES_TIMESTAMP_KEY, Date.now());
+    return true;
+  } catch (error) {
+    console.error("保存待同步变更计数失败:", error);
+    return false;
+  }
+}
+
+// 增加待同步变更计数
+export async function incrementPendingChanges(type) {
+  try {
+    const counter = await getPendingSyncChanges();
+    const newCounter = {
+      ...counter,
+      [type]: counter[type] + 1
+    };
+    
+    await savePendingSyncChanges(newCounter);
+    return newCounter;
+  } catch (error) {
+    console.error("增加待同步变更计数失败:", error);
+    return null;
+  }
+}
+
+// 重置待同步变更计数
+export async function resetPendingChanges() {
+  try {
+    await syncStore.setItem(CHANGES_COUNTER_KEY, { favorites: 0, history: 0 });
+    await syncStore.setItem(CHANGES_TIMESTAMP_KEY, Date.now());
+    return true;
+  } catch (error) {
+    console.error("重置待同步变更计数失败:", error);
+    return false;
+  }
+} 

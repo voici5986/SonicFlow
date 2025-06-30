@@ -1,15 +1,15 @@
-<?xml version="1.0" standalone="no"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg t="1750925880682" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5999" xmlns:xlink="http://www.w3.org/1999/xlink" width="256" height="256">
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="512" height="512">
   <defs>
     <linearGradient id="musicGradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#6a11cb"/>
       <stop offset="50%" stop-color="#8f3dff"/>
       <stop offset="100%" stop-color="#2575fc"/>
     </linearGradient>
-    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#6a11cb" flood-opacity="0.5"/>
-    </filter>
   </defs>
-  <path d="M768.496 359.12L648.224 572a128 128 0 1 1-1.648-92.288l90.784-160.656A295.2 295.2 0 0 0 520 224C356.512 224 224 356.512 224 520S356.512 816 520 816C683.472 816 816 683.472 816 520c0-59.328-17.44-114.56-47.504-160.88zM600.272 562.352l-0.272-0.144 1.648-2.912a80 80 0 1 0-1.376 3.072zM864 520C864 709.984 709.984 864 520 864S176 709.984 176 520 330.016 176 520 176 864 330.016 864 520z" fill="url(#musicGradient)" filter="url(#shadow)" p-id="6000"></path>
+  <!-- 透明背景 -->
+  <g>
+    <!-- 音乐图标路径 -->
+    <path d="M384.248 179.56L324.112 286a64 64 0 1 1-0.824-46.144l45.392-80.328A147.6 147.6 0 0 0 260 112C178.256 112 112 178.256 112 260S178.256 408 260 408C341.736 408 408 341.736 408 260c0-29.664-8.72-57.28-23.752-80.44zM300.136 281.176l-0.136-0.072l0.824-1.456a40 40 0 1 0-0.688 1.536zM432 260C432 354.992 354.992 432 260 432S88 354.992 88 260 165.008 88 260 88 432 165.008 432 260z" fill="url(#musicGradient)" />
+  </g>
 </svg> 

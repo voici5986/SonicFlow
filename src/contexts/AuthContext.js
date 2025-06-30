@@ -8,7 +8,12 @@ import {
   sendPasswordReset,
   firebaseInitError
 } from '../services/firebase';
-import { initialSync } from '../services/syncService';
+import { 
+  SyncEvents, 
+  triggerEvent, 
+  shouldSyncOnLogin, 
+  initialSync 
+} from '../services/syncService';
 import { toast } from 'react-toastify';
 import { saveSyncStatus, getLocalUser, saveLocalUser, getNetworkStatus } from '../services/storage';
 import { APP_MODES, APP_EVENTS } from '../services/regionDetection';
@@ -226,6 +231,86 @@ export const AuthProvider = ({ children }) => {
     }
     
     try {
+      // 在退出登录前执行一次同步，确保数据保存到云端
+      if (currentUser && !isOfflineMode && appModeRef.current !== APP_MODES.CHINA) {
+        try {
+          console.log('退出登录前同步：检查数据变更');
+          
+          // 检查网络状态
+          const networkStatus = await getNetworkStatus();
+          if (networkStatus.online) {
+            // 检查Firebase可用性
+            const firebaseAvailable = await checkAvailability();
+            if (firebaseAvailable) {
+              // 检查是否有数据需要同步
+              const syncCheck = await shouldSyncOnLogin(currentUser.uid);
+              
+              if (syncCheck.shouldSync) {
+                console.log(`退出前执行同步: ${syncCheck.reason}`);
+                
+                // 触发同步开始事件
+                triggerEvent(SyncEvents.SYNC_STARTED, { 
+                  uid: currentUser.uid, 
+                  timestamp: Date.now(), 
+                  syncType: 'logout' 
+                });
+                
+                // 更新同步状态
+                await saveSyncStatus({
+                  loading: true,
+                  success: null,
+                  message: '退出前数据同步...',
+                  timestamp: null
+                }, currentUser.uid);
+                
+                // 执行同步
+                const result = await initialSync(currentUser.uid);
+                
+                // 触发同步完成/失败事件
+                if (result.success) {
+                  triggerEvent(SyncEvents.SYNC_COMPLETED, { 
+                    uid: currentUser.uid, 
+                    timestamp: Date.now(),
+                    syncType: 'logout',
+                    result: { success: true }
+                  });
+                } else {
+                  triggerEvent(SyncEvents.SYNC_FAILED, { 
+                    uid: currentUser.uid, 
+                    error: result.error || '未知错误',
+                    timestamp: Date.now(),
+                    syncType: 'logout'
+                  });
+                }
+                
+                // 更新同步状态
+                await saveSyncStatus({
+                  loading: false,
+                  success: result.success,
+                  message: result.success ? '同步完成' : `同步失败: ${result.error}`,
+                  timestamp: new Date()
+                }, currentUser.uid);
+                
+                console.log('退出前同步完成，状态:', result.success ? '成功' : '失败');
+              } else {
+                console.log(`退出前同步跳过: ${syncCheck.reason}`);
+              }
+            }
+          }
+        } catch (syncError) {
+          console.error('退出前同步失败:', syncError);
+          
+          // 触发同步失败事件
+          triggerEvent(SyncEvents.SYNC_FAILED, { 
+            uid: currentUser.uid, 
+            error: syncError.message || '未知错误',
+            timestamp: Date.now(),
+            syncType: 'logout'
+          });
+        }
+      }
+      
+      // 执行退出登录
       await logout();
       toast.info('您已退出登录');
       return { success: true };
@@ -312,6 +397,20 @@ export const AuthProvider = ({ children }) => {
               loading: false,
               success: false,
               message: 'Firebase不可用，同步已跳过',
+              timestamp: new Date()
+            }, user.uid);
+            return;
+          }
+          
+          // 新增：检查是否需要同步
+          const syncCheck = await shouldSyncOnLogin(user.uid);
+          if (!syncCheck.shouldSync) {
+            console.log(`跳过登录同步: ${syncCheck.reason}`);
+            setSyncComplete(true);
+            await saveSyncStatus({
+              loading: false,
+              success: true,
+              message: `同步已跳过: ${syncCheck.reason}`,
               timestamp: new Date()
             }, user.uid);
             return;
