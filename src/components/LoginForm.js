@@ -170,17 +170,14 @@ const LoginForm = ({ onToggleForm, onLoginSuccess }) => {
         </Form.Group>
 
         <div className="d-flex justify-content-between mb-4">
-          <a
-            href="#"
-            className="text-primary"
-            onClick={(e) => {
-              e.preventDefault();
-              handleForgotPassword();
-            }}
+          <button
+            type="button"
+            className="btn btn-link p-0 text-primary"
+            onClick={handleForgotPassword}
             style={{ cursor: 'pointer', textDecoration: 'none' }}
           >
             忘记密码？
-          </a>
+          </button>
         </div>
 
         <Button
@@ -218,17 +215,14 @@ const LoginForm = ({ onToggleForm, onLoginSuccess }) => {
         <div className="text-center mt-3">
           <p className="mb-0">
             还没有账号？{" "}
-            <a
-              href="#"
-              className="text-primary"
-              onClick={(e) => {
-                e.preventDefault();
-                onToggleForm();
-              }}
+            <button
+              type="button"
+              className="btn btn-link p-0 text-primary"
+              onClick={onToggleForm}
               style={{ cursor: 'pointer', textDecoration: 'none' }}
             >
               立即注册
-            </a>
+            </button>
           </p>
         </div>
       </Form>

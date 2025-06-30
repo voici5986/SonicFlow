@@ -207,16 +207,13 @@ const RegisterForm = ({ onToggleForm, onRegisterSuccess }) => {
         
         <div className="text-center">
           <span className="text-muted small">已有账号? </span>
-          <a 
-            href="#" 
-            onClick={(e) => {
-              e.preventDefault();
-              if (onToggleForm) onToggleForm();
-            }}
-            className="text-decoration-none small"
+          <button 
+            type="button"
+            className="btn btn-link p-0 text-decoration-none small"
+            onClick={onToggleForm}
           >
             立即登录
-          </a>
+          </button>
         </div>
       </Form>
     </div>

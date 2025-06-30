@@ -30,10 +30,7 @@ const Favorites = () => {
   const [downloading, setDownloading] = useState(false);
   const [currentDownloadingTrack, setCurrentDownloadingTrack] = useState(null);
 
-  useEffect(() => {
-    loadFavorites();
-  }, []);
-
+  // 定义loadFavorites函数在useEffect之前
   const loadFavorites = async () => {
     setLoading(true);
     try {
@@ -65,6 +62,11 @@ const Favorites = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadFavorites();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleRemoveFromFavorites = async (track) => {
     try {

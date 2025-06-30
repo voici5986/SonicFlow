@@ -10,7 +10,7 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
   // 添加滚动状态
   const [scrolled, setScrolled] = useState(false);
   // 检测窗口宽度用于响应式设计
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const { currentUser } = useAuth();
   
   // 监听滚动事件
@@ -31,7 +31,7 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
   // 监听窗口大小变化
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
+      setWindowWidth(window.innerWidth);
     };
     
     window.addEventListener('resize', handleResize);

@@ -22,10 +22,7 @@ const History = () => {
   // 从PlayerContext获取状态和方法
   const { handlePlay, currentTrack, isPlaying, fetchCover, coverCache } = usePlayer();
 
-  useEffect(() => {
-    loadHistory();
-  }, []);
-
+  // 定义loadHistory函数在useEffect之前
   const loadHistory = async () => {
     setLoading(true);
     try {
@@ -63,6 +60,11 @@ const History = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleClearHistory = async () => {
     if (window.confirm('确定要清空全部历史记录吗？此操作不可恢复。')) {

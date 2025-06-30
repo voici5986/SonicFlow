@@ -35,7 +35,9 @@ export const ErrorSeverity = {
  */
 export const handleError = (error, type = ErrorTypes.UNKNOWN, severity = ErrorSeverity.ERROR, customMessage = null, callback = null) => {
   // 记录错误到控制台
-  console.error(`[${type.toUpperCase()}] Error:`, error);
+  if (process.env.NODE_ENV === 'development') {
+    console.error(`[${type.toUpperCase()}] Error:`, error);
+  }
   
   // 确定显示的错误消息
   let message = customMessage;
@@ -66,9 +68,6 @@ export const handleError = (error, type = ErrorTypes.UNKNOWN, severity = ErrorSe
   if (callback && typeof callback === 'function') {
     callback(error, type, severity);
   }
-  
-  // 记录错误到服务器（如果需要）
-  // logErrorToServer(error, type, severity);
 };
 
 /**
@@ -79,7 +78,7 @@ export const handleError = (error, type = ErrorTypes.UNKNOWN, severity = ErrorSe
  */
 const getErrorMessage = (error, type) => {
   // 检查是否是网络错误
-  if (error.message && error.message.includes('Network Error') || error.code === 'ERR_NETWORK') {
+  if ((error.message && error.message.includes('Network Error')) || error.code === 'ERR_NETWORK') {
     return '网络连接错误，请检查您的网络连接';
   }
   
@@ -157,6 +156,56 @@ const showErrorToast = (message, severity, icon, duration) => {
 };
 
 /**
+ * 检查网络状态并处理离线情况
+ * @param {boolean} isOnline - 是否在线
+ * @param {string} actionType - 尝试执行的操作类型
+ * @returns {boolean} - 如果在线返回true，离线返回false
+ */
+export const checkNetworkStatus = (isOnline, actionType = '操作') => {
+  if (!isOnline) {
+    handleError(
+      new Error('您当前处于离线状态'),
+      ErrorTypes.NETWORK,
+      ErrorSeverity.WARNING,
+      `您当前处于离线状态，无法${actionType}`
+    );
+    return false;
+  }
+  return true;
+};
+
+/**
+ * 检查搜索参数
+ * @param {string} query - 搜索关键词
+ * @returns {boolean} - 如果搜索参数有效返回true，否则返回false
+ */
+export const validateSearchParams = (query) => {
+  if (!query || query.trim() === '') {
+    handleError(
+      new Error('搜索关键词为空'),
+      ErrorTypes.SEARCH,
+      ErrorSeverity.INFO,
+      '请输入搜索关键词'
+    );
+    return false;
+  }
+  return true;
+};
+
+/**
+ * 检查下载状态
+ * @param {boolean} downloading - 是否正在下载
+ * @returns {boolean} - 如果可以开始新的下载返回true，否则返回false
+ */
+export const checkDownloadStatus = (downloading) => {
+  if (downloading) {
+    toast.info('正在下载中，请稍候', { autoClose: 2000 });
+    return false;
+  }
+  return true;
+};
+
+/**
  * 提供恢复建议
  * @param {string} type - 错误类型
  * @returns {string} - 恢复建议
@@ -193,8 +242,8 @@ export const getRecoverySuggestion = (type) => {
 export const canAutoRecover = (error, type) => {
   // 网络错误通常可以通过重试来恢复
   if (type === ErrorTypes.NETWORK || 
-      (error.message && error.message.includes('Network Error')) || 
-      error.code === 'ERR_NETWORK') {
+      ((error.message && error.message.includes('Network Error')) || 
+      error.code === 'ERR_NETWORK')) {
     return true;
   }
   
@@ -220,8 +269,10 @@ export const autoRecover = async (recoveryFn, maxRetries = 3, delay = 1000) => {
   
   while (retries < maxRetries) {
     try {
+      // 捕获当前delay值
+      const currentDelay = delay;
       // 等待指定延迟
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise(resolve => setTimeout(resolve, currentDelay));
       
       // 尝试恢复
       const result = await recoveryFn();

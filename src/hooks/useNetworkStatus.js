@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getNetworkStatus, saveNetworkStatus } from '../services/storage';
-import { toast } from 'react-toastify';
 import { adjustCacheForOffline } from '../services/cacheService';
 
 /**
@@ -96,7 +95,7 @@ export const useNetworkStatus = (options = {}) => {
     dispatchNetworkStatusChange(true);
     
     // 不显示网络恢复提示
-  }, [showToasts, dispatchNetworkStatusChange, detectConnectionType, adjustCache]);
+  }, [dispatchNetworkStatusChange, detectConnectionType, adjustCache]);
   
   // 处理网络离线事件
   const handleOffline = useCallback(() => {
@@ -118,7 +117,7 @@ export const useNetworkStatus = (options = {}) => {
     dispatchNetworkStatusChange(false);
     
     // 不显示网络断开提示
-  }, [showToasts, dispatchNetworkStatusChange, adjustCache]);
+  }, [dispatchNetworkStatusChange, adjustCache]);
   
   // 手动检查网络状态
   const checkNetworkStatus = useCallback(async () => {

@@ -47,6 +47,64 @@ const AudioPlayer = () => {
   parseLyric
   } = usePlayer();
   
+  // 设置MediaSession API
+  useEffect(() => {
+    if (!currentTrack || !playerUrl) return;
+
+    // 检查浏览器是否支持MediaSession API
+    if ('mediaSession' in navigator) {
+      // 设置媒体会话元数据
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentTrack.name,
+        artist: currentTrack.artist,
+        album: currentTrack.album || '',
+        artwork: [
+          {
+            src: coverCache[`${currentTrack.source}-${currentTrack.pic_id}-300`] || '/default_cover.png',
+            sizes: '300x300',
+            type: 'image/png'
+          }
+        ]
+      });
+
+      // 设置媒体控制处理程序
+      navigator.mediaSession.setActionHandler('play', () => {
+        setIsPlaying(true);
+      });
+
+      navigator.mediaSession.setActionHandler('pause', () => {
+        setIsPlaying(false);
+      });
+
+      // 如果播放列表中有多首歌曲，添加上一首/下一首控制
+      if (currentPlaylist && currentPlaylist.length > 1) {
+        navigator.mediaSession.setActionHandler('previoustrack', handlePrevious);
+        navigator.mediaSession.setActionHandler('nexttrack', handleNext);
+      } else {
+        navigator.mediaSession.setActionHandler('previoustrack', null);
+        navigator.mediaSession.setActionHandler('nexttrack', null);
+      }
+
+      // 设置播放位置更新
+      navigator.mediaSession.setActionHandler('seekto', (details) => {
+        if (playerRef.current && details.seekTime) {
+          playerRef.current.seekTo(details.seekTime);
+        }
+      });
+    }
+  }, [currentTrack, playerUrl, coverCache, currentPlaylist, setIsPlaying, handlePrevious, handleNext, playerRef]);
+
+  // 更新媒体会话播放状态
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+      if (isPlaying) {
+        navigator.mediaSession.playbackState = 'playing';
+      } else {
+        navigator.mediaSession.playbackState = 'paused';
+      }
+    }
+  }, [isPlaying]);
+  
   // 添加歌词滚动效果
   useEffect(() => {
     if (lyricExpanded && currentLyricIndex >= 0 && lyricsContainerRef.current) {

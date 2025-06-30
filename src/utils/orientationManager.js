@@ -21,10 +21,48 @@ export const isOrientationApiSupported = () => {
 };
 
 /**
+ * 检查是否需要请求iOS设备方向权限
+ * @returns {boolean} 是否需要请求权限
+ */
+export const isDeviceOrientationPermissionRequired = () => {
+  return (
+    typeof DeviceOrientationEvent !== 'undefined' &&
+    typeof DeviceOrientationEvent.requestPermission === 'function'
+  );
+};
+
+/**
+ * 请求iOS设备方向权限
+ * @returns {Promise<boolean>} 是否获得权限
+ */
+export const requestDeviceOrientationPermission = async () => {
+  if (!isDeviceOrientationPermissionRequired()) {
+    return true; // 不需要权限的设备默认返回true
+  }
+
+  try {
+    const permission = await DeviceOrientationEvent.requestPermission();
+    return permission === 'granted';
+  } catch (error) {
+    console.error('请求设备方向权限失败:', error);
+    return false;
+  }
+};
+
+/**
  * 尝试锁定屏幕方向为竖屏
  * @returns {Promise<boolean>} 是否成功锁定
  */
 export const lockToPortrait = async () => {
+  // 首先检查是否需要iOS权限
+  if (isDeviceOrientationPermissionRequired()) {
+    const hasPermission = await requestDeviceOrientationPermission();
+    if (!hasPermission) {
+      console.log('未获得设备方向权限，无法锁定屏幕方向');
+      return false;
+    }
+  }
+
   // 检查是否支持Screen Orientation API
   if (!isOrientationApiSupported()) {
     console.log('当前浏览器不支持Screen Orientation API，无法锁定屏幕方向');
@@ -127,6 +165,8 @@ export const addOrientationChangeListener = (callback) => {
 // 创建一个命名对象，代替匿名导出
 const orientationManager = {
   isOrientationApiSupported,
+  isDeviceOrientationPermissionRequired,
+  requestDeviceOrientationPermission,
   lockToPortrait,
   unlockOrientation,
   getCurrentOrientation,

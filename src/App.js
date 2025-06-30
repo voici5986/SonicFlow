@@ -18,16 +18,21 @@ import { downloadTrack } from './services/downloadService';
 import { searchMusic } from './services/musicApiService';
 import useNetworkStatus from './hooks/useNetworkStatus';
 import useFirebaseStatus from './hooks/useFirebaseStatus';
-import { handleError, ErrorTypes, ErrorSeverity } from './utils/errorHandler';
+import { 
+  handleError, 
+  ErrorTypes, 
+  ErrorSeverity, 
+  checkNetworkStatus, 
+  validateSearchParams, 
+  checkDownloadStatus 
+} from './utils/errorHandler';
 import { adjustCacheForOffline } from './services/cacheService';
-// 导入导航样式修复
+// 导入样式文件
 import './styles/NavigationFix.css';
-// 导入音频播放器样式
 import './styles/AudioPlayer.css';
-// 导入屏幕方向样式
 import './styles/Orientation.css';
 
-// 改为懒加载
+// 懒加载页面组件
 const Favorites = React.lazy(() => import('./pages/Favorites'));
 const History = React.lazy(() => import('./pages/History'));
 const User = React.lazy(() => import('./pages/User'));
@@ -53,7 +58,7 @@ const offlineBannerStyle = {
 const DownloadContext = React.createContext();
 const useDownloadContext = () => React.useContext(DownloadContext);
 
-// 搜索结果项组件，使用usePlayer
+// 搜索结果项组件
 const SearchResultItem = ({ track }) => {
   const { handlePlay, currentTrack, isPlaying } = usePlayer();
   const { downloading, handleDownload } = useDownloadContext();
@@ -110,23 +115,18 @@ const SearchResultItem = ({ track }) => {
   );
 };
 
-// 创建AppContent组件，将使用usePlayer的逻辑移到这里
 const AppContent = () => {
-  // 新增当前活动标签页状态
   const [activeTab, setActiveTab] = useState('home');
   
-  // 定义handleTabChange作为useCallback包装的setActiveTab
   const handleTabChange = useCallback((tab) => {
     setActiveTab(tab);
   }, []);
   
-  // 获取用户认证状态
   const { isOfflineMode } = useAuth();
   
-  // 使用自定义Hook管理网络状态
   const { isOnline } = useNetworkStatus({
-    showToasts: true, // 显示网络状态变化的提示
-    dispatchEvents: true // 分发网络状态变化事件
+    showToasts: true,
+    dispatchEvents: true
   });
   
   // 监听网络状态变化，调整缓存策略
@@ -134,18 +134,15 @@ const AppContent = () => {
     // 根据网络状态调整缓存策略
     adjustCacheForOffline(isOnline);
     
-    // 显示网络状态变化提示
-    if (isOnline) {
-      console.log('网络已连接，正常模式');
-    } else {
-      console.log('网络已断开，离线模式');
+    if (process.env.NODE_ENV === 'development') {
+      console.log(isOnline ? '网络已连接，正常模式' : '网络已断开，离线模式');
     }
   }, [isOnline]);
   
   // 使用自定义Hook管理Firebase状态
   useFirebaseStatus({
-    showToasts: true, // 显示Firebase状态变化的提示
-    manualCheck: false // 自动检查
+    showToasts: true,
+    manualCheck: false
   });
   
   // 搜索相关状态
@@ -174,57 +171,44 @@ const AppContent = () => {
 
   // 搜索处理函数
   const handleSearch = useCallback(async (e) => {
-    // 阻止默认表单提交行为
     if (e) {
       e.preventDefault();
     }
     
-    // 打印调试信息
-    console.log('Search triggered with query:', query);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Search triggered with query:', query);
+    }
     
-    // 如果离线，显示提示
-    if (!isOnline) {
-      handleError(
-        new Error('您当前处于离线状态'),
-        ErrorTypes.NETWORK,
-        ErrorSeverity.WARNING,
-        '您当前处于离线状态，无法搜索音乐'
-      );
+    // 检查网络状态
+    if (!checkNetworkStatus(isOnline, '搜索音乐')) {
       return;
     }
     
-    // 检查搜索词是否为空
-    if (!query || query.trim() === '') {
-      handleError(
-        new Error('搜索关键词为空'),
-        ErrorTypes.SEARCH,
-        ErrorSeverity.INFO,
-        '请输入搜索关键词'
-      );
+    // 验证搜索参数
+    if (!validateSearchParams(query)) {
       return;
     }
 
     setLoading(true);
     try {
-      // 使用当前query值进行搜索
       const searchResults = await searchMusic(query, source, 20, 1);
       
-      // 为每个结果添加封面URL，使用PlayerContext的fetchCover方法
+      // 为每个结果添加封面URL
       const resultsWithCover = await Promise.all(
         searchResults.map(async (track) => {
           if (track.pic_id) {
             try {
-              // 先检查PlayerContext的缓存
               const cacheKey = `${track.source}-${track.pic_id}-300`;
               if (coverCache[cacheKey]) {
                 return { ...track, picUrl: coverCache[cacheKey] };
               }
               
-              // 如果缓存中没有，则使用fetchCover获取
               const coverUrl = await fetchCover(track.source, track.pic_id);
               return { ...track, picUrl: coverUrl };
             } catch (error) {
-              console.error('获取封面失败:', error);
+              if (process.env.NODE_ENV === 'development') {
+                console.error('获取封面失败:', error);
+              }
               return { ...track, picUrl: 'default_cover.png' };
             }
           }
@@ -244,7 +228,9 @@ const AppContent = () => {
         const { addSearchHistory } = await import('./services/storage');
         addSearchHistory(query, source);
       } catch (error) {
-        console.error('添加搜索历史失败:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('添加搜索历史失败:', error);
+        }
       }
       
     } catch (error) {
@@ -261,20 +247,13 @@ const AppContent = () => {
 
   // 处理下载
   const handleDownload = useCallback(async (track) => {
-    // 如果已经在下载中，不做任何操作
-    if (downloading) {
-      toast.info('正在下载中，请稍候', { autoClose: 2000 });
+    // 检查是否正在下载
+    if (!checkDownloadStatus(downloading)) {
       return;
     }
     
-    // 如果离线，显示提示
-    if (!isOnline) {
-      handleError(
-        new Error('您当前处于离线状态'),
-        ErrorTypes.NETWORK,
-        ErrorSeverity.WARNING,
-        '您当前处于离线状态，无法下载音乐'
-      );
+    // 检查网络状态
+    if (!checkNetworkStatus(isOnline, '下载音乐')) {
       return;
     }
     
@@ -284,7 +263,6 @@ const AppContent = () => {
       
       await downloadTrack(track, quality);
       
-
     } catch (error) {
       handleError(
         error,
@@ -314,7 +292,6 @@ const AppContent = () => {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
-                      // 直接触发搜索
                       handleSearch();
                     }
                   }}
@@ -375,9 +352,8 @@ const AppContent = () => {
     );
   };
 
-  // 修改renderContent函数，添加Suspense包装
+  // 渲染不同标签页的内容
   const renderContent = () => {
-    // 懒加载页面的加载状态显示
     const loadingFallback = (
       <div className="text-center my-5">
         <Spinner animation="border" variant="primary" />
@@ -414,28 +390,15 @@ const AppContent = () => {
   // 使用设备检测功能
   const deviceInfo = useDevice();
   
-  // Service Worker注册对象
-  // eslint-disable-next-line no-unused-vars
-  const [swRegistration, setSwRegistration] = useState(null);
-  
-  // 获取Service Worker注册对象
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.ready.then(registration => {
-        setSwRegistration(registration);
-      });
-    }
-  }, []);
-  
   // 尝试锁定屏幕方向为竖屏（仅在移动设备和平板上）
   useEffect(() => {
     if (deviceInfo.isMobile || deviceInfo.isTablet) {
-      // 尝试锁定屏幕方向
       lockToPortrait().then(success => {
-        if (success) {
-          console.log('成功锁定屏幕方向为竖屏');
-        } else {
-          console.log('无法锁定屏幕方向，将使用备选方案');
+        if (process.env.NODE_ENV === 'development') {
+          console.log(success ? 
+            '成功锁定屏幕方向为竖屏' : 
+            '无法锁定屏幕方向，将使用备选方案'
+          );
         }
       });
     }
@@ -443,15 +406,15 @@ const AppContent = () => {
 
   // 初始化应用
   useEffect(() => {
-    // 初始化函数
     const initialize = async () => {
       try {
-        console.log("应用初始化中...");
-        
-        // 加载持久化的网络和区域状态
-        // 网络状态已由useNetworkStatus Hook加载
+        if (process.env.NODE_ENV === 'development') {
+          console.log("应用初始化中...");
+        }
       } catch (error) {
-        console.error("初始化失败:", error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error("初始化失败:", error);
+        }
       }
     };
     
@@ -484,7 +447,6 @@ const AppContent = () => {
           {renderContent()}
         </Container>
         
-        {/* AudioPlayer现在从PlayerContext获取所有状态 */}
         <AudioPlayer />
         
         <InstallPWA />

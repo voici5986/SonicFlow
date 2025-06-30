@@ -27,6 +27,15 @@ export const useFirebaseStatus = (options = {}) => {
   const [isChecking, setIsChecking] = useState(false);
   const [lastChecked, setLastChecked] = useState(Date.now());
   
+  // 分发Firebase状态变化事件
+  const dispatchFirebaseStatusChange = useCallback((available) => {
+    const event = new CustomEvent('firebaseStatusChange', { 
+      detail: { available, lastChecked: Date.now() } 
+    });
+    window.dispatchEvent(event);
+    console.log(`[useFirebaseStatus] 已分发Firebase状态变化事件: ${available ? '可用' : '不可用'}`);
+  }, []);
+  
   // 检查Firebase可用性
   const checkAvailability = useCallback(async (force = false) => {
     // 如果正在检查，直接返回当前状态
@@ -94,16 +103,7 @@ export const useFirebaseStatus = (options = {}) => {
     } finally {
       setIsChecking(false);
     }
-  }, [isOnline, isAvailable, isChecking, showToasts]);
-  
-  // 分发Firebase状态变化事件
-  const dispatchFirebaseStatusChange = useCallback((available) => {
-    const event = new CustomEvent('firebaseStatusChange', { 
-      detail: { available, lastChecked: Date.now() } 
-    });
-    window.dispatchEvent(event);
-    console.log(`[useFirebaseStatus] 已分发Firebase状态变化事件: ${available ? '可用' : '不可用'}`);
-  }, []);
+  }, [isOnline, isAvailable, isChecking, showToasts, dispatchFirebaseStatusChange]);
   
   // 网络状态变化时自动检查Firebase
   useEffect(() => {
