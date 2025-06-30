@@ -1,5 +1,8 @@
 import { db, isFirebaseAvailable, checkFirebaseAvailability } from './firebase';
-import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
+import { 
+  doc, updateDoc, getDoc, setDoc, collection, 
+  query, where, getDocs, writeBatch, orderBy, limit
+} from 'firebase/firestore';
 import { getFavorites, saveFavorites, getHistory, saveHistory, MAX_HISTORY_ITEMS, getNetworkStatus, getPendingSyncChanges, resetPendingChanges } from './storage';
 
 // 同步时间戳存储键
@@ -11,6 +14,12 @@ const DELAYED_SYNC_CONFIG = {
   delayTime: 30000, // 30秒
   historyThreshold: 5 // 历史记录变更阈值
 };
+// 批量操作限制
+const BATCH_SIZE = 100; // Firestore每批次最多500个操作，我们保守使用100
+
+// 定义子集合名称
+const FAVORITES_COLLECTION = 'favorites';
+const HISTORY_COLLECTION = 'history';
 
 // 定义事件类型
 export const SyncEvents = {
@@ -92,6 +101,33 @@ const saveLastSyncTime = async (uid, timestamp) => {
 };
 
 /**
+ * 获取收藏子集合引用
+ * @param {string} uid 用户ID
+ * @returns {CollectionReference} 收藏子集合引用
+ */
+const getFavoritesCollectionRef = (uid) => {
+  return collection(db, "users", uid, FAVORITES_COLLECTION);
+};
+
+/**
+ * 获取历史记录子集合引用
+ * @param {string} uid 用户ID
+ * @returns {CollectionReference} 历史记录子集合引用
+ */
+const getHistoryCollectionRef = (uid) => {
+  return collection(db, "users", uid, HISTORY_COLLECTION);
+};
+
+/**
+ * 获取用户文档引用
+ * @param {string} uid 用户ID
+ * @returns {DocumentReference} 用户文档引用
+ */
+const getUserDocRef = (uid) => {
+  return doc(db, "users", uid);
+};
+
+/**
  * 获取自上次同步后本地变更的数据
  * @param {number} lastSyncTime 上次同步时间戳
  * @returns {Promise<{favorites: Array, history: Array}>} 本地变更数据
@@ -158,13 +194,13 @@ const checkSyncAvailability = async () => {
 };
 
 /**
- * 增量同步函数
+ * 增量同步函数 - 使用子集合架构
  * @param {string} uid 用户ID
  * @returns {Promise<{success: boolean, data?: any, error?: any, unchanged?: boolean}>}
  */
-const incrementalSync = async (uid) => {
+const incrementalSyncWithSubcollections = async (uid) => {
   try {
-    console.log('开始增量同步...');
+    console.log('开始子集合增量同步...');
     
     // 触发同步开始事件
     triggerEvent(SyncEvents.SYNC_STARTED, { uid, timestamp: Date.now() });
@@ -172,7 +208,7 @@ const incrementalSync = async (uid) => {
     // 检查同步可用性
     const { canSync, error } = await checkSyncAvailability();
     if (!canSync) {
-      console.warn(`增量同步失败: ${error}`);
+      console.warn(`子集合增量同步失败: ${error}`);
       
       // 触发同步失败事件
       triggerEvent(SyncEvents.SYNC_FAILED, { uid, error, timestamp: Date.now() });
@@ -181,7 +217,7 @@ const incrementalSync = async (uid) => {
     }
     
     if (!uid) {
-      console.warn('增量同步失败: 用户未登录');
+      console.warn('子集合增量同步失败: 用户未登录');
       
       // 触发同步失败事件
       triggerEvent(SyncEvents.SYNC_FAILED, { 
@@ -211,8 +247,18 @@ const incrementalSync = async (uid) => {
     console.log(`本地变更: 收藏=${localChanges.favorites.length}条, 历史=${localChanges.history.length}条`);
     
     // 获取用户文档
-    const userRef = doc(db, "users", uid);
+    const userRef = getUserDocRef(uid);
     const userDoc = await getDoc(userRef);
+    
+    // 如果用户文档不存在，创建一个基本文档
+    if (!userDoc.exists()) {
+      await setDoc(userRef, {
+        lastUpdated: now,
+        createdAt: now
+      });
+      console.log('已创建新的用户基本文档');
+    }
+    
     const userData = userDoc.exists() ? userDoc.data() : {};
     
     // 获取云端最后更新时间
@@ -223,22 +269,41 @@ const incrementalSync = async (uid) => {
     if (!localChanges.hasChanges && cloudLastUpdated <= lastSyncTime) {
       console.log('没有变化，跳过同步');
       
-      // 获取当前时间用于更新同步时间戳
-      const currentTime = Date.now();
-      
       // 更新同步时间戳为当前时间，即使没有实际同步
-      await saveLastSyncTime(uid, currentTime);
+      await saveLastSyncTime(uid, now);
       
       // 触发同步完成事件
       triggerEvent(SyncEvents.SYNC_COMPLETED, { 
         uid, 
-        timestamp: currentTime,
+        timestamp: now,
         syncType: 'incremental',
         result: { success: true, unchanged: true }
       });
       
-      return { success: true, unchanged: true, timestamp: currentTime };
+      return { success: true, unchanged: true, timestamp: now };
     }
+    
+    // 触发同步进度事件
+    triggerEvent(SyncEvents.SYNC_PROGRESS, { 
+      uid, 
+      phase: 'cloud_favorites',
+      message: '获取云端收藏数据...',
+      timestamp: Date.now() 
+    });
+    
+    // 获取云端收藏数据变更
+    const cloudFavorites = await getCloudFavoritesFromSubcollection(uid, lastSyncTime);
+    
+    // 触发同步进度事件
+    triggerEvent(SyncEvents.SYNC_PROGRESS, { 
+      uid, 
+      phase: 'cloud_history',
+      message: '获取云端历史记录...',
+      timestamp: Date.now() 
+    });
+    
+    // 获取云端历史记录变更
+    const cloudHistory = await getCloudHistoryFromSubcollection(uid, lastSyncTime);
     
     // 触发同步进度事件
     triggerEvent(SyncEvents.SYNC_PROGRESS, { 
@@ -248,46 +313,16 @@ const incrementalSync = async (uid) => {
       timestamp: Date.now() 
     });
     
-    // 获取云端数据
-    const cloudFavorites = userData.favorites || [];
-    const cloudHistory = userData.history || [];
-    console.log(`云端数据: 收藏=${cloudFavorites.length}条, 历史=${cloudHistory.length}条`);
+    // 同步收藏数据 - 本地到云端
+    if (localChanges.favorites.length > 0) {
+      console.log(`同步${localChanges.favorites.length}条本地收藏到云端...`);
+      await saveCloudFavoritesToSubcollection(uid, localChanges.favorites);
+    }
     
-    // 合并收藏数据
-    const mergedFavorites = mergeFavoritesData(
-      cloudFavorites, 
-      localChanges.favorites
-    );
-    
-    // 合并历史记录
-    const mergedHistory = mergeHistoryData(
-      cloudHistory, 
-      localChanges.history
-    );
-    
-    // 触发同步进度事件
-    triggerEvent(SyncEvents.SYNC_PROGRESS, { 
-      uid, 
-      phase: 'update_cloud',
-      message: '更新云端数据...',
-      timestamp: Date.now() 
-    });
-    
-    // 更新到云端
-    if (userDoc.exists()) {
-      await updateDoc(userRef, {
-        favorites: mergedFavorites,
-        history: mergedHistory,
-        lastUpdated: now
-      });
-      console.log('云端数据已更新');
-    } else {
-      await setDoc(userRef, {
-        favorites: mergedFavorites,
-        history: mergedHistory,
-        lastUpdated: now
-      });
-      console.log('已创建新的用户文档');
+    // 同步历史记录 - 本地到云端
+    if (localChanges.history.length > 0) {
+      console.log(`同步${localChanges.history.length}条本地历史记录到云端...`);
+      await saveCloudHistoryToSubcollection(uid, localChanges.history);
     }
     
     // 触发同步进度事件
@@ -298,10 +333,82 @@ const incrementalSync = async (uid) => {
       timestamp: Date.now() 
     });
     
-    // 保存到本地
-    await saveFavorites(mergedFavorites);
-    await saveHistory(mergedHistory);
-    console.log('本地数据已更新');
+    // 如果有云端数据变更，更新本地数据
+    let localDataUpdated = false;
+    
+    // 处理云端收藏变更
+    if (cloudFavorites.length > 0) {
+      // 获取所有本地收藏
+      const allLocalFavorites = await getFavorites();
+      const favoritesMap = new Map();
+      
+      // 添加所有本地收藏到Map
+      allLocalFavorites.forEach(item => {
+        favoritesMap.set(item.id, item);
+      });
+      
+      // 更新/添加云端变更的收藏
+      cloudFavorites.forEach(item => {
+        // 确保docId不存储到本地
+        const { docId, ...itemData } = item;
+        
+        const existingItem = favoritesMap.get(item.id);
+        
+        // 如果本地没有该项，或者云端项更新，则使用云端项
+        if (!existingItem || (item.modifiedAt && existingItem.modifiedAt && 
+            item.modifiedAt > existingItem.modifiedAt)) {
+          favoritesMap.set(item.id, itemData);
+          localDataUpdated = true;
+        }
+      });
+      
+      // 转换回数组并保存
+      if (localDataUpdated) {
+        const mergedFavorites = Array.from(favoritesMap.values());
+        await saveFavorites(mergedFavorites);
+        console.log(`已更新本地收藏数据，总数: ${mergedFavorites.length}条`);
+      }
+    }
+    
+    // 处理云端历史记录变更
+    if (cloudHistory.length > 0) {
+      // 获取所有本地历史记录
+      const allLocalHistory = await getHistory();
+      const historyMap = new Map();
+      
+      // 添加所有本地历史记录到Map，键为歌曲ID
+      allLocalHistory.forEach(item => {
+        if (item.song && item.song.id) {
+          historyMap.set(item.song.id, item);
+        }
+      });
+      
+      // 更新/添加云端变更的历史记录
+      cloudHistory.forEach(item => {
+        // 确保docId不存储到本地
+        const { docId, ...itemData } = item;
+        
+        if (item.song && item.song.id) {
+          const existingItem = historyMap.get(item.song.id);
+          
+          // 如果本地没有该项，或者云端项更新，则使用云端项
+          if (!existingItem || item.timestamp > existingItem.timestamp) {
+            historyMap.set(item.song.id, itemData);
+            localDataUpdated = true;
+          }
+        }
+      });
+      
+      // 转换回数组，按时间戳排序，并保存
+      if (localDataUpdated) {
+        const mergedHistory = Array.from(historyMap.values())
+          .sort((a, b) => b.timestamp - a.timestamp)
+          .slice(0, MAX_HISTORY_ITEMS); // 限制数量
+        
+        await saveHistory(mergedHistory);
+        console.log(`已更新本地历史记录，总数: ${mergedHistory.length}条`);
+      }
+    }
     
     // 更新同步时间戳
     await saveLastSyncTime(uid, now);
@@ -314,18 +421,22 @@ const incrementalSync = async (uid) => {
       syncType: 'incremental',
       result: { 
         success: true, 
-        favorites: mergedFavorites.length,
-        history: mergedHistory.length
+        cloudFavorites: cloudFavorites.length,
+        cloudHistory: cloudHistory.length,
+        localFavorites: localChanges.favorites.length,
+        localHistory: localChanges.history.length
       }
     });
     
     return { 
       success: true, 
-      favorites: mergedFavorites,
-      history: mergedHistory
+      cloudFavorites: cloudFavorites.length,
+      cloudHistory: cloudHistory.length,
+      localFavorites: localChanges.favorites.length,
+      localHistory: localChanges.history.length
     };
   } catch (error) {
-    console.error('增量同步失败:', error);
+    console.error('子集合增量同步失败:', error);
     
     // 触发同步失败事件
     triggerEvent(SyncEvents.SYNC_FAILED, { 
@@ -345,6 +456,7 @@ const incrementalSync = async (uid) => {
  * @param {Array} localData 本地数据
  * @returns {Array} 合并后的数据
  */
+// eslint-disable-next-line no-unused-vars
 const mergeFavoritesData = (cloudData, localData) => {
   // 使用Map存储最终结果，键为歌曲ID
   const resultMap = new Map();
@@ -380,6 +492,7 @@ const mergeFavoritesData = (cloudData, localData) => {
  * @param {Array} localData 本地数据
  * @returns {Array} 合并后的数据
  */
+// eslint-disable-next-line no-unused-vars
 const mergeHistoryData = (cloudData, localData) => {
   // 使用Map存储最终结果，键为歌曲ID
   const historyMap = new Map();
@@ -408,10 +521,17 @@ const mergeHistoryData = (cloudData, localData) => {
 };
 
 /**
+ * 增量同步函数
+ * @param {string} uid 用户ID
+ * @returns {Promise<{success: boolean, data?: any, error?: any, unchanged?: boolean}>}
+ */
+const incrementalSync = incrementalSyncWithSubcollections;
+
+/**
  * 通用同步函数，根据不同参数执行不同的同步行为
  * @param {string} uid 用户ID
  * @param {string} dataType 数据类型 'favorites' | 'history'
- * @param {string} direction 同步方向 'toCloud' | 'fromCloud' | 'merge'
+ * @param {string} direction 同步方向 'merge'
  * @returns {Promise<{success: boolean, data?: any, error?: any}>}
  */
 const syncData = async (uid, dataType, direction) => {
@@ -430,70 +550,8 @@ const syncData = async (uid, dataType, direction) => {
       return { success: false, error: '用户未登录' };
     }
 
-    // 根据数据类型确定使用的函数和字段名
-    const isHistory = dataType === 'history';
-    const getLocalData = isHistory ? getHistory : getFavorites;
-    const saveLocalData = isHistory ? saveHistory : saveFavorites;
-    const fieldName = isHistory ? 'history' : 'favorites';
-    const errorMsg = isHistory ? '历史记录' : '收藏';
-
-    // 获取本地数据
-    const localData = await getLocalData();
-    console.log(`已获取本地${errorMsg}数据: ${localData.length}条`);
-    
-    // 获取用户文档引用
-    const userRef = doc(db, "users", uid);
-    const now = Date.now();
-    
-    // 根据同步方向执行不同操作
-    if (direction === 'toCloud') {
-      // 上传到云端
-      const userSnap = await getDoc(userRef);
-    
-      if (!userSnap.exists()) {
-        // 用户文档不存在，创建新文档
-        console.log(`创建新的用户文档: ${uid}`);
-        await setDoc(userRef, { 
-          [fieldName]: localData,
-          lastUpdated: now
-        });
-      } else {
-        // 更新现有文档
-        console.log(`更新现有用户文档: ${uid}`);
-        await updateDoc(userRef, { 
-          [fieldName]: localData,
-          lastUpdated: now
-        });
-      }
-      
-      // 更新同步时间戳
-      await saveLastSyncTime(uid, now);
-      console.log(`${errorMsg}上传到云端成功`);
-      return { success: true };
-      
-    } else if (direction === 'fromCloud') {
-      // 从云端下载
-      console.log(`尝试从云端下载${errorMsg}`);
-      const userDoc = await getDoc(userRef);
-      
-      if (!userDoc.exists() || !userDoc.data()[fieldName]) {
-        console.warn(`云端${errorMsg}不存在`);
-        return { success: false, error: `云端${errorMsg}不存在` };
-      }
-      
-      const cloudData = userDoc.data()[fieldName];
-      console.log(`已获取云端${errorMsg}数据: ${cloudData.length}条`);
-      
-      // 保存到本地
-      await saveLocalData(cloudData);
-      
-      // 更新同步时间戳
-      await saveLastSyncTime(uid, now);
-      console.log(`${errorMsg}从云端下载成功`);
-      
-      return { success: true, data: cloudData };
-      
-    } else if (direction === 'merge') {
+    // 仅支持合并操作
+    if (direction === 'merge') {
       // 使用增量同步进行合并
       return await incrementalSync(uid);
     }
@@ -506,26 +564,6 @@ const syncData = async (uid, dataType, direction) => {
   }
 };
 
-// 将本地收藏同步到云端
-export const syncFavoritesToCloud = async (uid) => {
-  return syncData(uid, 'favorites', 'toCloud');
-};
-
-// 将云端收藏同步到本地
-export const syncFavoritesFromCloud = async (uid) => {
-  return syncData(uid, 'favorites', 'fromCloud');
-};
-
-// 将本地历史记录同步到云端
-export const syncHistoryToCloud = async (uid) => {
-  return syncData(uid, 'history', 'toCloud');
-};
-
-// 将云端历史记录同步到本地
-export const syncHistoryFromCloud = async (uid) => {
-  return syncData(uid, 'history', 'fromCloud');
-};
-
 // 合并本地和云端收藏数据
 export const mergeFavorites = async (uid) => {
   return syncData(uid, 'favorites', 'merge');
@@ -536,7 +574,10 @@ export const mergeHistory = async (uid) => {
   return syncData(uid, 'history', 'merge');
 };
 
-// 同步器，处理用户登录后的初始化同步
+/**
+ * 同步器，处理用户登录后的初始化同步
+ * @param {string} uid 用户ID
+ */
 export const initialSync = async (uid) => {
   try {
     console.log("开始初始同步操作");
@@ -545,7 +586,7 @@ export const initialSync = async (uid) => {
     triggerEvent(SyncEvents.SYNC_STARTED, { uid, timestamp: Date.now(), syncType: 'initial' });
     
     // 直接调用增量同步
-    const result = await incrementalSync(uid);
+    const result = await incrementalSyncWithSubcollections(uid);
     
     // 如果没有变化，也算成功
     if (result.unchanged) {
@@ -583,13 +624,6 @@ export const initialSync = async (uid) => {
   }
 };
 
-// 导出其他辅助函数以供外部使用
-export {
-  getLastSyncTime,
-  getLocalChangesSince,
-  triggerEvent // 导出触发事件函数，以便外部代码可以触发事件
-};
-
 /**
  * 登录时检查是否需要执行同步
  * @param {string} uid 用户ID
@@ -612,7 +646,7 @@ export const shouldSyncOnLogin = async (uid) => {
     const hasLocalChanges = localChanges.hasChanges;
     
     // 检查云端是否有更新
-    const userRef = doc(db, "users", uid);
+    const userRef = getUserDocRef(uid);
     const userDoc = await getDoc(userRef);
     
     // 如果用户文档不存在，需要创建
@@ -760,4 +794,200 @@ export const triggerDelayedSync = async (uid) => {
       delayedSyncTimer = null;
     }
   }, DELAYED_SYNC_CONFIG.delayTime);
+};
+
+/**
+ * 从子集合获取云端收藏数据
+ * @param {string} uid 用户ID
+ * @param {number} lastSyncTime 上次同步时间
+ * @returns {Promise<Array>} 收藏数据数组
+ */
+const getCloudFavoritesFromSubcollection = async (uid, lastSyncTime = 0) => {
+  try {
+    const favoritesRef = getFavoritesCollectionRef(uid);
+    let favoritesQuery;
+    
+    if (lastSyncTime > 0) {
+      // 只获取上次同步后更新的数据
+      favoritesQuery = query(
+        favoritesRef,
+        where('modifiedAt', '>', lastSyncTime)
+      );
+    } else {
+      // 获取所有数据
+      favoritesQuery = favoritesRef;
+    }
+    
+    const snapshot = await getDocs(favoritesQuery);
+    const favorites = [];
+    
+    snapshot.forEach(doc => {
+      favorites.push({
+        ...doc.data(),
+        docId: doc.id // 保存文档ID用于后续操作
+      });
+    });
+    
+    console.log(`从云端获取到${favorites.length}条收藏数据`);
+    return favorites;
+  } catch (error) {
+    console.error('从子集合获取收藏数据失败:', error);
+    return [];
+  }
+};
+
+/**
+ * 从子集合获取云端历史记录数据
+ * @param {string} uid 用户ID
+ * @param {number} lastSyncTime 上次同步时间
+ * @param {number} maxItems 最大记录数
+ * @returns {Promise<Array>} 历史记录数据数组
+ */
+const getCloudHistoryFromSubcollection = async (uid, lastSyncTime = 0, maxItems = MAX_HISTORY_ITEMS) => {
+  try {
+    const historyRef = getHistoryCollectionRef(uid);
+    let historyQuery;
+    
+    if (lastSyncTime > 0) {
+      // 只获取上次同步后更新的数据
+      historyQuery = query(
+        historyRef,
+        where('timestamp', '>', lastSyncTime),
+        orderBy('timestamp', 'desc'),
+        limit(maxItems)
+      );
+    } else {
+      // 获取所有数据，但限制数量
+      historyQuery = query(
+        historyRef,
+        orderBy('timestamp', 'desc'),
+        limit(maxItems)
+      );
+    }
+    
+    const snapshot = await getDocs(historyQuery);
+    const history = [];
+    
+    snapshot.forEach(doc => {
+      history.push({
+        ...doc.data(),
+        docId: doc.id // 保存文档ID用于后续操作
+      });
+    });
+    
+    console.log(`从云端获取到${history.length}条历史记录数据`);
+    return history;
+  } catch (error) {
+    console.error('从子集合获取历史记录数据失败:', error);
+    return [];
+  }
+};
+
+/**
+ * 将本地收藏数据保存到云端子集合
+ * @param {string} uid 用户ID
+ * @param {Array} favorites 收藏数据数组
+ * @returns {Promise<{success: boolean, error?: Error}>} 保存结果
+ */
+const saveCloudFavoritesToSubcollection = async (uid, favorites) => {
+  try {
+    const favoritesRef = getFavoritesCollectionRef(uid);
+    const now = Date.now();
+    let modifiedCount = 0;
+    
+    // 使用批量写入提高性能
+    // Firestore每批次最多500个操作，我们分批处理
+    for (let i = 0; i < favorites.length; i += BATCH_SIZE) {
+      const batch = writeBatch(db);
+      const chunk = favorites.slice(i, i + BATCH_SIZE);
+      
+      for (const item of chunk) {
+        // 使用歌曲ID作为文档ID，确保唯一性
+        const itemDocRef = doc(favoritesRef, item.id.toString());
+        
+        // 确保数据有修改时间
+        const itemData = {
+          ...item,
+          modifiedAt: item.modifiedAt || now
+        };
+        
+        // 如果有文档ID属性，删除它，避免存储冗余数据
+        if (itemData.docId) {
+          delete itemData.docId;
+        }
+        
+        batch.set(itemDocRef, itemData);
+        modifiedCount++;
+      }
+      
+      await batch.commit();
+      console.log(`保存了收藏批次 ${i/BATCH_SIZE + 1}/${Math.ceil(favorites.length/BATCH_SIZE)}`);
+    }
+    
+    // 更新用户文档的lastUpdated字段
+    const userRef = getUserDocRef(uid);
+    await updateDoc(userRef, { lastUpdated: now });
+    
+    console.log(`成功保存${modifiedCount}条收藏数据到云端子集合`);
+    return { success: true };
+  } catch (error) {
+    console.error('保存收藏数据到子集合失败:', error);
+    return { success: false, error };
+  }
+};
+
+/**
+ * 将本地历史记录保存到云端子集合
+ * @param {string} uid 用户ID
+ * @param {Array} history 历史记录数据数组
+ * @returns {Promise<{success: boolean, error?: Error}>} 保存结果
+ */
+const saveCloudHistoryToSubcollection = async (uid, history) => {
+  try {
+    const historyRef = getHistoryCollectionRef(uid);
+    const now = Date.now();
+    let modifiedCount = 0;
+    
+    // 使用批量写入提高性能
+    for (let i = 0; i < history.length; i += BATCH_SIZE) {
+      const batch = writeBatch(db);
+      const chunk = history.slice(i, i + BATCH_SIZE);
+      
+      for (const item of chunk) {
+        // 使用时间戳+歌曲ID作为文档ID，确保唯一性
+        // 即使同一首歌多次播放也会有不同记录
+        const itemId = `${item.timestamp}_${item.song.id}`;
+        const itemDocRef = doc(historyRef, itemId);
+        
+        // 如果有文档ID属性，删除它
+        if (item.docId) {
+          delete item.docId;
+        }
+        
+        batch.set(itemDocRef, item);
+        modifiedCount++;
+      }
+      
+      await batch.commit();
+      console.log(`保存了历史记录批次 ${i/BATCH_SIZE + 1}/${Math.ceil(history.length/BATCH_SIZE)}`);
+    }
+    
+    // 更新用户文档的lastUpdated字段
+    const userRef = getUserDocRef(uid);
+    await updateDoc(userRef, { lastUpdated: now });
+    
+    console.log(`成功保存${modifiedCount}条历史记录到云端子集合`);
+    return { success: true };
+  } catch (error) {
+    console.error('保存历史记录到子集合失败:', error);
+    return { success: false, error };
+  }
+};
+
+// 导出其他辅助函数以供外部使用
+export {
+  getLastSyncTime,
+  getLocalChangesSince,
+  triggerEvent, // 导出触发事件函数，以便外部代码可以触发事件
+  incrementalSyncWithSubcollections as incrementalSync // 导出子集合同步作为默认同步函数
 }; 
