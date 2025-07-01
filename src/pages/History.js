@@ -9,6 +9,7 @@ import HeartButton from '../components/HeartButton';
 import './History.css';
 import { downloadTrack } from '../services/downloadService';
 import { usePlayer } from '../contexts/PlayerContext';
+import { useAuth } from '../contexts/AuthContext';
 
 // 设置moment为中文
 moment.locale('zh-cn');
@@ -21,6 +22,9 @@ const History = () => {
   
   // 从PlayerContext获取状态和方法
   const { handlePlay, currentTrack, isPlaying, fetchCover, coverCache } = usePlayer();
+  
+  // 从AuthContext获取用户状态
+  const { currentUser } = useAuth();
 
   // 定义loadHistory函数在useEffect之前
   const loadHistory = async () => {
@@ -112,6 +116,30 @@ const History = () => {
     }
   };
 
+  // 渲染登录提醒组件
+  const renderLoginReminder = () => {
+    if (!currentUser) {
+      return (
+        <Alert variant="info" className="mb-4 login-reminder">
+          <div className="d-flex align-items-center justify-content-between">
+            <div>
+              <h5 className="mb-1">登录您的账号</h5>
+              <p className="mb-0">登录后可以将您的播放历史同步到云端，在任何设备上继续您的音乐旅程。</p>
+            </div>
+            <Button 
+              variant="primary" 
+              href="#/auth"
+              className="ms-3"
+            >
+              立即登录
+            </Button>
+          </div>
+        </Alert>
+      );
+    }
+    return null;
+  };
+
   return (
     <Container className="my-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -126,6 +154,9 @@ const History = () => {
           </Button>
         )}
       </div>
+      
+      {/* 添加登录提醒 */}
+      {renderLoginReminder()}
       
       {loading ? (
         <div className="text-center my-5">

@@ -3,6 +3,7 @@ import { Container, Row, Col, Card } from 'react-bootstrap';
 import UserProfile from '../components/UserProfile';
 import LoginForm from '../components/LoginForm';
 import RegisterForm from '../components/RegisterForm';
+import ClearDataButton from '../components/ClearDataButton';
 import { useAuth } from '../contexts/AuthContext';
 import { getFavorites, getHistory } from '../services/storage';
 import { useRegion } from '../contexts/RegionContext';
@@ -30,6 +31,17 @@ const User = ({ onTabChange }) => {
     };
     
     loadCounts();
+    
+    // 监听数据清除事件
+    const handleDataCleared = () => {
+      loadCounts();
+    };
+    
+    window.addEventListener('local:data_cleared', handleDataCleared);
+    
+    return () => {
+      window.removeEventListener('local:data_cleared', handleDataCleared);
+    };
   }, []);
   
   // 处理表单切换
@@ -111,6 +123,8 @@ const User = ({ onTabChange }) => {
                       <p className="stats-label">历史记录</p>
                     </div>
                   </div>
+                  
+                  <ClearDataButton onClick={() => {}} />
                   
                   <div className="text-muted small mt-2">
                     <p className="mb-1">登录后可以同步您的收藏和历史记录到云端</p>

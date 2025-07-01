@@ -6,10 +6,14 @@ import { toast } from 'react-toastify';
 import { downloadTrack, downloadTracks } from '../services/downloadService';
 import { searchMusic } from '../services/musicApiService';
 import { usePlayer } from '../contexts/PlayerContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const Favorites = () => {
   // 从PlayerContext获取状态和方法
   const { handlePlay, currentTrack, isPlaying, fetchCover, coverCache } = usePlayer();
+  
+  // 从AuthContext获取用户状态
+  const { currentUser } = useAuth();
   
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -506,6 +510,32 @@ const Favorites = () => {
     }
   };
 
+  // 渲染登录提醒组件
+  const renderLoginReminder = () => {
+    if (!currentUser) {
+      return (
+        <Alert variant="info" className="mb-4 login-reminder">
+          <div className="d-flex align-items-center">
+            <div className="flex-grow-1">
+              <h5 className="mb-1">登录您的账号</h5>
+              <p className="mb-0">登录后可以将您的收藏同步到云端，在任何设备上访问您喜爱的音乐。</p>
+            </div>
+            <div>
+              <Button 
+                variant="primary" 
+                href="#/auth"
+                className="ms-3"
+              >
+                立即登录
+              </Button>
+            </div>
+          </div>
+        </Alert>
+      );
+    }
+    return null;
+  };
+
   return (
     <Container className="my-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -572,6 +602,9 @@ const Favorites = () => {
           </div>
         </div>
       </div>
+      
+      {/* 添加登录提醒 */}
+      {renderLoginReminder()}
       
       {/* 隐藏的文件输入框，用于导入功能 */}
       <input 

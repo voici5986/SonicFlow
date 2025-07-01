@@ -46,6 +46,7 @@ desktop.ini
 .temp/
 *.tmp
 *.temp
+/temp_icons/
 
 # 缓存文件
 .cache/
@@ -58,3 +59,9 @@ firebase-debug.log
 firebase-debug.*.log
 firestore-debug.log
 ui-debug.log
+
+# PWA相关
+**/public/workbox-*.js
+**/public/sw.js
+**/public/service-worker.js.map
+**/public/workbox-*.js.map

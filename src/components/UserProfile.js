@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getFavorites, getHistory } from '../services/storage';
 import { FaHeart, FaHistory, FaSignOutAlt, FaSync } from 'react-icons/fa';
 import FirebaseStatus from './FirebaseStatus';
+import ClearDataButton from './ClearDataButton';
 import { toast } from 'react-toastify';
 import { useSync } from '../contexts/SyncContext';
 import { initialSync } from '../services/syncService';
@@ -46,6 +47,21 @@ const UserProfile = ({ onTabChange }) => {
     
     return () => {
       window.removeEventListener('sync:data_refreshed', handleDataRefreshed);
+    };
+  }, [loadCounts, updatePendingChanges]);
+  
+  // 添加本地数据清除事件监听
+  useEffect(() => {
+    const handleDataCleared = () => {
+      loadCounts();
+      updatePendingChanges();
+      toast.info('本地数据已更新');
+    };
+    
+    window.addEventListener('local:data_cleared', handleDataCleared);
+    
+    return () => {
+      window.removeEventListener('local:data_cleared', handleDataCleared);
     };
   }, [loadCounts, updatePendingChanges]);
   
@@ -227,6 +243,8 @@ const UserProfile = ({ onTabChange }) => {
                   <p className="stats-label">历史记录</p>
                 </div>
               </div>
+              
+              <ClearDataButton onClick={() => {}} />
             </Card.Body>
           </Card>
           

@@ -984,6 +984,39 @@ const saveCloudHistoryToSubcollection = async (uid, history) => {
   }
 };
 
+/**
+ * 清除同步时间戳
+ * @param {string} uid 用户ID，如果未提供则清除所有用户的同步时间戳
+ * @returns {Promise<boolean>} 操作是否成功
+ */
+export const clearSyncTimestamp = async (uid) => {
+  try {
+    if (uid) {
+      // 清除特定用户的同步时间戳
+      const key = `${SYNC_TIMESTAMP_KEY}_${uid}`;
+      localStorage.removeItem(key);
+    } else {
+      // 清除所有同步时间戳
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(SYNC_TIMESTAMP_KEY)) {
+          keysToRemove.push(key);
+        }
+      }
+      
+      keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+      });
+    }
+    console.log(`同步时间戳已清除${uid ? '(用户ID: ' + uid + ')' : '(所有用户)'}`);
+    return true;
+  } catch (error) {
+    console.error('清除同步时间戳失败:', error);
+    return false;
+  }
+};
+
 // 导出其他辅助函数以供外部使用
 export {
   getLastSyncTime,
