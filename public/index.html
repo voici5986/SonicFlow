@@ -41,10 +41,8 @@
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png" />
     
     <!-- 启动画面 -->
-    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash-640x1136.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)" />
-    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" />
-    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash-1242x2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3)" />
-    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash-screen.svg" />
+    
     <link
     href="https://lf3-cdn-tos.bytecdntp.com/cdn/expire-1-M/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet"
   />
@@ -83,7 +81,21 @@
         50% { transform: scale(1); opacity: 1; }
         100% { transform: scale(0.95); opacity: 0.7; }
       }
+      
+      /* 添加预加载样式，确保启动时立即显示 */
+      body {
+        background-color: #f5f5f7;
+        margin: 0;
+        padding: 0;
+      }
     </style>
+    
+    <!-- 预加载脚本，确保启动画面立即显示 -->
+    <script>
+      // 设置页面背景色与启动画面一致
+      document.documentElement.style.backgroundColor = '#f5f5f7';
+      document.body.style.backgroundColor = '#f5f5f7';
+    </script>
   </head>
   <body>
     <!-- PWA启动屏幕 -->
