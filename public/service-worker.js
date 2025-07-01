@@ -17,8 +17,6 @@ const STATIC_CACHE_URLS = [
   '/manifest.json',
   '/favicon.ico',
   '/logo.svg',
-  '/splash-icon.svg', // 启动画面图标
-  '/splash-screen.svg', // 完整启动画面
   '/lyric.svg',
   '/offline.html', // 离线页面
   '/china.html',   // 中国模式页面
