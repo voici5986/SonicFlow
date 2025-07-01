@@ -12,8 +12,8 @@ export const APP_EVENTS = {
   NETWORK_CHANGE: 'networkStatusChange',
 };
 
-// IPinfo.io API令牌
-const IPINFO_TOKEN = 'f0e3677a212cc4';
+// IPinfo.io API令牌 - 使用环境变量
+const IPINFO_TOKEN = process.env.REACT_APP_IPINFO_TOKEN || 'f0e3677a212cc4';
 
 // 本地存储键
 const STORAGE_KEYS = {
@@ -46,6 +46,12 @@ export const APP_MODES = {
 export const detectIpRegion = async () => {
   try {
     console.log("开始检测IP区域...");
+    
+    // 检查API令牌是否设置(开发环境友好提示)
+    if (process.env.NODE_ENV === 'development' && !process.env.REACT_APP_IPINFO_TOKEN) {
+      console.warn("注意：使用了默认IP检测API令牌，建议在.env文件中设置REACT_APP_IPINFO_TOKEN");
+    }
+    
     const response = await fetch(`https://ipinfo.io/json?token=${IPINFO_TOKEN}`);
     
     if (!response.ok) {

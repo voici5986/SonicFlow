@@ -125,6 +125,28 @@
  生产环境需配置一个环境编辑，`REACT_APP_API_BASE` 后端API地址，由于跨域问题不可以直接使用，一般填写反代 `https://music-api.gdstudio.xyz/api.php` 后地址，可使用nginx、caddy 等web服务反代，也可是cloudflare worker反代，我这边提供了worker反向代理的代码，见 [worker.js](worker.js) 和 [cfworker.js](../cfworker.js)
     可快速部署到 netlify 、vercel、Cloudflare Pages 等平台。[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvoici5986%2FSonicFlow&project-name=sonicflow&repository-name=sonicflow)  [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/voici5986/SonicFlow)
 
+## 环境变量配置
+
+项目使用以下环境变量：
+
+- `REACT_APP_API_BASE`: 后端API地址，默认为 `/api`
+- `REACT_APP_IPINFO_TOKEN`: IPinfo.io API令牌，用于IP地区检测
+
+### 配置方法
+
+1. **开发环境**：
+   创建 `.env.development.local` 文件，添加以下内容：
+   ```
+   REACT_APP_API_BASE=/api
+   REACT_APP_IPINFO_TOKEN=your_ipinfo_token
+   ```
+
+2. **生产环境**：
+   - 创建 `.env.production.local` 文件（本地构建），或
+   - 在部署平台（Netlify/Vercel/Cloudflare Pages等）设置这些环境变量
+
+**注意**：环境变量文件应添加到 `.gitignore` 中，避免将敏感信息提交到代码库。
+
 **Docker部署**
   - docker 
 
