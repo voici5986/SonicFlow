@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Container, Row, Col, Card, Button, Spinner, Modal, Form, Alert, ProgressBar, Dropdown } from 'react-bootstrap';
-import { FaPlay, FaPause, FaDownload, FaTrash, FaFileExport, FaFileImport, FaCloudDownloadAlt, FaGithub, FaExchangeAlt } from 'react-icons/fa';
+import { Container, Row, Col, Card, Button, Spinner, Modal, Form, Alert, ProgressBar, Dropdown, InputGroup } from 'react-bootstrap';
+import { FaPlay, FaPause, FaDownload, FaTrash, FaFileExport, FaFileImport, FaCloudDownloadAlt, FaGithub, FaExchangeAlt, FaSearch } from 'react-icons/fa';
 import { getFavorites, toggleFavorite, saveFavorites, MAX_FAVORITES_ITEMS } from '../services/storage';
 import { toast } from 'react-toastify';
 import { downloadTrack, downloadTracks } from '../services/downloadService';
@@ -33,6 +33,10 @@ const Favorites = () => {
   // 添加单首歌曲下载状态
   const [downloading, setDownloading] = useState(false);
   const [currentDownloadingTrack, setCurrentDownloadingTrack] = useState(null);
+  
+  // 新增搜索相关状态
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredFavorites, setFilteredFavorites] = useState([]);
 
   // 定义loadFavorites函数在useEffect之前
   const loadFavorites = async () => {
@@ -58,7 +62,83 @@ const Favorites = () => {
         })
       );
       
+      // 添加诊断日志
+      console.log(`收藏项数量: ${itemsWithCover.length}`);
+      
+      // 详细打印收藏数据结构
+      console.log("收藏数据结构诊断:");
+      console.log("第一个收藏项:", itemsWithCover[0]);
+      
+      // 查找包含特定日文字符的项目
+      const testJapanese = "ずっと";
+      const japaneseItems = itemsWithCover.filter(item => {
+        // 检查艺术家字段的所有可能形式
+        const artistString = typeof item.artist === 'string' ? item.artist : '';
+        const artistObj = typeof item.artist === 'object' ? item.artist : null;
+        const artists = Array.isArray(item.artists) ? item.artists : [];
+        
+        // 检查ar字段(网易云音乐常用)
+        const ar = Array.isArray(item.ar) ? item.ar : [];
+        
+        return (
+          artistString.includes(testJapanese) || 
+          (artistObj && JSON.stringify(artistObj).includes(testJapanese)) ||
+          artists.some(a => (typeof a === 'string' && a.includes(testJapanese)) || 
+                           (a && typeof a.name === 'string' && a.name.includes(testJapanese))) ||
+          ar.some(a => (typeof a === 'string' && a.includes(testJapanese)) || 
+                      (a && typeof a.name === 'string' && a.name.includes(testJapanese)))
+        );
+      });
+      
+      console.log(`测试日文字符"${testJapanese}"的匹配结果:`, japaneseItems.length);
+      
+      if (japaneseItems.length > 0) {
+        console.log("包含日文字符的项目:");
+        japaneseItems.forEach((item, index) => {
+          console.log(`项目 ${index+1}:`);
+          console.log("- ID:", item.id);
+          console.log("- 歌名:", item.name);
+          console.log("- 艺术家原始值:", item.artist);
+          console.log("- 艺术家类型:", typeof item.artist);
+          
+          // 如果艺术家是对象，打印其结构
+          if (typeof item.artist === 'object' && item.artist !== null) {
+            console.log("- 艺术家对象结构:", JSON.stringify(item.artist));
+          }
+          
+          // 检查是否有artists数组
+          if (Array.isArray(item.artists)) {
+            console.log("- artists数组:", item.artists);
+          }
+          
+          // 检查是否有ar字段(网易云音乐)
+          if (Array.isArray(item.ar)) {
+            console.log("- ar字段:", item.ar);
+          }
+          
+          // 测试各种字符串方法
+          if (typeof item.artist === 'string') {
+            console.log("- artist.includes测试:", item.artist.includes(testJapanese));
+            console.log("- artist.indexOf测试:", item.artist.indexOf(testJapanese));
+            console.log("- artist.search测试:", item.artist.search(testJapanese));
+            
+            // 打印编码
+            console.log("- 艺术家编码:", Array.from(item.artist).map(c => c.charCodeAt(0).toString(16)).join(' '));
+            console.log("- 测试字符编码:", Array.from(testJapanese).map(c => c.charCodeAt(0).toString(16)).join(' '));
+          }
+        });
+        
+        // 测试所有收藏项的artist字段类型分布
+        const artistTypes = {};
+        itemsWithCover.forEach(item => {
+          const type = typeof item.artist;
+          artistTypes[type] = (artistTypes[type] || 0) + 1;
+        });
+        console.log("艺术家字段类型分布:", artistTypes);
+      }
+      
       setFavorites(itemsWithCover);
+      setFilteredFavorites(itemsWithCover); // 初始化过滤结果
     } catch (error) {
       console.error('加载收藏失败:', error);
       toast.error('加载收藏失败，请重试', { icon: '⚠️' });
@@ -71,6 +151,38 @@ const Favorites = () => {
     loadFavorites();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 加载收藏时强制检查日文艺术家
+  useEffect(() => {
+    if (favorites.length > 0) {
+      // 检查是否有日文艺术家数据，并打印详细信息
+      const japaneseItems = favorites.filter(item => 
+        typeof item.artist === 'string' && 
+        /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(item.artist)
+      );
+      console.log(`日文艺术家测试 - 总数: ${japaneseItems.length}`);
+      
+      if (japaneseItems.length > 0) {
+        // 测试一个已知的日文艺术家名称
+        const testArtist = "ずっと真夜中でいいのに。";
+        const testItem = japaneseItems.find(item => item.artist.includes(testArtist));
+        
+        if (testItem) {
+          console.log(`找到艺术家"${testArtist}":`);
+          console.log(`- 完整艺术家名: ${testItem.artist}`);
+          // 测试子字符串搜索
+          console.log(`- 测试"ずっと"是否匹配: ${testItem.artist.includes("ずっと")}`);
+          console.log(`- 测试"真夜中"是否匹配: ${testItem.artist.includes("真夜中")}`);
+          
+          // 字符编码测试
+          const artistChars = Array.from(testItem.artist);
+          const searchChars = Array.from("ずっと");
+          console.log(`- 艺术家编码: ${artistChars.map(c => c.charCodeAt(0).toString(16)).join(' ')}`);
+          console.log(`- 搜索词编码: ${searchChars.map(c => c.charCodeAt(0).toString(16)).join(' ')}`);
+        }
+      }
+    }
+  }, [favorites]);
 
   const handleRemoveFromFavorites = async (track) => {
     try {
@@ -110,6 +222,167 @@ const Favorites = () => {
         setDownloading(false);
         setCurrentDownloadingTrack(null);
     }
+  };
+
+  // 搜索过滤功能 - 基于诊断结果的全新实现
+  const handleSearch = (e) => {
+    const query = e.target.value.trim();
+    setSearchQuery(query);
+    
+    if (!query) {
+      setFilteredFavorites(favorites);
+      return;
+    }
+    
+    console.log(`开始搜索: "${query}"`);
+    console.log(`查询编码: ${Array.from(query).map(c => c.charCodeAt(0).toString(16)).join(' ')}`);
+    
+    // 查找所有匹配的收藏项目
+    const filtered = favorites.filter(track => {
+      // 检查简单字段
+      if (isMatch(track.name, query) || 
+          isMatch(track.album, query)) {
+        return true;
+      }
+      
+      // 检查艺术家 - 处理多种可能的数据结构
+      return isArtistMatch(track, query);
+    });
+    
+    console.log(`找到 ${filtered.length} 个匹配结果`);
+    setFilteredFavorites(filtered);
+  };
+
+  // 递归搜索任何值是否匹配查询词
+  const searchInValue = (value, query) => {
+    // 处理字符串直接比较
+    if (typeof value === 'string') {
+      return isMatch(value, query);
+    }
+    
+    // 处理数组 - 检查数组中的每个元素
+    if (Array.isArray(value)) {
+      return value.some(item => searchInValue(item, query));
+    }
+    
+    // 处理对象 - 检查所有属性值
+    if (value !== null && typeof value === 'object') {
+      return Object.values(value).some(propValue => 
+        searchInValue(propValue, query)
+      );
+    }
+    
+    // 其他类型无法搜索
+    return false;
+  };
+
+  // 检查字符串是否匹配查询词
+  const isMatch = (text, query) => {
+    // 处理null/undefined
+    if (!text) return false;
+    
+    // 确保为字符串
+    const str = typeof text === 'string' ? text : String(text);
+    
+    // 1. 精确匹配检查
+    if (str === query) return true;
+    
+    // 2. 包含检查 - 保持原始大小写
+    if (str.includes(query)) return true;
+    
+    // 3. 不区分大小写检查
+    const lowerStr = str.toLowerCase();
+    const lowerQuery = query.toLowerCase();
+    if (lowerStr.includes(lowerQuery)) return true;
+    
+    // 4. 分词检查 - 适用于由空格分隔的多个单词
+    const words = query.split(/\s+/).filter(word => word.length > 0);
+    if (words.length > 1) {
+      return words.every(word => isMatch(str, word));
+    }
+    
+    return false;
+  };
+
+  // 专门检查艺术家字段的匹配
+  const isArtistMatch = (track, query) => {
+    // 1. 检查artist字段（字符串形式）
+    if (typeof track.artist === 'string' && isMatch(track.artist, query)) {
+      return true;
+    }
+    
+    // 2. 检查artist字段（对象形式）
+    if (track.artist !== null && typeof track.artist === 'object') {
+      // 检查name属性
+      if (track.artist.name && isMatch(track.artist.name, query)) {
+        return true;
+      }
+      
+      // 递归搜索整个对象
+      if (searchInValue(track.artist, query)) {
+        return true;
+      }
+    }
+    
+    // 3. 检查artists数组（某些API返回数组）
+    if (Array.isArray(track.artists)) {
+      // 检查数组中的每个艺术家
+      return track.artists.some(artist => {
+        if (typeof artist === 'string') {
+          return isMatch(artist, query);
+        }
+        
+        if (artist && typeof artist === 'object') {
+          // 检查name属性
+          if (artist.name && isMatch(artist.name, query)) {
+            return true;
+          }
+          
+          // 递归搜索整个对象
+          return searchInValue(artist, query);
+        }
+        
+        return false;
+      });
+    }
+    
+    // 4. 检查ar字段（网易云音乐常用）
+    if (Array.isArray(track.ar)) {
+      return track.ar.some(artist => {
+        if (typeof artist === 'string') {
+          return isMatch(artist, query);
+        }
+        
+        if (artist && typeof artist === 'object') {
+          // 检查name属性
+          if (artist.name && isMatch(artist.name, query)) {
+            return true;
+          }
+          
+          // 递归搜索整个对象
+          return searchInValue(artist, query);
+        }
+        
+        return false;
+      });
+    }
+    
+    // 5. 检查album对象中的artist信息
+    if (track.al && typeof track.al === 'object') {
+      if (searchInValue(track.al, query)) {
+        return true;
+      }
+    }
+    
+    // 6. 尝试在整个track对象中搜索（仅限特定字段）
+    const fieldsToSearch = ['artistsname', 'singer', 'author', 'composer'];
+    for (const field of fieldsToSearch) {
+      if (track[field] && isMatch(track[field], query)) {
+        return true;
+      }
+    }
+    
+    return false;
   };
 
   // 搜索并匹配歌曲
@@ -606,6 +879,38 @@ const Favorites = () => {
       {/* 添加登录提醒 */}
       {renderLoginReminder()}
       
+      {/* 添加搜索框 */}
+      {favorites.length > 0 && (
+        <InputGroup className="mb-4">
+          <InputGroup.Text>
+            <FaSearch />
+          </InputGroup.Text>
+          <Form.Control
+            placeholder="搜索歌名或艺术家..."
+            value={searchQuery}
+            onChange={handleSearch}
+          />
+          {searchQuery && (
+            <Button 
+              variant="outline-secondary" 
+              onClick={() => {
+                setSearchQuery('');
+                setFilteredFavorites(favorites);
+              }}
+            >
+              清除
+            </Button>
+          )}
+        </InputGroup>
+      )}
+      
+      {/* 显示搜索结果统计 */}
+      {searchQuery && (
+        <div className="mb-3 text-muted">
+          找到 {filteredFavorites.length} 个匹配结果 {filteredFavorites.length === 0 && '(无匹配内容)'}
+        </div>
+      )}
+      
       {/* 隐藏的文件输入框，用于导入功能 */}
       <input 
         type="file" 
@@ -626,9 +931,16 @@ const Favorites = () => {
             您可以在搜索结果中点击❤️收藏歌曲，或者通过导入功能批量添加
           </small>
         </Alert>
+      ) : filteredFavorites.length === 0 ? (
+        <Alert variant="light" className="text-center">
+          <p className="mb-0">没有匹配的收藏歌曲</p>
+          <small className="text-muted">
+            尝试使用不同的关键词搜索
+          </small>
+        </Alert>
       ) : (
         <Row className="g-4">
-          {favorites.map((track) => (
+          {filteredFavorites.map((track) => (
             <Col key={track.id} xs={12} sm={6} md={4} lg={3}>
               <Card className="h-100">
                 <Card.Body>

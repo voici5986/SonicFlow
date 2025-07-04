@@ -196,8 +196,8 @@ const ProgressBar = () => {
       className="progress-wrapper" 
       ref={progressBarRef}
       style={{ 
-        padding: '4px 0', 
-        marginBottom: '6px',
+        padding: '0', 
+        marginBottom: '2px',
         cursor: currentTrack ? 'pointer' : 'default',
         position: 'relative',
         touchAction: 'none' // 阻止浏览器默认触摸行为
@@ -211,15 +211,36 @@ const ProgressBar = () => {
       onTouchEnd={handleEmptyEvent}
       onTouchCancel={handleEmptyEvent}
     >
+      {/* 时间显示 - 移到进度条上方 */}
+      <div 
+        className="time-display" 
+        style={{
+          display: 'flex', 
+          justifyContent: 'space-between',
+          fontSize: deviceType === 'mobile' ? '0.7rem' : '0.8rem',
+          marginBottom: '1px',
+          color: '#555',
+          fontWeight: '500',
+          padding: '0', // 确保对齐
+          position: 'relative', // 添加相对定位
+          zIndex: 10 // 添加较高的z-index值
+        }}
+      >
+        <span>{formatTime(currentTimeInSeconds)}</span>
+        <span>{formatTime(totalSeconds)}</span>
+      </div>
+      
       {/* 进度条容器 */}
       <div 
         className="progress" 
         style={{ 
-          height: isHovering ? '8px' : (deviceType === 'mobile' ? '4px' : '6px'), 
+          height: isHovering ? '6px' : (deviceType === 'mobile' ? '3px' : '4px'), 
           position: 'relative',
           overflow: 'visible', // 允许把手超出边界
           transition: 'height 0.15s ease',
-          borderRadius: '3px'
+          borderRadius: '3px',
+          padding: '0',
+          margin: '0'
         }}
       >
         {/* 增大触摸区域 */}
@@ -268,20 +289,6 @@ const ProgressBar = () => {
             transform: (isDragging || isHovering) ? 'scale(1.1)' : 'scale(1)'
           }}
         />
-      </div>
-      
-      {/* 时间显示 */}
-        <div 
-        className="time-display" 
-          style={{
-          display: 'flex', 
-          justifyContent: 'flex-end',
-          fontSize: deviceType === 'mobile' ? '0.7rem' : '0.8rem',
-          marginTop: '2px',
-          color: '#6c757d'
-        }}
-      >
-        <span>{formatTime(currentTimeInSeconds)}/{formatTime(totalSeconds)}</span>
       </div>
     </div>
   );

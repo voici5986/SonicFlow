@@ -365,20 +365,31 @@ export const PlayerProvider = ({ children }) => {
     
     // 根据播放模式决定下一首
     if (playMode === 'random') {
-      // 随机模式：随机选择一首未播放过的歌曲
-      const unplayedTracks = currentPlaylist.filter((_, i) => 
-        !playHistory.includes(i) || playHistory.indexOf(i) < playHistory.lastIndexOf(currentIndex)
-      );
+      // 随机模式：随机选择一首未播放过的歌曲或最近未播放的歌曲
+      const lastPlayed = playHistory.slice(-Math.min(3, currentPlaylist.length));
       
-      if (unplayedTracks.length > 0) {
-        // 还有未播放的歌曲，随机选择一首
-        const randomTrack = unplayedTracks[Math.floor(Math.random() * unplayedTracks.length)];
-        nextIndex = currentPlaylist.indexOf(randomTrack);
+      // 排除最近播放的3首或全部歌曲（如果播放列表少于3首）
+      const availableTracks = currentPlaylist
+        .map((track, idx) => ({ track, idx }))
+        .filter(({ _, idx }) => !lastPlayed.includes(idx));
+      
+      if (availableTracks.length > 0) {
+        // 还有未在最近播放过的歌曲，随机选择一首
+        const randomTrack = availableTracks[Math.floor(Math.random() * availableTracks.length)];
+        nextIndex = randomTrack.idx;
       } else {
-        // 所有歌曲都播放过了，重新开始
-        nextIndex = Math.floor(Math.random() * currentPlaylist.length);
-        // 清空播放历史
-        setPlayHistory([]);
+        // 所有歌曲都最近播放过了，随机选择一首不是当前播放的歌曲
+        const notCurrentTracks = currentPlaylist
+          .map((track, idx) => ({ track, idx }))
+          .filter(({ _, idx }) => idx !== currentIndex);
+        
+        if (notCurrentTracks.length > 0) {
+          const randomTrack = notCurrentTracks[Math.floor(Math.random() * notCurrentTracks.length)];
+          nextIndex = randomTrack.idx;
+        } else {
+          // 如果只有一首歌（理论上不会到达这里，因为前面有检查）
+          nextIndex = currentIndex;
+        }
       }
     } else {
       // 顺序模式：播放下一首
@@ -439,26 +450,23 @@ export const PlayerProvider = ({ children }) => {
     handlePlay(currentPlaylist[prevIndex], prevIndex, currentPlaylist);
   }, [currentPlaylist, currentIndex, playMode, playHistory, handlePlay]);
   
-  // 切换播放模式
+  // 处理切换播放模式
   const handleTogglePlayMode = useCallback(() => {
-    // 循环切换：repeat-all -> repeat-one -> random -> repeat-all
+    // 播放模式顺序：repeat-all -> repeat-one -> random -> repeat-all
     const modes = ['repeat-all', 'repeat-one', 'random'];
-    const currentModeIndex = modes.indexOf(playMode);
-    const nextIndex = (currentModeIndex + 1) % modes.length;
+    const currentIndex = modes.indexOf(playMode);
+    const nextIndex = (currentIndex + 1) % modes.length;
     
+    // 更新播放模式
     setPlayMode(modes[nextIndex]);
+    localStorage.setItem('playMode', modes[nextIndex]);
     
-    // 显示提示
-    const modeNames = {
-      'repeat-all': '列表循环',
-      'repeat-one': '单曲循环',
-      'random': '随机播放'
-    };
-    
-    toast.info(`已切换为${modeNames[modes[nextIndex]]}模式`, {
-      autoClose: 1500,
-      hideProgressBar: true
-    });
+    // 提示已切换模式
+    // toast.info(`已切换为${modeNames[modes[nextIndex]]}模式`, {
+    //  autoClose: 1500,
+    //  hideProgressBar: true,
+    //  position: 'bottom-center'
+    // });
   }, [playMode]);
   
   // 提供Context值

@@ -48,7 +48,18 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId} {
+      // 允许用户读写自己的文档
       allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // 允许用户读写自己的收藏子集合
+      match /favorites/{favoriteId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // 允许用户读写自己的历史记录子集合
+      match /history/{historyId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
   }
 }

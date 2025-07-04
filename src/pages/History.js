@@ -121,11 +121,12 @@ const History = () => {
     if (!currentUser) {
       return (
         <Alert variant="info" className="mb-4 login-reminder">
-          <div className="d-flex align-items-center justify-content-between">
-            <div>
+          <div className="d-flex align-items-center">
+            <div className="flex-grow-1">
               <h5 className="mb-1">登录您的账号</h5>
               <p className="mb-0">登录后可以将您的播放历史同步到云端，在任何设备上继续您的音乐旅程。</p>
             </div>
+            <div>
             <Button 
               variant="primary" 
               href="#/auth"
@@ -133,6 +134,7 @@ const History = () => {
             >
               立即登录
             </Button>
+            </div>
           </div>
         </Alert>
       );

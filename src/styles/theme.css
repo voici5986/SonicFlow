@@ -76,7 +76,7 @@
   /* ===== 组件特定变量 ===== */
   /* 播放器 */
   --player-height-collapsed: 85px;
-  --player-height-expanded: 70vh;
+  --player-height-expanded: 90vh;
   --player-transition: var(--transition-bounce);
   --player-shadow: 0 -4px 20px rgba(0, 0, 0, 0.07);
   
@@ -112,7 +112,7 @@
 /* 媒体查询中的变量调整 */
 @media (max-width: 1024px) {
   :root {
-    --player-height-collapsed: 125px;
+    --player-height-collapsed: 120px;
     /* 其他响应式变量调整... */
   }
 }

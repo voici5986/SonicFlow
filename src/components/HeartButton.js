@@ -34,16 +34,14 @@ const HeartButton = ({ track, className = '', size = 'sm', onToggle, variant = '
       // 切换收藏状态
       const result = await toggleFavorite(track);
       
-      if (result.full) {
+      // 如果收藏列表已满，显示提示
+      if (result.error === 'favorites_limit') {
         toast.warning('收藏列表已满，请删除一些收藏后再试');
         return;
       }
       
       // 更新按钮状态
       setIsFav(result.added);
-      
-      // 显示提示
-      toast.success(result.added ? '已添加到收藏' : '已从收藏中移除');
       
       // 如果传入了回调函数，执行它
       if (onToggle) {
@@ -65,7 +63,7 @@ const HeartButton = ({ track, className = '', size = 'sm', onToggle, variant = '
         }
       }
     } catch (error) {
-      console.error('切换收藏状态失败:', error);
+      console.error('Toggle favorite error:', error);
       toast.error('操作失败，请重试');
     } finally {
       setIsToggling(false);
