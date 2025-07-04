@@ -23,6 +23,8 @@ const ProgressBar = () => {
   // 添加标志，表示是否刚刚释放拖动
   const justReleasedRef = useRef(false);
   const releaseTimeoutRef = useRef(null);
+  // 添加标识，用来跟踪是否已经应用了seek操作
+  const hasAppliedSeekRef = useRef(false);
   
   // 用于鼠标位置跟踪
   const progressBarRef = useRef(null);
@@ -54,6 +56,8 @@ const ProgressBar = () => {
         releaseTimeoutRef.current = setTimeout(() => {
           justReleasedRef.current = false;
           setLastReleasedProgress(null);
+          // 重置seek操作标识
+          hasAppliedSeekRef.current = false;
         }, 1000);
         
         setIsDragging(false);
@@ -79,6 +83,18 @@ const ProgressBar = () => {
       }
     };
   }, []);
+  
+  // 应用seek操作的安全函数，避免重复调用
+  const applySeek = useCallback((position) => {
+    if (playerRef.current && !hasAppliedSeekRef.current) {
+      playerRef.current.seekTo(position);
+      hasAppliedSeekRef.current = true;
+      // 100ms后允许再次seek，防止连续多次seek操作
+      setTimeout(() => {
+        hasAppliedSeekRef.current = false;
+      }, 100);
+    }
+  }, [playerRef]);
   
   // 鼠标事件处理
   const handleMouseEnter = useCallback(() => {
@@ -106,12 +122,10 @@ const ProgressBar = () => {
       const boundedPosition = Math.max(0, Math.min(1, position));
       setDragProgress(boundedPosition * 100);
       
-      // 实时更新播放位置
-      if (playerRef.current) {
-        playerRef.current.seekTo(boundedPosition);
-      }
+      // 实时更新播放位置，但避免频繁调用
+      applySeek(boundedPosition);
     }
-  }, [currentTrack, isDragging, playerRef]);
+  }, [currentTrack, isDragging, applySeek]);
   
   const handleMouseDown = useCallback((e) => {
     if (!currentTrack) return;
@@ -126,11 +140,9 @@ const ProgressBar = () => {
     // 更新状态
     setDragProgress(boundedPosition * 100);
     
-    // 立即应用位置
-    if (playerRef.current) {
-      playerRef.current.seekTo(boundedPosition);
-    }
-  }, [currentTrack, playerRef]);
+    // 立即应用位置，使用安全的seek函数
+    applySeek(boundedPosition);
+  }, [currentTrack, applySeek]);
   
   // 触摸事件处理
   const handleTouchStart = useCallback((e) => {
@@ -151,11 +163,9 @@ const ProgressBar = () => {
     // 更新状态
     setDragProgress(boundedPosition * 100);
     
-    // 立即应用位置
-    if (playerRef.current) {
-      playerRef.current.seekTo(boundedPosition);
-    }
-  }, [currentTrack, playerRef]);
+    // 立即应用位置，使用安全的seek函数
+    applySeek(boundedPosition);
+  }, [currentTrack, applySeek]);
   
   const handleTouchMove = useCallback((e) => {
     if (!isDragging || !currentTrack) return;
@@ -172,11 +182,9 @@ const ProgressBar = () => {
     // 更新状态
     setDragProgress(boundedPosition * 100);
     
-    // 实时更新播放位置
-    if (playerRef.current) {
-      playerRef.current.seekTo(boundedPosition);
-    }
-  }, [isDragging, currentTrack, playerRef]);
+    // 实时更新播放位置，使用安全的seek函数
+    applySeek(boundedPosition);
+  }, [isDragging, currentTrack, applySeek]);
   
   // 空回调函数，避免重新创建
   const handleEmptyEvent = useCallback(() => {}, []);
@@ -216,7 +224,7 @@ const ProgressBar = () => {
         className="time-display" 
         style={{
           display: 'flex', 
-          justifyContent: 'space-between',
+          justifyContent: 'flex-end',
           fontSize: deviceType === 'mobile' ? '0.7rem' : '0.8rem',
           marginBottom: '1px',
           color: '#555',
@@ -226,8 +234,7 @@ const ProgressBar = () => {
           zIndex: 10 // 添加较高的z-index值
         }}
       >
-        <span>{formatTime(currentTimeInSeconds)}</span>
-        <span>{formatTime(totalSeconds)}</span>
+        <span>{formatTime(currentTimeInSeconds)}/{formatTime(totalSeconds)}</span>
       </div>
       
       {/* 进度条容器 */}

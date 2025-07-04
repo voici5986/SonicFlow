@@ -28,6 +28,7 @@ import {
 } from './utils/errorHandler';
 import { adjustCacheForOffline } from './services/cacheService';
 import SyncProvider from './contexts/SyncContext';
+import FavoritesProvider from './contexts/FavoritesContext';
 // 导入样式文件
 import './styles/NavigationFix.css';
 import './styles/AudioPlayer.css';
@@ -464,7 +465,9 @@ const App = () => {
     <RegionProvider>
       <SyncProvider>
       <PlayerProvider>
-        <AppContent />
+        <FavoritesProvider>
+          <AppContent />
+        </FavoritesProvider>
       </PlayerProvider>
       </SyncProvider>
     </RegionProvider>

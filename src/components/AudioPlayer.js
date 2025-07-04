@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, memo, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useCallback, memo, useMemo, useState } from 'react';
 import { Row, Col, Button, Spinner } from 'react-bootstrap';
 import ReactPlayer from 'react-player';
 import { FaPlay, FaPause, FaDownload, FaMusic, 
@@ -7,6 +7,7 @@ import HeartButton from './HeartButton';
 import ProgressBar from './ProgressBar';
 import '../styles/AudioPlayer.css';
 import { usePlayer } from '../contexts/PlayerContext';
+import { useDevice } from '../contexts/DeviceContext';
 
 /**
  * 音频播放器组件
@@ -28,9 +29,11 @@ const AudioPlayer = () => {
   currentDownloadingTrack,
   coverCache,
   currentPlaylist,
+  totalSeconds,
   
     // 方法
   setIsPlaying,
+  setTotalSeconds,
     togglePlay,
     toggleLyric,
   handleProgress,
@@ -46,6 +49,9 @@ const AudioPlayer = () => {
   // 工具函数
   parseLyric
   } = usePlayer();
+
+  // 获取设备信息
+  const deviceInfo = useDevice();
 
   // 为虚拟滚动添加的状态
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 20 });
@@ -73,13 +79,19 @@ const AudioPlayer = () => {
         ]
       });
 
-      // 设置媒体控制处理程序
+      // 设置媒体控制处理程序 - 直接操作ReactPlayer实例，避免状态不同步
       navigator.mediaSession.setActionHandler('play', () => {
+        if (playerRef.current) {
+          // 直接设置播放状态，避免重复触发播放
         setIsPlaying(true);
+        }
       });
 
       navigator.mediaSession.setActionHandler('pause', () => {
+        if (playerRef.current) {
+          // 直接设置暂停状态，避免不同步
         setIsPlaying(false);
+        }
       });
 
       // 如果播放列表中有多首歌曲，添加上一首/下一首控制
@@ -140,7 +152,7 @@ const AudioPlayer = () => {
         }
       }, 300);
     }
-  }, [lyricExpanded, processedLyrics.length]);
+  }, [lyricExpanded, processedLyrics.length, lyricsContainerRef]);
   
   // 计算可见歌词范围
   useEffect(() => {
@@ -167,7 +179,7 @@ const AudioPlayer = () => {
       }
       }, 50);
     }
-  }, [currentLyricIndex, lyricExpanded, containerHeight, lyricLineHeight, processedLyrics.length, userScrolled]);
+  }, [currentLyricIndex, lyricExpanded, containerHeight, lyricLineHeight, processedLyrics.length, userScrolled, lyricsContainerRef]);
   
   // 监听用户滚动事件
   const handleLyricScroll = useCallback((e) => {
@@ -191,7 +203,7 @@ const AudioPlayer = () => {
       
       setVisibleRange({ start, end });
     }
-  }, [containerHeight, lyricLineHeight, processedLyrics.length]);
+  }, [containerHeight, lyricLineHeight, processedLyrics.length, lyricsContainerRef]);
   
   // 获取当前播放模式图标
   const getPlayModeIcon = useCallback(() => {
@@ -235,9 +247,6 @@ const AudioPlayer = () => {
   // 如果没有当前音轨，不渲染任何内容
   if (!currentTrack) return null;
   
-  // 获取设备信息（从DeviceContext获取）
-  const deviceInfo = { isDesktop: window.innerWidth >= 768, deviceType: window.innerWidth >= 768 ? 'desktop' : 'mobile' };
-  
   // 增加播放器展开状态的类名
   const playerClassName = `audio-player ${lyricExpanded ? 'expanded' : 'collapsed'}`;
   
@@ -248,8 +257,7 @@ const AudioPlayer = () => {
       return <div className="text-center text-muted py-5">暂无歌词</div>;
     }
     
-    // 创建占位元素，确保滚动条高度正确
-    const totalHeight = processedLyrics.length * lyricLineHeight;
+    // 计算占位元素高度
     const placeholderHeight = visibleRange.start * lyricLineHeight;
     const bottomPlaceholderHeight = Math.max(0, (processedLyrics.length - visibleRange.end) * lyricLineHeight);
     
@@ -340,11 +348,40 @@ const AudioPlayer = () => {
               {/* 左侧：歌曲信息 */}
               <Col xs={5} md={3} className="d-flex align-items-center mb-2 mb-md-0">
                 <div className="d-flex align-items-center">
-                  <img 
-                    src={coverCache[`${currentTrack.source}-${currentTrack.pic_id}-300`] || '/default_cover.png'}
-                    alt="当前播放"
-                    className="me-2 rounded player-thumbnail"
-                  />
+                  <div className="position-relative">
+                    <img 
+                      src={coverCache[`${currentTrack.source}-${currentTrack.pic_id}-300`] || '/default_cover.png'}
+                      alt="当前播放"
+                      className="me-2 rounded player-thumbnail"
+                      onClick={handleLyricToggle}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    {deviceInfo.isMobile && !lyricExpanded && (
+                      <div 
+                        className="d-md-none position-absolute" 
+                        style={{
+                          bottom: '2px',
+                          right: '2px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                          borderRadius: '50%',
+                          width: '18px',
+                          height: '18px',
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          fontSize: '10px',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                        }}
+                      >
+                        <img 
+                          src="/lyric.svg" 
+                          alt="查看歌词" 
+                          width="12" 
+                          height="12"
+                        />
+                      </div>
+                    )}
+                  </div>
                   <div className="track-info-container">
                     <h6 className="mb-0 text-truncate track-name">{currentTrack.name}</h6>
                     <small className="text-muted text-truncate track-artist">{currentTrack.artist}</small>
@@ -482,22 +519,23 @@ const AudioPlayer = () => {
               onReady={() => console.log('播放器就绪')}
               onDuration={(duration) => {
                 console.log('音频时长:', duration);
-                // 直接设置总时长
-                if (typeof handleProgress === 'function') {
-                  handleProgress({
-                    played: 0,
-                    playedSeconds: 0,
-                    loaded: 0,
-                    loadedSeconds: duration
-                  });
-                }
+                // 只更新总时长，不调用完整的handleProgress避免重复触发
+                setTotalSeconds(duration);
               }}
               onError={(e) => {
                 console.error('播放错误:', e);
                 setIsPlaying(false);
               }}
               onEnded={handleEnded}
-              config={{ file: { forceAudio: true } }}
+              config={{ 
+                file: { 
+                  forceAudio: true,
+                  attributes: {
+                    // 禁用HTML5音频元素的原生控制
+                    controlsList: 'nodownload'
+                  }
+                } 
+              }}
               height={0}
               style={{ display: playerUrl ? 'block' : 'none' }} 
             />
