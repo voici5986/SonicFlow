@@ -9,6 +9,7 @@ import '../styles/AudioPlayer.css';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { handleError, ErrorTypes, ErrorSeverity } from '../utils/errorHandler';
+import { sendMessageToSW } from '../utils/serviceWorkerRegistration';
 
 /**
  * 专辑封面组件
@@ -502,6 +503,14 @@ const AudioPlayer = () => {
       />
     );
   };
+  
+  // 在音频播放时向Service Worker发送当前播放的音频URL
+  useEffect(() => {
+    if (isPlaying && playerUrl) {
+      console.log('向Service Worker发送当前播放音频信息:', playerUrl);
+      sendMessageToSW('CURRENT_AUDIO', { url: playerUrl });
+    }
+  }, [isPlaying, playerUrl]);
   
   return (
     <>

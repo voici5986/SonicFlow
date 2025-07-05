@@ -10,6 +10,17 @@ const API_CACHE_NAME = 'sonicflow-api-' + CACHE_VERSION;
 const AUDIO_CACHE_NAME = 'sonicflow-audio-' + CACHE_VERSION;
 const IMAGE_CACHE_NAME = 'sonicflow-image-' + CACHE_VERSION;
 
+// 当前播放的音频URL
+self.currentPlayingAudio = null;
+
+// 处理来自主应用的消息
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'CURRENT_AUDIO') {
+    console.log('[Service Worker] 接收到当前播放音频信息:', event.data.url);
+    self.currentPlayingAudio = event.data.url;
+  }
+});
+
 // 需要缓存的资源列表
 const STATIC_CACHE_URLS = [
   '/',
@@ -155,7 +166,24 @@ self.addEventListener('fetch', (event) => {
       caches.match(event.request)
         .then((cachedResponse) => {
           if (cachedResponse) {
-            // 如果有缓存，返回缓存
+            // 如果有缓存，返回缓存，但确保不会与当前播放的音频冲突
+            console.log('[Service Worker] 从缓存返回音频文件:', url.pathname);
+            
+            // 检查是否是当前正在播放的音频
+            const isCurrentAudio = self.currentPlayingAudio === url.href;
+            if (isCurrentAudio) {
+              console.log('[Service Worker] 检测到当前正在播放的音频，使用网络请求');
+              // 如果是当前播放的音频，优先使用网络请求以避免冲突
+              return fetch(event.request)
+                .then(response => {
+                  if (!response || !response.ok) {
+                    return cachedResponse;
+                  }
+                  return response;
+                })
+                .catch(() => cachedResponse);
+            }
+            
             return cachedResponse;
           }
           

@@ -10,3 +10,24 @@
   to = "https://music-api.gdstudio.xyz/api.php/:splat"
   status = 200
   force = true
+
+# 添加音频文件的缓存控制
+[[headers]]
+  for = "*.mp3"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    
+[[headers]]
+  for = "*.flac"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    
+[[headers]]
+  for = "*.aac"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    
+[[headers]]
+  for = "*.ogg"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
