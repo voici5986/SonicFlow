@@ -26,6 +26,11 @@ export const PlayerProvider = ({ children }) => {
   const [playerUrl, setPlayerUrl] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
   
+  // 添加调试日志，监控isPlaying状态变化
+  useEffect(() => {
+    console.log('播放状态变化:', isPlaying ? '播放中' : '已暂停', currentTrack?.name || '无曲目');
+  }, [isPlaying, currentTrack]);
+  
   // 播放进度相关
   const [playProgress, setPlayProgress] = useState(0);
   const [playedSeconds, setPlayedSeconds] = useState(0);
@@ -315,6 +320,13 @@ export const PlayerProvider = ({ children }) => {
       // 获取播放URL和歌词
       const { url, lyrics } = await playMusic(track, 999); // 默认使用最高音质
       
+      // 设置URL前记录状态
+      console.log('设置URL前状态:', { 
+        isPlaying: isPlaying, 
+        currentTrack: currentTrack?.name, 
+        playerUrl: playerUrl?.substring(0, 50) + '...'
+      });
+      
       // 设置URL
       setPlayerUrl(url);
       
@@ -328,6 +340,12 @@ export const PlayerProvider = ({ children }) => {
           parsedLyric
         });
       }
+      
+      // 开始播放前记录状态
+      console.log('开始播放前状态:', { 
+        track: track.name, 
+        url: url?.substring(0, 50) + '...'
+      });
       
       // 开始播放
       setIsPlaying(true);

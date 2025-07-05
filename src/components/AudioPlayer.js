@@ -641,13 +641,26 @@ const AudioPlayer = () => {
               onProgress={handleProgress}
               url={playerUrl}
               playing={isPlaying}
-              onReady={() => console.log('播放器就绪')}
+              onReady={() => {
+                console.log('播放器就绪，URL:', playerUrl, '播放状态:', isPlaying);
+                console.log('当前曲目:', currentTrack?.name);
+              }}
               onDuration={(duration) => {
                 console.log('音频时长:', duration);
                 // 只更新总时长，不调用完整的handleProgress避免重复触发
                 setTotalSeconds(duration);
               }}
+              onStart={() => {
+                console.log('音频开始播放:', currentTrack?.name);
+              }}
+              onPause={() => {
+                console.log('音频暂停:', currentTrack?.name);
+              }}
+              onPlay={() => {
+                console.log('音频播放:', currentTrack?.name);
+              }}
               onError={(e) => {
+                console.error('音频播放错误:', e);
                 handleError(
                   e,
                   ErrorTypes.PLAYBACK,

@@ -31,7 +31,8 @@ import SyncProvider from './contexts/SyncContext';
 import FavoritesProvider from './contexts/FavoritesContext';
 // 导入样式文件
 import './styles/NavigationFix.css';
-import './styles/AudioPlayer.css';
+// 样式已在index.js中导入，这里不再重复导入
+// import './styles/AudioPlayer.css';
 import './styles/Orientation.css';
 
 // 懒加载页面组件
@@ -62,7 +63,7 @@ const useDownloadContext = () => React.useContext(DownloadContext);
 
 // 搜索结果项组件
 const SearchResultItem = ({ track }) => {
-  const { handlePlay, currentTrack, isPlaying } = usePlayer();
+  const { handlePlay, currentTrack, isPlaying, togglePlay, playerUrl } = usePlayer();
   const { downloading, handleDownload } = useDownloadContext();
   
   return (
@@ -95,7 +96,17 @@ const SearchResultItem = ({ track }) => {
             variant="outline-primary" 
             size="sm"
             className="me-1"
-            onClick={() => handlePlay(track)}
+            onClick={() => {
+              console.log("从搜索结果播放歌曲:", track.name);
+              // 如果当前曲目正在播放，则切换播放/暂停
+              if (currentTrack?.id === track.id) {
+                togglePlay();
+              } else {
+                // 否则播放新曲目
+                handlePlay(track);
+              }
+            }}
+            disabled={currentTrack?.id === track.id && !playerUrl}
           >
             {currentTrack?.id === track.id && isPlaying ? <FaPause /> : <FaPlay />}
           </Button>
