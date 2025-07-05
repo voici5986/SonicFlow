@@ -64,35 +64,6 @@ const LyricToggleButton = ({ expanded, onToggle, className = '', variant = 'link
 };
 
 /**
- * 单行歌词显示组件
- * 封装收起状态下的单行歌词显示逻辑
- */
-const SingleLineLyric = ({ currentLyricText, onToggle }) => {
-  return (
-    <div 
-      onClick={onToggle} 
-      style={{ 
-        cursor: 'pointer',
-        width: '100%',
-        textAlign: 'left',
-        color: '#555',
-        fontSize: '0.95rem',
-        marginBottom: '5px',
-        padding: '5px 0',
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        transition: 'color 0.3s ease',
-        position: 'relative',
-        bottom: '5px'
-      }}
-    >
-      {currentLyricText || "暂无歌词"}
-    </div>
-  );
-};
-
-/**
  * 歌词行组件
  * 封装歌词行的渲染逻辑，减少代码重复
  */
@@ -216,20 +187,6 @@ const PlayerControlButton = ({
     >
       {children}
     </Button>
-  );
-};
-
-/**
- * 响应式进度条组件
- * 封装进度条的通用逻辑，适应不同设备类型
- */
-const ResponsiveProgressBar = ({ isMobile = false }) => {
-  return (
-    <div className={isMobile ? "mobile-progress-container" : "progress-control-container"} style={isMobile ? {} : { bottom: '0', marginBottom: '8px' }}>
-      <div className="progress-bar-container" style={{ position: 'relative', zIndex: 5 }}>
-        <ProgressBar />
-      </div>
-    </div>
   );
 };
 
@@ -447,6 +404,14 @@ const AudioPlayer = () => {
     }
   }, [containerHeight, lyricLineHeight, processedLyrics.length, lyricsContainerRef]);
   
+  // 在音频播放时向Service Worker发送当前播放的音频URL
+  useEffect(() => {
+    if (isPlaying && playerUrl) {
+      console.log('向Service Worker发送当前播放音频信息:', playerUrl);
+      sendMessageToSW('CURRENT_AUDIO', { url: playerUrl });
+    }
+  }, [isPlaying, playerUrl]);
+  
   // 获取当前播放模式图标
   const getPlayModeIcon = useCallback(() => {
     switch (playMode) {
@@ -503,14 +468,6 @@ const AudioPlayer = () => {
       />
     );
   };
-  
-  // 在音频播放时向Service Worker发送当前播放的音频URL
-  useEffect(() => {
-    if (isPlaying && playerUrl) {
-      console.log('向Service Worker发送当前播放音频信息:', playerUrl);
-      sendMessageToSW('CURRENT_AUDIO', { url: playerUrl });
-    }
-  }, [isPlaying, playerUrl]);
   
   return (
     <>
