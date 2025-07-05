@@ -193,9 +193,25 @@ export const PlayerProvider = ({ children }) => {
   const togglePlay = useCallback(() => {
     // 只在有当前曲目时才切换状态
     if (currentTrack && playerUrl) {
-    setIsPlaying(prev => !prev);
+      // 先清理可能存在的其他音频实例
+      const audioElements = document.querySelectorAll('audio');
+      if (audioElements.length > 1) {
+        // 如果发现多个audio元素，暂停除主播放器外的其他音频
+        audioElements.forEach((audio, index) => {
+          if (index > 0) { // 假设第一个是主要的音频播放器
+            audio.pause();
+            if (audio.parentElement && !audio.parentElement.contains(playerRef.current?.getInternalPlayer())) {
+              // 尝试移除非主要播放器的audio元素
+              audio.parentElement.removeChild(audio);
+            }
+          }
+        });
+      }
+      
+      // 切换播放状态
+      setIsPlaying(prev => !prev);
     }
-  }, [currentTrack, playerUrl]);
+  }, [currentTrack, playerUrl, playerRef]);
   
   // 添加键盘事件监听
   useEffect(() => {
@@ -239,6 +255,14 @@ export const PlayerProvider = ({ children }) => {
       
       // 先暂停当前播放，避免多个音频同时播放
       setIsPlaying(false);
+      
+      // 确保播放器实例已经暂停
+      if (playerRef.current) {
+        playerRef.current.getInternalPlayer()?.pause();
+      }
+      
+      // 清空之前的URL，强制停止旧的音频流
+      setPlayerUrl('');
       
       // 设置当前播放歌曲
       setCurrentTrack(track);
@@ -296,6 +320,9 @@ export const PlayerProvider = ({ children }) => {
       
       // 获取播放URL和歌词
       const { url, lyrics } = await playMusic(track, 999); // 默认使用最高音质
+      
+      // 添加一个短暂延迟，确保之前的音频已完全停止
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       // 设置URL
       setPlayerUrl(url);

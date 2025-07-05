@@ -8,6 +8,231 @@ import ProgressBar from './ProgressBar';
 import '../styles/AudioPlayer.css';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useDevice } from '../contexts/DeviceContext';
+import { handleError, ErrorTypes, ErrorSeverity } from '../utils/errorHandler';
+
+/**
+ * 专辑封面组件
+ * 封装专辑封面的渲染逻辑，减少代码重复
+ */
+const AlbumCover = ({ track, coverCache, size = 'small', onClick, className = '' }) => {
+  const imgSrc = coverCache[`${track.source}-${track.pic_id}-300`] || '/default_cover.png';
+  
+  return (
+    <img 
+      src={imgSrc}
+      alt={size === 'small' ? "当前播放" : "专辑封面"}
+      className={`${className} ${size === 'small' ? 'player-thumbnail rounded me-2' : 'album-cover-large'}`}
+      onClick={onClick}
+      style={{ cursor: onClick ? 'pointer' : 'default' }}
+      onError={(e) => {
+        e.target.onerror = null;
+        e.target.src = '/default_cover.png';
+      }}
+    />
+  );
+};
+
+/**
+ * 歌词切换按钮组件
+ * 封装歌词展开/收起按钮的逻辑，减少代码重复
+ */
+const LyricToggleButton = ({ expanded, onToggle, className = '', variant = 'link', iconOnly = true, customIcon = null }) => {
+  return (
+    <Button
+      variant={variant}
+      onClick={onToggle}
+      className={`${className} control-button`}
+      aria-label={expanded ? "收起歌词" : "展开歌词"}
+      title={expanded ? "收起歌词" : "展开歌词"}
+    >
+      {customIcon ? (
+        customIcon
+      ) : iconOnly ? (
+        <img 
+          src="/lyric.svg" 
+          alt="歌词" 
+          width="20" 
+          height="20" 
+          className="lyric-icon"
+        />
+      ) : (
+        expanded ? "收起歌词" : "展开歌词"
+      )}
+    </Button>
+  );
+};
+
+/**
+ * 单行歌词显示组件
+ * 封装收起状态下的单行歌词显示逻辑
+ */
+// eslint-disable-next-line no-unused-vars
+const SingleLineLyric = ({ currentLyricText, onToggle }) => {
+  return (
+    <div 
+      onClick={onToggle} 
+      style={{ 
+        cursor: 'pointer',
+        width: '100%',
+        textAlign: 'left',
+        color: '#555',
+        fontSize: '0.95rem',
+        marginBottom: '5px',
+        padding: '5px 0',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        transition: 'color 0.3s ease',
+        position: 'relative',
+        bottom: '5px'
+      }}
+    >
+      {currentLyricText || "暂无歌词"}
+    </div>
+  );
+};
+
+/**
+ * 歌词行组件
+ * 封装歌词行的渲染逻辑，减少代码重复
+ */
+const LyricLine = ({ line, index, isActive, isNextActive }) => {
+  return (
+    <div
+      key={index}
+      className={`lyric-line ${isActive ? 'active' : ''} ${isNextActive ? 'next-active' : ''}`}
+      data-time={line.time}
+      data-index={index}
+      style={{
+        padding: isActive ? '10px 15px 10px 20px' : '8px 8px 8px 10px',
+        textAlign: 'left',
+        width: '100%',
+        maxWidth: '100%',
+        wordBreak: 'break-word',
+        whiteSpace: 'normal',
+        overflow: 'hidden',
+        boxSizing: 'border-box',
+        backgroundColor: 'transparent',
+        borderLeft: isActive ? '3px solid #dc3545' : 'none',
+        transition: 'none',
+        fontWeight: isActive ? '600' : 'normal',
+        fontSize: isActive ? '1.15rem' : '1rem',
+        color: isActive ? '#222222' : '#999999',
+        borderRadius: 0,
+        boxShadow: 'none',
+        marginBottom: '5px',
+        position: 'relative',
+        left: isActive ? '10px' : '0'
+      }}
+    >
+      <div style={{ 
+        width: '100%', 
+        maxWidth: '100%', 
+        wordBreak: 'break-word',
+        letterSpacing: isActive ? '0.01em' : 'normal'
+      }}>
+        {line.text}
+      </div>
+      {line.translatedText && (
+        <div style={{ 
+          width: '100%', 
+          maxWidth: '100%', 
+          wordBreak: 'break-word', 
+          paddingLeft: 0,
+          color: isActive ? '#555' : '#888',
+          fontSize: isActive ? '0.95rem' : '0.9rem',
+          fontWeight: isActive ? '500' : 'normal'
+        }} className="translated-lyric">
+          {line.translatedText}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
+ * 虚拟滚动歌词组件
+ * 封装虚拟滚动歌词的渲染逻辑，减少代码重复
+ */
+const VirtualizedLyrics = ({ processedLyrics, visibleRange, lyricLineHeight, currentLyricIndex }) => {
+  // 如果没有歌词，显示提示
+  if (!processedLyrics || processedLyrics.length === 0) {
+    return <div className="text-center text-muted py-5">暂无歌词</div>;
+  }
+  
+  // 计算占位元素高度
+  const placeholderHeight = visibleRange.start * lyricLineHeight;
+  const bottomPlaceholderHeight = Math.max(0, (processedLyrics.length - visibleRange.end) * lyricLineHeight);
+  
+  return (
+    <div style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+      {placeholderHeight > 0 && (
+        <div style={{ height: `${placeholderHeight}px` }}></div>
+      )}
+      
+      {processedLyrics.slice(visibleRange.start, visibleRange.end).map((line, virtualIndex) => {
+        const index = visibleRange.start + virtualIndex;
+        const isActive = index === currentLyricIndex;
+        const isNextActive = index === currentLyricIndex + 1;
+        
+        return (
+          <LyricLine
+            key={index}
+            line={line}
+            index={index}
+            isActive={isActive}
+            isNextActive={isNextActive}
+          />
+        );
+      })}
+      
+      {bottomPlaceholderHeight > 0 && (
+        <div style={{ height: `${bottomPlaceholderHeight}px` }}></div>
+      )}
+    </div>
+  );
+};
+
+/**
+ * 播放控制按钮组件
+ * 封装播放控制按钮的通用逻辑，减少代码重复
+ */
+const PlayerControlButton = ({ 
+  onClick, 
+  disabled = false, 
+  className = '', 
+  ariaLabel = '', 
+  title = '',
+  children
+}) => {
+  return (
+    <Button
+      variant="link"
+      onClick={onClick}
+      disabled={disabled}
+      className={`control-button control-icon-btn ${className}`}
+      aria-label={ariaLabel}
+      title={title}
+    >
+      {children}
+    </Button>
+  );
+};
+
+/**
+ * 响应式进度条组件
+ * 封装进度条的通用逻辑，适应不同设备类型
+ */
+// eslint-disable-next-line no-unused-vars
+const ResponsiveProgressBar = ({ isMobile = false }) => {
+  return (
+    <div className={isMobile ? "mobile-progress-container" : "progress-control-container"} style={isMobile ? {} : { bottom: '0', marginBottom: '8px' }}>
+      <div className="progress-bar-container" style={{ position: 'relative', zIndex: 5 }}>
+        <ProgressBar />
+      </div>
+    </div>
+  );
+};
 
 /**
  * 音频播放器组件
@@ -29,10 +254,10 @@ const AudioPlayer = () => {
   currentDownloadingTrack,
   coverCache,
   currentPlaylist,
-  totalSeconds,
   
     // 方法
   setIsPlaying,
+  // eslint-disable-next-line no-unused-vars
   setTotalSeconds,
     togglePlay,
     toggleLyric,
@@ -79,19 +304,15 @@ const AudioPlayer = () => {
         ]
       });
 
-      // 设置媒体控制处理程序 - 直接操作ReactPlayer实例，避免状态不同步
+      // 设置媒体控制处理程序 - 只修改状态，让Context控制实际的播放逻辑
       navigator.mediaSession.setActionHandler('play', () => {
-        if (playerRef.current) {
-          // 直接设置播放状态，避免重复触发播放
+        // 只修改状态，不直接操作播放器实例
         setIsPlaying(true);
-        }
       });
 
       navigator.mediaSession.setActionHandler('pause', () => {
-        if (playerRef.current) {
-          // 直接设置暂停状态，避免不同步
+        // 只修改状态，不直接操作播放器实例
         setIsPlaying(false);
-        }
       });
 
       // 如果播放列表中有多首歌曲，添加上一首/下一首控制
@@ -227,8 +448,9 @@ const AudioPlayer = () => {
   
   // 处理播放/暂停切换
   const handlePlayPauseToggle = useCallback(() => {
+    if (!currentTrack || !playerUrl) return;
     togglePlay();
-  }, [togglePlay]);
+  }, [togglePlay, currentTrack, playerUrl]);
   
   // 处理歌词展开/收起
   const handleLyricToggle = useCallback(() => {
@@ -252,84 +474,13 @@ const AudioPlayer = () => {
   
   // 渲染虚拟滚动歌词
   const renderVirtualizedLyrics = () => {
-    // 如果没有歌词，显示提示
-    if (!processedLyrics || processedLyrics.length === 0) {
-      return <div className="text-center text-muted py-5">暂无歌词</div>;
-    }
-    
-    // 计算占位元素高度
-    const placeholderHeight = visibleRange.start * lyricLineHeight;
-    const bottomPlaceholderHeight = Math.max(0, (processedLyrics.length - visibleRange.end) * lyricLineHeight);
-    
     return (
-      <div style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
-        {placeholderHeight > 0 && (
-          <div style={{ height: `${placeholderHeight}px` }}></div>
-        )}
-        
-        {processedLyrics.slice(visibleRange.start, visibleRange.end).map((line, virtualIndex) => {
-          const index = visibleRange.start + virtualIndex;
-          const isActive = index === currentLyricIndex;
-          const isNextActive = index === currentLyricIndex + 1;
-          
-          // 使用条件运算符分别设置活动行和非活动行的样式
-          return (
-            <div
-              key={index}
-              className={`lyric-line ${isActive ? 'active' : ''} ${isNextActive ? 'next-active' : ''}`}
-              data-time={line.time}
-              data-index={index}
-              style={{
-                padding: isActive ? '10px 15px 10px 20px' : '8px 8px 8px 10px',
-                textAlign: 'left',
-                width: '100%',
-                maxWidth: '100%',
-                wordBreak: 'break-word',
-                whiteSpace: 'normal',
-                overflow: 'hidden',
-                boxSizing: 'border-box',
-                backgroundColor: 'transparent',
-                borderLeft: isActive ? '3px solid #dc3545' : 'none',
-                transition: 'none',
-                fontWeight: isActive ? '600' : 'normal',
-                fontSize: isActive ? '1.15rem' : '1rem',
-                color: isActive ? '#222222' : '#999999',
-                borderRadius: 0,
-                boxShadow: 'none',
-                marginBottom: '5px',
-                position: 'relative',
-                left: isActive ? '10px' : '0'
-              }}
-            >
-              <div style={{ 
-                width: '100%', 
-                maxWidth: '100%', 
-                wordBreak: 'break-word',
-                letterSpacing: isActive ? '0.01em' : 'normal'
-              }}>
-                {line.text}
-              </div>
-              {line.translatedText && (
-                <div style={{ 
-                  width: '100%', 
-                  maxWidth: '100%', 
-                  wordBreak: 'break-word', 
-                  paddingLeft: 0,
-                  color: isActive ? '#555' : '#888',
-                  fontSize: isActive ? '0.95rem' : '0.9rem',
-                  fontWeight: isActive ? '500' : 'normal'
-                }} className="translated-lyric">
-                  {line.translatedText}
-                </div>
-              )}
-            </div>
-          );
-        })}
-        
-        {bottomPlaceholderHeight > 0 && (
-          <div style={{ height: `${bottomPlaceholderHeight}px` }}></div>
-        )}
-      </div>
+      <VirtualizedLyrics
+        processedLyrics={processedLyrics}
+        visibleRange={visibleRange}
+        lyricLineHeight={lyricLineHeight}
+        currentLyricIndex={currentLyricIndex}
+      />
     );
   };
   
@@ -341,46 +492,22 @@ const AudioPlayer = () => {
       
       {/* 播放器主体 */}
       <div className={playerClassName}>
-        <div className="player-inner">
+        <div 
+          className="player-inner" 
+          onClick={(e) => {
+            // 不再允许点击空白处展开
+            // 移动端和桌面端逻辑保持一致
+          }} 
+          style={{ cursor: 'default' }}
+        >
           <div className="player-content">
             {/* 基础播放控制区域 - 在收起和展开状态都显示 */}
             <Row className="align-items-center player-info-controls">
               {/* 左侧：歌曲信息 */}
-              <Col xs={5} md={3} className="d-flex align-items-center mb-2 mb-md-0">
+              <Col xs={5} md={3} className="d-flex align-items-center mb-2 mb-md-0" onClick={(e) => e.stopPropagation()}>
                 <div className="d-flex align-items-center">
                   <div className="position-relative">
-                    <img 
-                      src={coverCache[`${currentTrack.source}-${currentTrack.pic_id}-300`] || '/default_cover.png'}
-                      alt="当前播放"
-                      className="me-2 rounded player-thumbnail"
-                      onClick={handleLyricToggle}
-                      style={{ cursor: 'pointer' }}
-                    />
-                    {deviceInfo.isMobile && !lyricExpanded && (
-                      <div 
-                        className="d-md-none position-absolute" 
-                        style={{
-                          bottom: '2px',
-                          right: '2px',
-                          backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                          borderRadius: '50%',
-                          width: '18px',
-                          height: '18px',
-                          display: 'flex',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          fontSize: '10px',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                        }}
-                      >
-                        <img 
-                          src="/lyric.svg" 
-                          alt="查看歌词" 
-                          width="12" 
-                          height="12"
-                        />
-                      </div>
-                    )}
+                    <AlbumCover track={currentTrack} coverCache={coverCache} size="small" onClick={handleLyricToggle} />
                   </div>
                   <div className="track-info-container">
                     <h6 className="mb-0 text-truncate track-name">{currentTrack.name}</h6>
@@ -395,7 +522,7 @@ const AudioPlayer = () => {
               </Col>
               
               {/* 移动端进度条区域 - 与专辑封面同行 */}
-              <Col xs={7} className="d-md-none">
+              <Col xs={7} className="d-md-none" onClick={(e) => e.stopPropagation()}>
                 <div className="mobile-progress-container">
                   <div className="progress-bar-container" style={{ position: 'relative', zIndex: 5 }}>
                     <ProgressBar />
@@ -404,23 +531,9 @@ const AudioPlayer = () => {
               </Col>
               
               {/* 右侧：播放控制 */}
-              <Col xs={12} md={3} className="d-flex justify-content-center justify-content-md-end mt-2 mt-md-0 control-buttons-container">
+              <Col xs={12} md={3} className="d-flex justify-content-center justify-content-md-end mt-2 mt-md-0 control-buttons-container" onClick={(e) => e.stopPropagation()}>
                 {/* 歌词切换按钮 */}
-                <Button
-                  variant="link"
-                  onClick={handleLyricToggle}
-                  className="p-2 control-button text-danger control-icon-btn"
-                  aria-label={lyricExpanded ? "收起歌词" : "展开歌词"}
-                  title={lyricExpanded ? "收起歌词" : "展开歌词"}
-                >
-                  <img 
-                    src="/lyric.svg" 
-                    alt="歌词" 
-                    width="20" 
-                    height="20" 
-                    className="lyric-icon"
-                  />
-                </Button>
+                <LyricToggleButton expanded={lyricExpanded} onToggle={handleLyricToggle} className="p-2 control-button text-danger control-icon-btn" />
                 
                 {currentTrack && (
                   <HeartButton 
@@ -431,22 +544,20 @@ const AudioPlayer = () => {
                   />
                 )}
                 
-                <Button 
-                  variant="link" 
+                <PlayerControlButton 
                   onClick={handlePrevious}
                   disabled={!currentTrack || currentPlaylist.length <= 1}
-                  className="mx-1 p-2 control-button text-secondary control-icon-btn" 
-                  aria-label="上一首"
+                  className="mx-1 p-2 text-secondary" 
+                  ariaLabel="上一首"
                 >
                   <FaStepBackward size={20} />
-                </Button>
+                </PlayerControlButton>
                 
-                <Button
-                  variant="link"
+                <PlayerControlButton
                   onClick={handlePlayPauseToggle}
                   disabled={!currentTrack || !playerUrl}
-                  className="mx-1 p-1 control-button control-icon-btn" 
-                  aria-label={isPlaying ? "暂停" : "播放"}
+                  className="mx-1 p-1" 
+                  ariaLabel={isPlaying ? "暂停" : "播放"}
                 >
                   {!currentTrack ? 
                     <FaMusic size={24} className="text-muted" /> 
@@ -455,34 +566,31 @@ const AudioPlayer = () => {
                    : 
                     <FaPlay size={24} className="text-primary" />
                   }
-                </Button>
+                </PlayerControlButton>
                 
-                <Button 
-                  variant="link" 
+                <PlayerControlButton 
                   onClick={handleNext}
                   disabled={!currentTrack || currentPlaylist.length <= 1}
-                  className="mx-1 p-2 control-button text-secondary control-icon-btn" 
-                  aria-label="下一首"
+                  className="mx-1 p-2 text-secondary" 
+                  ariaLabel="下一首"
                 >
                   <FaStepForward size={20} />
-                </Button>
+                </PlayerControlButton>
                 
-                <Button
-                  variant="link"
+                <PlayerControlButton
                   onClick={handleTogglePlayMode}
-                  className="mx-1 p-2 text-secondary control-button control-icon-btn" 
-                  aria-label="播放模式"
+                  className="mx-1 p-2 text-secondary" 
+                  ariaLabel="播放模式"
                 >
                   {getPlayModeIcon()}
-                </Button>
+                </PlayerControlButton>
                 
                 {/* 添加下载按钮 */}
                 {currentTrack && (
-                  <Button
-                    variant="link"
+                  <PlayerControlButton
                     onClick={handleDownloadCurrent}
-                    className="mx-1 p-2 text-success control-button control-icon-btn" 
-                    aria-label="下载"
+                    className="mx-1 p-2 text-success" 
+                    ariaLabel="下载"
                     title="下载歌曲"
                     disabled={downloading && currentDownloadingTrack?.id === currentTrack.id}
                   >
@@ -490,18 +598,16 @@ const AudioPlayer = () => {
                       <Spinner animation="border" size="sm" /> : 
                       <FaDownload size={20} />
                     }
-                  </Button>
+                  </PlayerControlButton>
                 )}
               </Col>
             </Row>
             
-            {/* 移动端：收起状态下不显示歌词，保持界面简洁 */}
-            
             {/* 桌面端：进度条和时间 - 在所有模式下都显示 */}
-            <div className="d-none d-md-block progress-control-container">
-              {/* 收起状态下的单行歌词显示 */}
-              {!lyricExpanded && currentTrack && currentLyricIndex >= 0 && processedLyrics.length > 0 && (
-                <div className="current-lyric-line">
+            <div className="d-none d-md-block progress-control-container" onClick={(e) => e.stopPropagation()}>
+              {/* 收起状态下的单行歌词显示 - 仅桌面端显示 */}
+              {!lyricExpanded && currentTrack && currentLyricIndex >= 0 && processedLyrics.length > 0 && deviceInfo.isDesktop && (
+                <div className="current-lyric-line" onClick={handleLyricToggle}>
                   {processedLyrics[currentLyricIndex]?.text || "暂无歌词"}
                 </div>
               )}
@@ -523,7 +629,12 @@ const AudioPlayer = () => {
                 setTotalSeconds(duration);
               }}
               onError={(e) => {
-                console.error('播放错误:', e);
+                handleError(
+                  e,
+                  ErrorTypes.PLAYBACK,
+                  ErrorSeverity.ERROR,
+                  '音频播放失败，该音源可能不可用'
+                );
                 setIsPlaying(false);
               }}
               onEnded={handleEnded}
@@ -537,7 +648,8 @@ const AudioPlayer = () => {
                 } 
               }}
               height={0}
-              style={{ display: playerUrl ? 'block' : 'none' }} 
+              width={0}
+              style={{ display: 'none' }} 
             />
           </div>
         </div>
@@ -546,26 +658,16 @@ const AudioPlayer = () => {
       {/* 歌词展开视图 - 作为独立组件 */}
       <div className="player-expanded-view" style={{ overflow: 'hidden', maxWidth: '100vw', display: lyricExpanded ? 'flex' : 'none' }}>
         {/* 关闭按钮 */}
-        <Button
-          variant="link"
-          onClick={handleLyricToggle}
+        <LyricToggleButton 
+          expanded={true} 
+          onToggle={handleLyricToggle} 
           className="close-lyrics-btn"
-          aria-label="关闭歌词"
-        >
-          <FaTimes />
-        </Button>
+          customIcon={<FaTimes />} 
+        />
         
         {/* 左侧：大封面 */}
         <div className="album-cover-container">
-          <img 
-            src={coverCache[`${currentTrack.source}-${currentTrack.pic_id}-300`] || '/default_cover.png'}
-            alt="专辑封面"
-            className="album-cover-large"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = '/default_cover.png';
-            }}
-          />
+          <AlbumCover track={currentTrack} coverCache={coverCache} size="large" onClick={handleLyricToggle} />
         </div>
         
         {/* 右侧：详细信息和歌词 */}

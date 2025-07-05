@@ -3,6 +3,12 @@
  * 提供精确的设备类型检测，包括移动设备、平板和桌面设备
  */
 
+// 缓存检测结果
+let deviceInfoCache = null;
+let lastDetectionTime = 0;
+// 缓存有效期（毫秒）
+const CACHE_TTL = 1000;
+
 /**
  * 检测设备类型
  * @returns {Object} 包含设备类型信息的对象
@@ -13,6 +19,13 @@
  * - deviceType: 设备类型 ('mobile', 'tablet', 或 'desktop')
  */
 export const detectDevice = () => {
+  const now = Date.now();
+  
+  // 如果有缓存且未过期，直接返回缓存结果
+  if (deviceInfoCache && (now - lastDetectionTime < CACHE_TTL)) {
+    return deviceInfoCache;
+  }
+  
   // 获取用户代理字符串
   const userAgent = navigator.userAgent || navigator.vendor || window.opera;
   
@@ -86,8 +99,8 @@ export const detectDevice = () => {
   // 判断设备方向
   const orientation = viewportWidth > viewportHeight ? 'landscape' : 'portrait';
   
-  // 返回完整的设备信息
-  return {
+  // 构造设备信息对象
+  const deviceInfo = {
     isMobile: isMobileDevice,
     isTablet: isTabletDevice,
     isDesktop: isDesktopDevice,
@@ -106,6 +119,13 @@ export const detectDevice = () => {
     },
     hasTouchScreen
   };
+  
+  // 更新缓存
+  deviceInfoCache = deviceInfo;
+  lastDetectionTime = now;
+  
+  // 返回设备信息
+  return deviceInfo;
 };
 
 /**
@@ -154,6 +174,15 @@ export const getOrientation = () => {
 };
 
 /**
+ * 强制刷新设备缓存
+ * 当明确知道设备信息可能发生变化时调用
+ */
+export const refreshDeviceInfo = () => {
+  deviceInfoCache = null;
+  return detectDevice();
+};
+
+/**
  * 添加设备类型变化监听器
  * @param {Function} callback 当设备类型变化时调用的回调函数
  * @returns {Function} 移除监听器的函数
@@ -162,7 +191,8 @@ export const addDeviceChangeListener = (callback) => {
   let currentDevice = detectDevice();
   
   const handleResize = () => {
-    const newDevice = detectDevice();
+    // 强制刷新设备信息
+    const newDevice = refreshDeviceInfo();
     
     // 检查设备类型或方向是否发生变化
     if (
@@ -190,6 +220,7 @@ const deviceDetector = {
   isTablet,
   isDesktop,
   getOrientation,
+  refreshDeviceInfo,
   addDeviceChangeListener
 };
 

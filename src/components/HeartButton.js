@@ -7,7 +7,7 @@ import { useFavorites } from '../contexts/FavoritesContext';
 const HeartButton = ({ track, className = '', size = 'sm', onToggle, variant = 'outline-danger' }) => {
   const [isToggling, setIsToggling] = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites();
-  
+
   // 判断当前歌曲是否已收藏
   const isFav = track && track.id ? isFavorite(track.id) : false;
 

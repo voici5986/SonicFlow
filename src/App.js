@@ -466,7 +466,7 @@ const App = () => {
       <SyncProvider>
       <PlayerProvider>
         <FavoritesProvider>
-          <AppContent />
+        <AppContent />
         </FavoritesProvider>
       </PlayerProvider>
       </SyncProvider>
