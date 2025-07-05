@@ -66,7 +66,6 @@ const LyricToggleButton = ({ expanded, onToggle, className = '', variant = 'link
  * 单行歌词显示组件
  * 封装收起状态下的单行歌词显示逻辑
  */
-// eslint-disable-next-line no-unused-vars
 const SingleLineLyric = ({ currentLyricText, onToggle }) => {
   return (
     <div 
@@ -223,7 +222,6 @@ const PlayerControlButton = ({
  * 响应式进度条组件
  * 封装进度条的通用逻辑，适应不同设备类型
  */
-// eslint-disable-next-line no-unused-vars
 const ResponsiveProgressBar = ({ isMobile = false }) => {
   return (
     <div className={isMobile ? "mobile-progress-container" : "progress-control-container"} style={isMobile ? {} : { bottom: '0', marginBottom: '8px' }}>
@@ -304,15 +302,25 @@ const AudioPlayer = () => {
         ]
       });
 
-      // 设置媒体控制处理程序 - 只修改状态，让Context控制实际的播放逻辑
+      // 设置媒体控制处理程序 - 直接操作ReactPlayer实例，避免状态不同步
       navigator.mediaSession.setActionHandler('play', () => {
-        // 只修改状态，不直接操作播放器实例
-        setIsPlaying(true);
+        if (playerRef.current) {
+          // 修复：直接修改状态而不是调用方法，防止触发多个播放实例
+          if (!isPlaying) {
+            console.log("MediaSession: play直接设置状态");
+            setIsPlaying(true);
+          }
+        }
       });
 
       navigator.mediaSession.setActionHandler('pause', () => {
-        // 只修改状态，不直接操作播放器实例
-        setIsPlaying(false);
+        if (playerRef.current) {
+          // 修复：直接修改状态而不是调用方法，防止触发多个播放实例
+          if (isPlaying) {
+            console.log("MediaSession: pause直接设置状态");
+            setIsPlaying(false);
+          }
+        }
       });
 
       // 如果播放列表中有多首歌曲，添加上一首/下一首控制
@@ -331,7 +339,19 @@ const AudioPlayer = () => {
         }
       });
     }
-  }, [currentTrack, playerUrl, coverCache, currentPlaylist, setIsPlaying, handlePrevious, handleNext, playerRef]);
+    
+    // 清理函数
+    return () => {
+      if ('mediaSession' in navigator) {
+        // 清除所有处理程序
+        navigator.mediaSession.setActionHandler('play', null);
+        navigator.mediaSession.setActionHandler('pause', null);
+        navigator.mediaSession.setActionHandler('previoustrack', null);
+        navigator.mediaSession.setActionHandler('nexttrack', null);
+        navigator.mediaSession.setActionHandler('seekto', null);
+      }
+    };
+  }, [currentTrack, playerUrl, coverCache, currentPlaylist, setIsPlaying, handlePrevious, handleNext, playerRef, isPlaying]);
 
   // 更新媒体会话播放状态
   useEffect(() => {
@@ -448,9 +468,8 @@ const AudioPlayer = () => {
   
   // 处理播放/暂停切换
   const handlePlayPauseToggle = useCallback(() => {
-    if (!currentTrack || !playerUrl) return;
     togglePlay();
-  }, [togglePlay, currentTrack, playerUrl]);
+  }, [togglePlay]);
   
   // 处理歌词展开/收起
   const handleLyricToggle = useCallback(() => {
@@ -648,8 +667,7 @@ const AudioPlayer = () => {
                 } 
               }}
               height={0}
-              width={0}
-              style={{ display: 'none' }} 
+              style={{ display: playerUrl ? 'block' : 'none' }} 
             />
           </div>
         </div>

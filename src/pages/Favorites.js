@@ -10,7 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 const Favorites = () => {
   // 从PlayerContext获取状态和方法
-  const { handlePlay, currentTrack, isPlaying, fetchCover, coverCache } = usePlayer();
+  const { handlePlay, currentTrack, isPlaying, fetchCover, coverCache, togglePlay } = usePlayer();
   
   // 从AuthContext获取用户状态
   const { currentUser } = useAuth();
@@ -971,7 +971,16 @@ const Favorites = () => {
                       variant="outline-primary" 
                       size="sm"
                       className="me-1"
-                      onClick={() => handlePlay(track)}
+                      onClick={() => {
+                        console.log("从Favorites播放歌曲:", track.name);
+                        // 如果当前曲目正在播放，则切换播放/暂停
+                        if (currentTrack?.id === track.id) {
+                          togglePlay();
+                        } else {
+                          // 否则播放新曲目
+                          handlePlay(track);
+                        }
+                      }}
                       disabled={currentTrack?.id === track.id && !currentTrack?.url}
                     >
                       {currentTrack?.id === track.id && isPlaying ? <FaPause /> : <FaPlay />}

@@ -21,7 +21,7 @@ const History = () => {
   const [currentDownloadingTrack, setCurrentDownloadingTrack] = useState(null);
   
   // 从PlayerContext获取状态和方法
-  const { handlePlay, currentTrack, isPlaying, fetchCover, coverCache } = usePlayer();
+  const { handlePlay, currentTrack, isPlaying, fetchCover, coverCache, togglePlay } = usePlayer();
   
   // 从AuthContext获取用户状态
   const { currentUser } = useAuth();
@@ -205,7 +205,16 @@ const History = () => {
                         variant="outline-primary" 
                         size="sm"
                         className="me-1"
-                        onClick={() => handlePlay(item.song)}
+                        onClick={() => {
+                          console.log("从History播放歌曲:", item.song.name);
+                          // 如果当前曲目正在播放，则切换播放/暂停
+                          if (currentTrack?.id === item.song.id) {
+                            togglePlay();
+                          } else {
+                            // 否则播放新曲目
+                            handlePlay(item.song);
+                          }
+                        }}
                         disabled={currentTrack?.id === item.song.id && !currentTrack?.url}
                       >
                         {currentTrack?.id === item.song.id && isPlaying ? <FaPause /> : <FaPlay />}
