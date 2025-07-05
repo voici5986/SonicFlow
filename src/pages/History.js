@@ -21,10 +21,19 @@ const History = () => {
   const [currentDownloadingTrack, setCurrentDownloadingTrack] = useState(null);
   
   // 从PlayerContext获取状态和方法
-  const { handlePlay, currentTrack, isPlaying, fetchCover, coverCache, togglePlay } = usePlayer();
+  const { handlePlay, currentTrack, isPlaying, fetchCover, coverCache } = usePlayer();
   
   // 从AuthContext获取用户状态
   const { currentUser } = useAuth();
+
+  // 添加单独的播放处理函数
+  const handleTrackPlay = (track) => {
+    console.log('从历史记录播放曲目:', track.id, track.name);
+    // 创建纯歌曲列表作为播放列表
+    const songsList = history.map(item => item.song);
+    const trackIndex = songsList.findIndex(item => item.id === track.id);
+    handlePlay(track, trackIndex >= 0 ? trackIndex : -1, songsList);
+  };
 
   // 定义loadHistory函数在useEffect之前
   const loadHistory = async () => {
@@ -205,16 +214,7 @@ const History = () => {
                         variant="outline-primary" 
                         size="sm"
                         className="me-1"
-                        onClick={() => {
-                          console.log("从History播放歌曲:", item.song.name);
-                          // 如果当前曲目正在播放，则切换播放/暂停
-                          if (currentTrack?.id === item.song.id) {
-                            togglePlay();
-                          } else {
-                            // 否则播放新曲目
-                            handlePlay(item.song);
-                          }
-                        }}
+                        onClick={() => handleTrackPlay(item.song)}
                         disabled={currentTrack?.id === item.song.id && !currentTrack?.url}
                       >
                         {currentTrack?.id === item.song.id && isPlaying ? <FaPause /> : <FaPlay />}

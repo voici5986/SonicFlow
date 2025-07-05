@@ -28,10 +28,10 @@ import {
 } from './utils/errorHandler';
 import { adjustCacheForOffline } from './services/cacheService';
 import SyncProvider from './contexts/SyncContext';
+import FavoritesProvider from './contexts/FavoritesContext';
 // 导入样式文件
 import './styles/NavigationFix.css';
-// 样式已在index.js中导入，这里不再重复导入
-// import './styles/AudioPlayer.css';
+import './styles/AudioPlayer.css';
 import './styles/Orientation.css';
 
 // 懒加载页面组件
@@ -61,9 +61,17 @@ const DownloadContext = React.createContext();
 const useDownloadContext = () => React.useContext(DownloadContext);
 
 // 搜索结果项组件
-const SearchResultItem = ({ track }) => {
-  const { handlePlay, currentTrack, isPlaying, togglePlay, playerUrl } = usePlayer();
+const SearchResultItem = ({ track, searchResults }) => {
+  const { handlePlay, currentTrack, isPlaying } = usePlayer();
   const { downloading, handleDownload } = useDownloadContext();
+  
+  // 添加单独的播放处理函数
+  const handleTrackPlay = (track) => {
+    console.log('从搜索结果播放曲目:', track.id, track.name);
+    // 使用当前搜索结果作为播放列表
+    const trackIndex = searchResults.findIndex(item => item.id === track.id);
+    handlePlay(track, trackIndex >= 0 ? trackIndex : -1, searchResults);
+  };
   
   return (
     <Card className="h-100">
@@ -95,17 +103,7 @@ const SearchResultItem = ({ track }) => {
             variant="outline-primary" 
             size="sm"
             className="me-1"
-            onClick={() => {
-              console.log("从搜索结果播放歌曲:", track.name);
-              // 如果当前曲目正在播放，则切换播放/暂停
-              if (currentTrack?.id === track.id) {
-                togglePlay();
-              } else {
-                // 否则播放新曲目
-                handlePlay(track);
-              }
-            }}
-            disabled={currentTrack?.id === track.id && !playerUrl}
+            onClick={() => handleTrackPlay(track)}
           >
             {currentTrack?.id === track.id && isPlaying ? <FaPause /> : <FaPlay />}
           </Button>
@@ -355,7 +353,7 @@ const AppContent = () => {
           <Row className="g-4">
             {results.map((track) => (
               <Col key={track.id} xs={12} sm={6} md={4} lg={3}>
-                <SearchResultItem track={track} />
+                <SearchResultItem track={track} searchResults={results} />
               </Col>
             ))}
           </Row>
@@ -475,13 +473,9 @@ const App = () => {
     <RegionProvider>
       <SyncProvider>
       <PlayerProvider>
-<<<<<<< HEAD
         <FavoritesProvider>
         <AppContent />
         </FavoritesProvider>
-=======
-        <AppContent />
->>>>>>> parent of 81ccd00 (bug修复)
       </PlayerProvider>
       </SyncProvider>
     </RegionProvider>

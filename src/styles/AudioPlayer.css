@@ -257,6 +257,11 @@
   width: 50px;
   height: 50px;
   object-fit: cover;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.player-thumbnail:active {
+  transform: scale(0.95);
 }
 
 /* 歌曲信息容器 */
@@ -290,7 +295,6 @@
   .track-artist {
     max-width: calc(22vw - 10px);
   }
-<<<<<<< HEAD
   
   .player-thumbnail {
     cursor: pointer;
@@ -325,8 +329,6 @@
     50% { opacity: 1; }
     100% { opacity: 0; }
   }
-=======
->>>>>>> parent of 81ccd00 (bug修复)
 }
 
 /* 歌词图标 */

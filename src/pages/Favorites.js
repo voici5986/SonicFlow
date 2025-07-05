@@ -10,7 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 const Favorites = () => {
   // 从PlayerContext获取状态和方法
-  const { handlePlay, currentTrack, isPlaying, fetchCover, coverCache, togglePlay } = usePlayer();
+  const { handlePlay, currentTrack, isPlaying, fetchCover, coverCache } = usePlayer();
   
   // 从AuthContext获取用户状态
   const { currentUser } = useAuth();
@@ -809,6 +809,14 @@ const Favorites = () => {
     return null;
   };
 
+  // 添加单独的播放处理函数
+  const handleTrackPlay = (track) => {
+    console.log('从收藏播放曲目:', track.id, track.name);
+    // 使用当前收藏列表作为播放列表，并找到当前曲目的索引
+    const trackIndex = favorites.findIndex(item => item.id === track.id);
+    handlePlay(track, trackIndex >= 0 ? trackIndex : -1, favorites);
+  };
+
   return (
     <Container className="my-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -971,16 +979,7 @@ const Favorites = () => {
                       variant="outline-primary" 
                       size="sm"
                       className="me-1"
-                      onClick={() => {
-                        console.log("从Favorites播放歌曲:", track.name);
-                        // 如果当前曲目正在播放，则切换播放/暂停
-                        if (currentTrack?.id === track.id) {
-                          togglePlay();
-                        } else {
-                          // 否则播放新曲目
-                          handlePlay(track);
-                        }
-                      }}
+                      onClick={() => handleTrackPlay(track)}
                       disabled={currentTrack?.id === track.id && !currentTrack?.url}
                     >
                       {currentTrack?.id === track.id && isPlaying ? <FaPause /> : <FaPlay />}
@@ -1091,25 +1090,17 @@ const Favorites = () => {
                 label={`${downloadProgress}%`} 
                 className="mb-3" 
               />
-              
-              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-            {downloadStatus.map((status, index) => (
-                  <div key={index} className={`mb-1 ${status.success ? 'text-success' : 'text-danger'}`}>
-                    {status.success ? '✓' : '✗'} {status.name} - {status.artist} ({status.message})
-              </div>
-            ))}
-          </div>
             </>
           )}
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={handleCloseDownload} disabled={isDownloading}>
-            关闭
+            取消
           </Button>
           <Button 
             variant="primary" 
             onClick={startBulkDownload}
-            disabled={isDownloading}
+            disabled={isDownloading || favorites.length === 0}
           >
             {isDownloading ? (
               <>
@@ -1120,21 +1111,8 @@ const Favorites = () => {
           </Button>
         </Modal.Footer>
       </Modal>
-      
-      {/* GitHub链接 */}
-      <div className="text-center mt-5">
-        <a 
-          href="https://github.com/voici5986/SonicFlow" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="text-muted text-decoration-none"
-        >
-          <FaGithub size={20} className="me-1" />
-          <small>GitHub</small>
-        </a>
-      </div>
     </Container>
   );
 };
 
-export default Favorites; 
+export default Favorites;

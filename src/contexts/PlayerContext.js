@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
-import { toast } from 'react-toastify';
 import { playMusic, getCoverImage } from '../services/musicApiService';
 import { addToHistory } from '../services/storage';
 import { handleError, ErrorTypes, ErrorSeverity } from '../utils/errorHandler';
@@ -26,11 +25,6 @@ export const PlayerProvider = ({ children }) => {
   const [currentTrack, setCurrentTrack] = useState(null);
   const [playerUrl, setPlayerUrl] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
-  
-  // 添加调试日志，监控isPlaying状态变化
-  useEffect(() => {
-    console.log('播放状态变化:', isPlaying ? '播放中' : '已暂停', currentTrack?.name || '无曲目');
-  }, [isPlaying, currentTrack]);
   
   // 播放进度相关
   const [playProgress, setPlayProgress] = useState(0);
@@ -197,8 +191,11 @@ export const PlayerProvider = ({ children }) => {
   
   // 播放/暂停切换
   const togglePlay = useCallback(() => {
+    // 只在有当前曲目时才切换状态
+    if (currentTrack && playerUrl) {
     setIsPlaying(prev => !prev);
-  }, []);
+    }
+  }, [currentTrack, playerUrl]);
   
   // 添加键盘事件监听
   useEffect(() => {
@@ -240,30 +237,23 @@ export const PlayerProvider = ({ children }) => {
         return;
       }
       
-<<<<<<< HEAD
-      console.log("开始播放新音频:", track.name);
-      
-      // 先暂停当前播放，避免多个音频同时播放
-      setIsPlaying(false);
-      
-      // 确保完全停止当前音频后再继续
+      // 强制停止当前正在播放的音频，避免多个音频同时播放
       if (playerRef.current) {
-        try {
-          console.log("停止当前音频播放");
-          playerRef.current.getInternalPlayer()?.pause();
-        } catch (e) {
-          console.error("停止当前音频时出错:", e);
+        // 先暂停当前播放器
+        setIsPlaying(false);
+        
+        // 如果是不同的曲目，清空URL强制停止之前的音频
+        if (currentTrack && currentTrack.id !== track.id) {
+          setPlayerUrl('');
+          
+          // 短暂延迟确保之前的播放器已经停止
+          await new Promise(resolve => setTimeout(resolve, 50));
         }
+      } else {
+        // 如果还没有播放器实例，也先确保播放状态为false
+        setIsPlaying(false);
       }
       
-      // 短暂延迟以确保之前的音频完全停止
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
-      // 重置playerUrl，确保ReactPlayer实例重新创建
-      setPlayerUrl('');
-      
-=======
->>>>>>> parent of 81ccd00 (bug修复)
       // 设置当前播放歌曲
       setCurrentTrack(track);
       
@@ -321,13 +311,6 @@ export const PlayerProvider = ({ children }) => {
       // 获取播放URL和歌词
       const { url, lyrics } = await playMusic(track, 999); // 默认使用最高音质
       
-      // 设置URL前记录状态
-      console.log('设置URL前状态:', { 
-        isPlaying: isPlaying, 
-        currentTrack: currentTrack?.name, 
-        playerUrl: playerUrl?.substring(0, 50) + '...'
-      });
-      
       // 设置URL
       setPlayerUrl(url);
       
@@ -341,12 +324,6 @@ export const PlayerProvider = ({ children }) => {
           parsedLyric
         });
       }
-      
-      // 开始播放前记录状态
-      console.log('开始播放前状态:', { 
-        track: track.name, 
-        url: url?.substring(0, 50) + '...'
-      });
       
       // 开始播放
       setIsPlaying(true);
@@ -535,6 +512,7 @@ export const PlayerProvider = ({ children }) => {
     
     // 方法
     setIsPlaying,
+    setTotalSeconds,
     togglePlay,
     setLyricExpanded,
     toggleLyric,
