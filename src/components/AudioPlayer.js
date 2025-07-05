@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, memo, useMemo, useState } from 'react';
+import React, { useEffect, useCallback, memo, useMemo, useState, useRef } from 'react';
 import { Row, Col, Button, Spinner } from 'react-bootstrap';
 import ReactPlayer from 'react-player';
 import { FaPlay, FaPause, FaDownload, FaMusic, 
@@ -7,6 +7,7 @@ import HeartButton from './HeartButton';
 import ProgressBar from './ProgressBar';
 import '../styles/AudioPlayer.css';
 import { usePlayer } from '../contexts/PlayerContext';
+<<<<<<< HEAD
 import { useDevice } from '../contexts/DeviceContext';
 import { handleError, ErrorTypes, ErrorSeverity } from '../utils/errorHandler';
 import { sendMessageToSW } from '../utils/serviceWorkerRegistration';
@@ -189,6 +190,8 @@ const PlayerControlButton = ({
     </Button>
   );
 };
+=======
+>>>>>>> parent of 81ccd00 (bug修复)
 
 /**
  * 音频播放器组件
@@ -213,8 +216,11 @@ const AudioPlayer = () => {
   
     // 方法
   setIsPlaying,
+<<<<<<< HEAD
   // eslint-disable-next-line no-unused-vars
   setTotalSeconds,
+=======
+>>>>>>> parent of 81ccd00 (bug修复)
     togglePlay,
     toggleLyric,
   handleProgress,
@@ -230,9 +236,6 @@ const AudioPlayer = () => {
   // 工具函数
   parseLyric
   } = usePlayer();
-
-  // 获取设备信息
-  const deviceInfo = useDevice();
 
   // 为虚拟滚动添加的状态
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 20 });
@@ -260,8 +263,9 @@ const AudioPlayer = () => {
         ]
       });
 
-      // 设置媒体控制处理程序 - 直接操作ReactPlayer实例，避免状态不同步
+      // 设置媒体控制处理程序
       navigator.mediaSession.setActionHandler('play', () => {
+<<<<<<< HEAD
         if (playerRef.current) {
           // 修复：直接修改状态而不是调用方法，防止触发多个播放实例
           if (!isPlaying) {
@@ -279,6 +283,13 @@ const AudioPlayer = () => {
             setIsPlaying(false);
           }
         }
+=======
+        setIsPlaying(true);
+      });
+
+      navigator.mediaSession.setActionHandler('pause', () => {
+        setIsPlaying(false);
+>>>>>>> parent of 81ccd00 (bug修复)
       });
 
       // 如果播放列表中有多首歌曲，添加上一首/下一首控制
@@ -351,7 +362,7 @@ const AudioPlayer = () => {
         }
       }, 300);
     }
-  }, [lyricExpanded, processedLyrics.length, lyricsContainerRef]);
+  }, [lyricExpanded, processedLyrics.length]);
   
   // 计算可见歌词范围
   useEffect(() => {
@@ -378,7 +389,7 @@ const AudioPlayer = () => {
       }
       }, 50);
     }
-  }, [currentLyricIndex, lyricExpanded, containerHeight, lyricLineHeight, processedLyrics.length, userScrolled, lyricsContainerRef]);
+  }, [currentLyricIndex, lyricExpanded, containerHeight, lyricLineHeight, processedLyrics.length, userScrolled]);
   
   // 监听用户滚动事件
   const handleLyricScroll = useCallback((e) => {
@@ -402,7 +413,7 @@ const AudioPlayer = () => {
       
       setVisibleRange({ start, end });
     }
-  }, [containerHeight, lyricLineHeight, processedLyrics.length, lyricsContainerRef]);
+  }, [containerHeight, lyricLineHeight, processedLyrics.length]);
   
   // 在音频播放时向Service Worker发送当前播放的音频URL
   useEffect(() => {
@@ -454,11 +465,27 @@ const AudioPlayer = () => {
   // 如果没有当前音轨，不渲染任何内容
   if (!currentTrack) return null;
   
+  // 获取设备信息（从DeviceContext获取）
+  const deviceInfo = { isDesktop: window.innerWidth >= 768, deviceType: window.innerWidth >= 768 ? 'desktop' : 'mobile' };
+  
   // 增加播放器展开状态的类名
   const playerClassName = `audio-player ${lyricExpanded ? 'expanded' : 'collapsed'}`;
   
   // 渲染虚拟滚动歌词
   const renderVirtualizedLyrics = () => {
+<<<<<<< HEAD
+=======
+    // 如果没有歌词，显示提示
+    if (!processedLyrics || processedLyrics.length === 0) {
+      return <div className="text-center text-muted py-5">暂无歌词</div>;
+    }
+    
+    // 创建占位元素，确保滚动条高度正确
+    const totalHeight = processedLyrics.length * lyricLineHeight;
+    const placeholderHeight = visibleRange.start * lyricLineHeight;
+    const bottomPlaceholderHeight = Math.max(0, (processedLyrics.length - visibleRange.end) * lyricLineHeight);
+    
+>>>>>>> parent of 81ccd00 (bug修复)
     return (
       <VirtualizedLyrics
         processedLyrics={processedLyrics}
@@ -491,9 +518,17 @@ const AudioPlayer = () => {
               {/* 左侧：歌曲信息 */}
               <Col xs={5} md={3} className="d-flex align-items-center mb-2 mb-md-0" onClick={(e) => e.stopPropagation()}>
                 <div className="d-flex align-items-center">
+<<<<<<< HEAD
                   <div className="position-relative">
                     <AlbumCover track={currentTrack} coverCache={coverCache} size="small" onClick={handleLyricToggle} />
                   </div>
+=======
+                  <img 
+                    src={coverCache[`${currentTrack.source}-${currentTrack.pic_id}-300`] || '/default_cover.png'}
+                    alt="当前播放"
+                    className="me-2 rounded player-thumbnail"
+                  />
+>>>>>>> parent of 81ccd00 (bug修复)
                   <div className="track-info-container">
                     <h6 className="mb-0 text-truncate track-name">{currentTrack.name}</h6>
                     <small className="text-muted text-truncate track-artist">{currentTrack.artist}</small>
@@ -613,8 +648,15 @@ const AudioPlayer = () => {
               }}
               onDuration={(duration) => {
                 console.log('音频时长:', duration);
-                // 只更新总时长，不调用完整的handleProgress避免重复触发
-                setTotalSeconds(duration);
+                // 直接设置总时长
+                if (typeof handleProgress === 'function') {
+                  handleProgress({
+                    played: 0,
+                    playedSeconds: 0,
+                    loaded: 0,
+                    loadedSeconds: duration
+                  });
+                }
               }}
               onStart={() => {
                 console.log('音频开始播放:', currentTrack?.name);
@@ -636,15 +678,7 @@ const AudioPlayer = () => {
                 setIsPlaying(false);
               }}
               onEnded={handleEnded}
-              config={{ 
-                file: { 
-                  forceAudio: true,
-                  attributes: {
-                    // 禁用HTML5音频元素的原生控制
-                    controlsList: 'nodownload'
-                  }
-                } 
-              }}
+              config={{ file: { forceAudio: true } }}
               height={0}
               style={{ display: playerUrl ? 'block' : 'none' }} 
             />

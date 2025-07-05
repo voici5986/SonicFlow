@@ -28,7 +28,6 @@ import {
 } from './utils/errorHandler';
 import { adjustCacheForOffline } from './services/cacheService';
 import SyncProvider from './contexts/SyncContext';
-import FavoritesProvider from './contexts/FavoritesContext';
 // 导入样式文件
 import './styles/NavigationFix.css';
 // 样式已在index.js中导入，这里不再重复导入
@@ -476,9 +475,13 @@ const App = () => {
     <RegionProvider>
       <SyncProvider>
       <PlayerProvider>
+<<<<<<< HEAD
         <FavoritesProvider>
         <AppContent />
         </FavoritesProvider>
+=======
+        <AppContent />
+>>>>>>> parent of 81ccd00 (bug修复)
       </PlayerProvider>
       </SyncProvider>
     </RegionProvider>

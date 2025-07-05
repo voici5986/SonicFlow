@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
+import { toast } from 'react-toastify';
 import { playMusic, getCoverImage } from '../services/musicApiService';
 import { addToHistory } from '../services/storage';
 import { handleError, ErrorTypes, ErrorSeverity } from '../utils/errorHandler';
@@ -196,11 +197,8 @@ export const PlayerProvider = ({ children }) => {
   
   // 播放/暂停切换
   const togglePlay = useCallback(() => {
-    // 只在有当前曲目时才切换状态
-    if (currentTrack && playerUrl) {
     setIsPlaying(prev => !prev);
-    }
-  }, [currentTrack, playerUrl]);
+  }, []);
   
   // 添加键盘事件监听
   useEffect(() => {
@@ -242,6 +240,7 @@ export const PlayerProvider = ({ children }) => {
         return;
       }
       
+<<<<<<< HEAD
       console.log("开始播放新音频:", track.name);
       
       // 先暂停当前播放，避免多个音频同时播放
@@ -263,6 +262,8 @@ export const PlayerProvider = ({ children }) => {
       // 重置playerUrl，确保ReactPlayer实例重新创建
       setPlayerUrl('');
       
+=======
+>>>>>>> parent of 81ccd00 (bug修复)
       // 设置当前播放歌曲
       setCurrentTrack(track);
       
@@ -534,7 +535,6 @@ export const PlayerProvider = ({ children }) => {
     
     // 方法
     setIsPlaying,
-    setTotalSeconds,
     togglePlay,
     setLyricExpanded,
     toggleLyric,
