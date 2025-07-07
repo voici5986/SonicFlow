@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Container, Row, Col, Card, Button, Spinner, Modal, Form, Alert, ProgressBar, Dropdown, InputGroup } from 'react-bootstrap';
-import { FaPlay, FaPause, FaDownload, FaTrash, FaFileExport, FaFileImport, FaCloudDownloadAlt, FaGithub, FaExchangeAlt, FaSearch } from 'react-icons/fa';
+import { FaPlay, FaPause, FaDownload, FaTrash, FaFileExport, FaFileImport, FaCloudDownloadAlt, FaExchangeAlt, FaSearch } from 'react-icons/fa';
 import { getFavorites, toggleFavorite, saveFavorites, MAX_FAVORITES_ITEMS } from '../services/storage';
 import { toast } from 'react-toastify';
 import { downloadTrack, downloadTracks } from '../services/downloadService';
@@ -813,8 +813,8 @@ const Favorites = () => {
   const handleTrackPlay = (track) => {
     console.log('从收藏播放曲目:', track.id, track.name);
     // 使用当前收藏列表作为播放列表，并找到当前曲目的索引
-    const trackIndex = favorites.findIndex(item => item.id === track.id);
-    handlePlay(track, trackIndex >= 0 ? trackIndex : -1, favorites);
+    const trackIndex = filteredFavorites.findIndex(item => item.id === track.id);
+    handlePlay(track, trackIndex >= 0 ? trackIndex : -1, filteredFavorites);
   };
 
   return (
@@ -1115,4 +1115,4 @@ const Favorites = () => {
   );
 };
 
-export default Favorites;
+export default Favorites; 

@@ -6,6 +6,7 @@ import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { getCachedCoverImageData, cacheCoverImageData } from '../services/cacheService';
 import { useAuth } from '../contexts/AuthContext';
 import { useSync } from '../contexts/SyncContext';
+import audioStateManager, { AUDIO_STATES } from '../services/audioStateManager';
 
 // 创建Context
 const PlayerContext = createContext();
@@ -52,6 +53,41 @@ export const PlayerProvider = ({ children }) => {
   // 引用
   const playerRef = useRef(null);
   const lyricsContainerRef = useRef(null);
+  
+  // 监听音频状态管理器的状态变化
+  useEffect(() => {
+    const removeListener = audioStateManager.addListener((state) => {
+      console.log('[PlayerContext] 收到音频状态更新:', state);
+      
+      // 更新当前曲目
+      if (state.track && (!currentTrack || currentTrack.id !== state.track.id)) {
+        setCurrentTrack(state.track);
+      }
+      
+      // 更新URL
+      if (state.url !== playerUrl) {
+        setPlayerUrl(state.url || '');
+      }
+      
+      // 更新播放状态
+      const newIsPlaying = state.state === AUDIO_STATES.PLAYING;
+      if (isPlaying !== newIsPlaying) {
+        setIsPlaying(newIsPlaying);
+      }
+      
+      // 处理错误
+      if (state.error) {
+        handleError(
+          state.error,
+          ErrorTypes.PLAYBACK,
+          ErrorSeverity.ERROR,
+          '播放失败，请重试'
+        );
+      }
+    });
+    
+    return () => removeListener();
+  }, [currentTrack, playerUrl, isPlaying]);
   
   // 歌词解析函数
   const parseLyric = useCallback((text) => {
@@ -193,9 +229,15 @@ export const PlayerProvider = ({ children }) => {
   const togglePlay = useCallback(() => {
     // 只在有当前曲目时才切换状态
     if (currentTrack && playerUrl) {
-    setIsPlaying(prev => !prev);
+      if (isPlaying) {
+        // 暂停
+        audioStateManager.pause();
+      } else {
+        // 播放
+        audioStateManager.play();
+      }
     }
-  }, [currentTrack, playerUrl]);
+  }, [currentTrack, playerUrl, isPlaying]);
   
   // 添加键盘事件监听
   useEffect(() => {
@@ -226,6 +268,8 @@ export const PlayerProvider = ({ children }) => {
   // 处理播放
   const handlePlay = useCallback(async (track, index = -1, playlist = null) => {
     try {
+      console.log(`[handlePlay] 开始播放: ${track.name} (${track.id})`);
+      
       // 如果离线，显示提示
       if (!isOnline) {
         handleError(
@@ -237,25 +281,11 @@ export const PlayerProvider = ({ children }) => {
         return;
       }
       
-      // 强制停止当前正在播放的音频，避免多个音频同时播放
-      if (playerRef.current) {
-        // 先暂停当前播放器
-        setIsPlaying(false);
-        
-        // 如果是不同的曲目，清空URL强制停止之前的音频
-        if (currentTrack && currentTrack.id !== track.id) {
-          setPlayerUrl('');
-          
-          // 短暂延迟确保之前的播放器已经停止
-          await new Promise(resolve => setTimeout(resolve, 50));
-        }
-      } else {
-        // 如果还没有播放器实例，也先确保播放状态为false
-        setIsPlaying(false);
-      }
+      // 取消当前请求（如果有）
+      audioStateManager.cancelCurrentRequest();
       
-      // 设置当前播放歌曲
-      setCurrentTrack(track);
+      // 设置当前播放歌曲 - 现在由状态管理器处理
+      // 但仍然需要更新播放列表和索引
       
       // 处理播放列表和索引
       let newPlaylist = playlist || currentPlaylist;
@@ -263,27 +293,30 @@ export const PlayerProvider = ({ children }) => {
       
       // 如果提供了新的播放列表，使用它
       if (playlist) {
+        console.log(`[handlePlay] 使用新播放列表，长度: ${playlist.length}`);
         setCurrentPlaylist(playlist);
       } 
       // 如果没有播放列表但有结果，使用当前结果作为播放列表
       else if (newPlaylist.length === 0) {
-        // 这里应该从外部获取结果，但在Context中无法直接访问
-        // 所以需要调用方提供playlist参数
+        console.log('[handlePlay] 无播放列表，创建单曲播放列表');
         newPlaylist = [track];
         setCurrentPlaylist(newPlaylist);
       }
       
       // 如果提供了索引，更新当前索引
       if (index >= 0) {
+        console.log(`[handlePlay] 使用提供的索引: ${index}`);
         setCurrentIndex(index);
       } else {
         // 否则尝试在播放列表中查找
         const foundIndex = newPlaylist.findIndex(item => item.id === track.id);
         if (foundIndex >= 0) {
+          console.log(`[handlePlay] 在播放列表中找到曲目，索引: ${foundIndex}`);
           setCurrentIndex(foundIndex);
           newIndex = foundIndex;
         } else {
           // 如果在播放列表中找不到，添加到播放列表末尾
+          console.log('[handlePlay] 曲目不在播放列表中，添加到末尾');
           newPlaylist = [...newPlaylist, track];
           setCurrentPlaylist(newPlaylist);
           setCurrentIndex(newPlaylist.length - 1);
@@ -295,12 +328,13 @@ export const PlayerProvider = ({ children }) => {
       setPlayHistory(prev => [...prev, newIndex]);
       
       // 重置进度状态
+      console.log('[handlePlay] 重置进度状态');
       setPlayProgress(0);
       setPlayedSeconds(0);
       setTotalSeconds(0);
       
-      // 清空之前的URL和歌词
-      setPlayerUrl('');
+      // 清空之前的歌词
+      console.log('[handlePlay] 清空之前的歌词');
       setLyricData({
         rawLyric: '',
         tLyric: '',
@@ -308,14 +342,13 @@ export const PlayerProvider = ({ children }) => {
       });
       setCurrentLyricIndex(-1);
       
-      // 获取播放URL和歌词
-      const { url, lyrics } = await playMusic(track, 999); // 默认使用最高音质
-      
-      // 设置URL
-      setPlayerUrl(url);
+      // 使用音频状态管理器获取播放URL和歌词
+      console.log(`[handlePlay] 获取播放URL和歌词: ${track.name} (${track.id})`);
+      const { lyrics } = await playMusic(track, 999); // 默认使用最高音质
       
       // 处理歌词
       if (lyrics && lyrics.raw) {
+        console.log('[handlePlay] 处理歌词数据');
         const parsedLyric = parseLyric(lyrics.raw);
         
         setLyricData({
@@ -324,9 +357,6 @@ export const PlayerProvider = ({ children }) => {
           parsedLyric
         });
       }
-      
-      // 开始播放
-      setIsPlaying(true);
       
       // 添加到历史记录
       addToHistory(track);
@@ -360,16 +390,15 @@ export const PlayerProvider = ({ children }) => {
         }));
       }
       
+      console.log(`[handlePlay] 播放处理完成: ${track.name} (${track.id})`);
     } catch (error) {
+      console.error('[handlePlay] 播放失败:', error);
       handleError(
         error,
         ErrorTypes.PLAYBACK,
         ErrorSeverity.ERROR,
         '播放失败，请重试'
       );
-      
-      // 重置状态
-      setIsPlaying(false);
     }
   }, [isOnline, currentPlaylist, parseLyric, coverCache, fetchCover, currentUser, updatePendingChanges]);
   
@@ -479,13 +508,6 @@ export const PlayerProvider = ({ children }) => {
     // 更新播放模式
     setPlayMode(modes[nextIndex]);
     localStorage.setItem('playMode', modes[nextIndex]);
-    
-    // 提示已切换模式
-    // toast.info(`已切换为${modeNames[modes[nextIndex]]}模式`, {
-    //  autoClose: 1500,
-    //  hideProgressBar: true,
-    //  position: 'bottom-center'
-    // });
   }, [playMode]);
   
   // 提供Context值

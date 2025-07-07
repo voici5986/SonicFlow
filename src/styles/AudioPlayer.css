@@ -231,10 +231,7 @@
   box-sizing: border-box !important;
 }
 
-/* 当前歌词行样式 - 移除，使用内联样式替代 */
-.lyric-line.active {
-  /* 所有样式都在内联样式中设置 */
-}
+/* 当前歌词行样式 - 已移除，使用内联样式替代 */
 
 .lyric-line.next-active {
   color: #666666;

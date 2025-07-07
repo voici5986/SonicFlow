@@ -9,6 +9,7 @@ import '../styles/AudioPlayer.css';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useDevice } from '../contexts/DeviceContext';
 import { handleError, ErrorTypes, ErrorSeverity } from '../utils/errorHandler';
+import audioStateManager, { AUDIO_STATES } from '../services/audioStateManager';
 
 /**
  * 专辑封面组件
@@ -59,35 +60,6 @@ const LyricToggleButton = ({ expanded, onToggle, className = '', variant = 'link
         expanded ? "收起歌词" : "展开歌词"
       )}
     </Button>
-  );
-};
-
-/**
- * 单行歌词显示组件
- * 封装收起状态下的单行歌词显示逻辑
- */
-const SingleLineLyric = ({ currentLyricText, onToggle }) => {
-  return (
-    <div 
-      onClick={onToggle} 
-      style={{ 
-        cursor: 'pointer',
-        width: '100%',
-        textAlign: 'left',
-        color: '#555',
-        fontSize: '0.95rem',
-        marginBottom: '5px',
-        padding: '5px 0',
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        transition: 'color 0.3s ease',
-        position: 'relative',
-        bottom: '5px'
-      }}
-    >
-      {currentLyricText || "暂无歌词"}
-    </div>
   );
 };
 
@@ -219,20 +191,6 @@ const PlayerControlButton = ({
 };
 
 /**
- * 响应式进度条组件
- * 封装进度条的通用逻辑，适应不同设备类型
- */
-const ResponsiveProgressBar = ({ isMobile = false }) => {
-  return (
-    <div className={isMobile ? "mobile-progress-container" : "progress-control-container"} style={isMobile ? {} : { bottom: '0', marginBottom: '8px' }}>
-      <div className="progress-bar-container" style={{ position: 'relative', zIndex: 5 }}>
-        <ProgressBar />
-      </div>
-    </div>
-  );
-};
-
-/**
  * 音频播放器组件
  * 负责音乐播放、控制、歌词显示等功能
  * 使用PlayerContext获取状态和方法
@@ -255,8 +213,8 @@ const AudioPlayer = () => {
   
     // 方法
   setIsPlaying,
-  // eslint-disable-next-line no-unused-vars
-  setTotalSeconds,
+    // eslint-disable-next-line no-unused-vars
+    setTotalSeconds,
     togglePlay,
     toggleLyric,
   handleProgress,
@@ -278,29 +236,111 @@ const AudioPlayer = () => {
   
   // 组件加载时打印日志，用于诊断多个实例问题
   useEffect(() => {
-    console.log('AudioPlayer 组件已挂载');
-    
+    // 全局唯一性检测
+    if (window.__audio_player_instance__) {
+      console.error('[AudioPlayer] 检测到已有全局音频播放器实例，当前实例将不再继续播放！');
+      // 若已有实例，主动暂停当前实例
+      setIsPlaying(false);
+      audioStateManager.stop();
+    } else {
+      window.__audio_player_instance__ = true;
+      console.log('[AudioPlayer] 已设置全局唯一标记');
+    }
     // 检测页面中可能存在的其他音频元素
     const audioElements = document.querySelectorAll('audio');
     if (audioElements.length > 1) {
-      console.warn(`检测到多个音频元素: ${audioElements.length}个`);
+      console.warn(`[AudioPlayer] 检测到多个音频元素: ${audioElements.length}个`);
+      console.log('[AudioPlayer] 音频元素详情:', Array.from(audioElements).map(el => ({
+        src: el.src,
+        paused: el.paused,
+        currentTime: el.currentTime,
+        parent: el.parentElement?.tagName
+      })));
     }
+    // 保存当前playerRef的引用，避免清理函数中使用可能变化的ref
+    const currentPlayerRef = playerRef.current;
+    const currentIsPlaying = isPlaying;
+    const currentSetIsPlaying = setIsPlaying;
+    // 返回清理函数
+    return () => {
+      console.log('[AudioPlayer] 组件将卸载');
+      // 卸载时清理全局唯一标记
+      if (window.__audio_player_instance__) {
+        delete window.__audio_player_instance__;
+        console.log('[AudioPlayer] 已清理全局唯一标记');
+      }
+      // 确保卸载时停止播放
+      if (currentPlayerRef && currentIsPlaying) {
+        currentSetIsPlaying(false);
+        audioStateManager.stop();
+        console.log('[AudioPlayer] 已停止播放并清理状态');
+      }
+    };
+  }, [isPlaying, playerRef, setIsPlaying]);
+  
+  // 添加页面可见性变化监听，处理页面切换时的播放状态
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        console.log('[AudioPlayer] 页面不可见');
+      } else {
+        console.log('[AudioPlayer] 页面可见');
+        // 页面重新可见时，检查是否存在多个音频元素
+        const audioElements = document.querySelectorAll('audio');
+        if (audioElements.length > 1) {
+          console.warn(`[AudioPlayer] 页面可见性变化时检测到多个音频元素: ${audioElements.length}个`);
+          // 如果存在多个音频元素，确保只有一个在播放
+          if (isPlaying) {
+            let playingCount = 0;
+            audioElements.forEach(el => {
+              if (!el.paused) playingCount++;
+            });
+            
+            if (playingCount > 1) {
+              console.warn(`[AudioPlayer] 检测到多个音频同时播放: ${playingCount}个`);
+              // 暂停所有音频，然后只恢复当前实例
+              audioElements.forEach(el => {
+                if (!el.paused) el.pause();
+              });
+              // 确保当前实例继续播放
+              if (playerRef.current && playerRef.current.getInternalPlayer()) {
+                playerRef.current.getInternalPlayer().play();
+              }
+            }
+          }
+        }
+      }
+    };
+    
+    // 添加页面可见性变化监听
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     
     // 返回清理函数
     return () => {
-      console.log('AudioPlayer 组件将卸载');
-      // 确保卸载时停止播放
-      if (playerRef.current && isPlaying) {
-        setIsPlaying(false);
-      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [isPlaying, playerRef, setIsPlaying]);
   
   // 跟踪播放状态变化的调试日志
   useEffect(() => {
-    console.log(`播放状态变更: ${isPlaying ? '播放' : '暂停'}, URL: ${playerUrl ? '已设置' : '未设置'}`);
+    console.log(`[AudioPlayer] 播放状态变更: ${isPlaying ? '播放' : '暂停'}, URL: ${playerUrl ? '已设置' : '未设置'}`);
+    
+    // 确保音频状态管理器和播放器状态同步
+    if (isPlaying) {
+      if (audioStateManager.getState() !== AUDIO_STATES.PLAYING) {
+        console.log('[AudioPlayer] 同步状态管理器: 设置为播放状态');
+        if (audioStateManager.getState() === AUDIO_STATES.PAUSED) {
+          audioStateManager.play();
+        }
+      }
+    } else {
+      if (audioStateManager.getState() === AUDIO_STATES.PLAYING) {
+        console.log('[AudioPlayer] 同步状态管理器: 设置为暂停状态');
+        audioStateManager.pause();
+      }
+    }
   }, [isPlaying, playerUrl]);
-  
+
   // 为虚拟滚动添加的状态
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 20 });
   const [userScrolled, setUserScrolled] = useState(false);
@@ -330,15 +370,15 @@ const AudioPlayer = () => {
       // 设置媒体控制处理程序 - 直接操作ReactPlayer实例，避免状态不同步
       navigator.mediaSession.setActionHandler('play', () => {
         if (playerRef.current) {
-          // 直接设置播放状态，避免重复触发播放
-        setIsPlaying(true);
+          // 使用音频状态管理器播放
+          audioStateManager.play();
         }
       });
 
       navigator.mediaSession.setActionHandler('pause', () => {
         if (playerRef.current) {
-          // 直接设置暂停状态，避免不同步
-        setIsPlaying(false);
+          // 使用音频状态管理器暂停
+          audioStateManager.pause();
         }
       });
 
@@ -358,7 +398,7 @@ const AudioPlayer = () => {
         }
       });
     }
-  }, [currentTrack, playerUrl, coverCache, currentPlaylist, setIsPlaying, handlePrevious, handleNext, playerRef]);
+  }, [currentTrack, playerUrl, coverCache, currentPlaylist, handlePrevious, handleNext, playerRef]);
 
   // 更新媒体会话播放状态
   useEffect(() => {
@@ -644,37 +684,86 @@ const AudioPlayer = () => {
 
             {/* ReactPlayer组件 - 确保只有一个音频实例 */}
             {playerUrl && (
-              <ReactPlayer
-                ref={playerRef}
-                onProgress={handleProgress}
-                url={playerUrl}
-                playing={isPlaying}
-                onReady={() => console.log('播放器就绪')}
-                onDuration={(duration) => {
-                  console.log('音频时长:', duration);
+            <ReactPlayer
+              ref={playerRef}
+              onProgress={handleProgress}
+              url={playerUrl}
+              playing={isPlaying}
+                onReady={() => {
+                  console.log('[ReactPlayer] 播放器就绪, URL:', playerUrl);
+                  // 检测页面中可能存在的其他音频元素
+                  const audioElements = document.querySelectorAll('audio');
+                  if (audioElements.length > 1) {
+                    console.warn(`[ReactPlayer] 警告：检测到多个音频元素: ${audioElements.length}个`);
+                    console.log('[ReactPlayer] 音频元素详情:', Array.from(audioElements).map(el => ({
+                      src: el.src,
+                      paused: el.paused,
+                      currentTime: el.currentTime,
+                      parent: el.parentElement?.tagName
+                    })));
+                  }
+                }}
+              onDuration={(duration) => {
+                  console.log('[ReactPlayer] 音频时长:', duration);
                   // 只更新总时长，不调用完整的handleProgress避免重复触发
                   setTotalSeconds(duration);
                 }}
-                onError={(e) => {
+                onStart={() => {
+                  console.log('[ReactPlayer] 开始播放:', currentTrack?.name);
+                  // 确保音频状态管理器状态同步
+                  if (audioStateManager.getState() !== AUDIO_STATES.PLAYING) {
+                    audioStateManager.play();
+                  }
+                }}
+                onPlay={() => {
+                  console.log('[ReactPlayer] 播放事件触发');
+                  // 确保状态同步
+                  if (!isPlaying) {
+                    setIsPlaying(true);
+                  }
+                }}
+                onPause={() => {
+                  console.log('[ReactPlayer] 暂停事件触发');
+                  // 确保状态同步
+                  if (isPlaying) {
+                    setIsPlaying(false);
+                }
+              }}
+              onError={(e) => {
+                  console.error('[ReactPlayer] 播放错误:', e);
+                  // 通知音频状态管理器
+                  audioStateManager.setError(e);
+                  
                   handleError(
                     e,
                     ErrorTypes.PLAYBACK,
                     ErrorSeverity.ERROR,
                     '音频播放失败，该音源可能不可用'
                   );
-                  setIsPlaying(false);
+                setIsPlaying(false);
+              }}
+                onEnded={() => {
+                  console.log('[ReactPlayer] 播放结束');
+                  // 通知音频状态管理器
+                  audioStateManager.stop();
+                  
+                  handleEnded();
                 }}
-                onEnded={handleEnded}
                 config={{ 
                   file: { 
                     forceAudio: true,
                     attributes: {
                       // 禁用HTML5音频元素的原生控制
-                      controlsList: 'nodownload'
-                    }
+                      controlsList: 'nodownload',
+                      id: `audio-player-${currentTrack?.id || 'null'}`,
+                      'data-testid': 'react-player-audio'
+                    },
+                    // 强制使用HTML5音频播放器
+                    forceHLS: false,
+                    forceDASH: false
                   } 
                 }}
-                height={0}
+              height={0}
                 width={0}
                 style={{ display: 'none' }}
                 playsinline={true} 
@@ -685,7 +774,7 @@ const AudioPlayer = () => {
                 fallback={null}
                 wrapper="div"
                 key={`player-${currentTrack?.id || 'null'}`}  // 添加唯一key确保正确更新
-              />
+            />
             )}
           </div>
         </div>
@@ -736,4 +825,4 @@ const AudioPlayer = () => {
 };
 
 // 使用React.memo包装组件，避免不必要的重渲染
-export default memo(AudioPlayer); 
+export default memo(AudioPlayer);

@@ -5,9 +5,15 @@
 import axios from 'axios';
 import { getCurrentAppMode, APP_MODES } from '../services/regionDetection';
 import { getCache, setCache, CACHE_TYPES } from './cacheService';
+import audioStateManager from './audioStateManager';
 
 // API地址配置
 const API_BASE = process.env.REACT_APP_API_BASE || '/api';
+
+// 添加防重复请求映射
+const pendingPlayRequests = new Map();
+const pendingUrlRequests = new Map();
+const pendingLyricRequests = new Map();
 
 /**
  * 检查是否允许API请求
@@ -120,20 +126,37 @@ export const searchMusic = async (query, source, count = 20, page = 1) => {
  */
 export const getAudioUrl = async (track, quality = 999) => {
   try {
+    // 生成请求唯一标识符
+    const requestId = `${track.source}_${track.id}_${quality}_${Date.now()}`;
+    
+    // 检查是否有相同URL的请求正在进行中
+    const pendingKey = `${track.source}_${track.id}_${quality}`;
+    if (pendingUrlRequests.has(pendingKey)) {
+      console.log(`[getAudioUrl] 检测到重复请求: ${track.name} (${track.id}), 使用现有请求`);
+      return pendingUrlRequests.get(pendingKey);
+    }
+    
+    console.log(`[getAudioUrl] 开始请求: ${track.name} (${track.id}), 请求ID: ${requestId}`);
+    
     checkApiAccess();
     
     // 生成缓存键
     const cacheKey = `${track.source}_${track.id}_${quality}`;
     
+    // 创建一个Promise并存储到映射中
+    const urlPromise = (async () => {
+      try {
     // 检查是否应该使用缓存
     if (shouldUseCache()) {
       // 检查缓存
       const cachedData = await getCache(CACHE_TYPES.AUDIO_URLS, cacheKey);
       if (cachedData) {
-        console.log('使用缓存的音频URL');
+            console.log(`[getAudioUrl] 使用缓存的音频URL: ${requestId}`);
         return cachedData;
       }
     }
+        
+        console.log(`[getAudioUrl] 缓存未命中，调用API: ${requestId}`);
     
     const response = await axios.get(`${API_BASE}`, {
       params: {
@@ -147,9 +170,24 @@ export const getAudioUrl = async (track, quality = 999) => {
     // 无论什么模式，都缓存结果
     await setCache(CACHE_TYPES.AUDIO_URLS, cacheKey, response.data);
     
+        console.log(`[getAudioUrl] 请求完成: ${requestId}`);
     return response.data;
+      } finally {
+        // 请求完成后从映射中移除
+        setTimeout(() => {
+          pendingUrlRequests.delete(pendingKey);
+          console.log(`[getAudioUrl] 请求映射已清理: ${requestId}`);
+        }, 100);
+      }
+    })();
+    
+    // 存储Promise到映射中
+    pendingUrlRequests.set(pendingKey, urlPromise);
+    
+    // 返回Promise
+    return urlPromise;
   } catch (error) {
-    console.error('获取音频URL失败:', error);
+    console.error('[getAudioUrl] 获取音频URL失败:', error);
     throw error;
   }
 };
@@ -161,20 +199,42 @@ export const getAudioUrl = async (track, quality = 999) => {
  */
 export const getLyrics = async (track) => {
   try {
+    // 如果没有歌词ID，返回空歌词
+    if (!track.lyric_id) {
+      return { raw: '', translated: '' };
+    }
+    
+    // 生成请求唯一标识符
+    const requestId = `${track.source}_${track.lyric_id}_${Date.now()}`;
+    
+    // 检查是否有相同歌词的请求正在进行中
+    const pendingKey = `${track.source}_${track.lyric_id}`;
+    if (pendingLyricRequests.has(pendingKey)) {
+      console.log(`[getLyrics] 检测到重复请求: ${track.name} (${track.lyric_id}), 使用现有请求`);
+      return pendingLyricRequests.get(pendingKey);
+    }
+    
+    console.log(`[getLyrics] 开始请求: ${track.name} (${track.lyric_id}), 请求ID: ${requestId}`);
+    
     checkApiAccess();
     
     // 生成缓存键
     const cacheKey = `${track.source}_${track.lyric_id}`;
     
+    // 创建一个Promise并存储到映射中
+    const lyricPromise = (async () => {
+      try {
     // 检查是否应该使用缓存
     if (shouldUseCache()) {
       // 检查缓存
       const cachedLyrics = await getCache(CACHE_TYPES.LYRICS, cacheKey);
       if (cachedLyrics) {
-        console.log('使用缓存的歌词');
+            console.log(`[getLyrics] 使用缓存的歌词: ${requestId}`);
         return cachedLyrics;
       }
     }
+        
+        console.log(`[getLyrics] 缓存未命中，调用API: ${requestId}`);
     
     const response = await axios.get(`${API_BASE}`, {
       params: {
@@ -192,9 +252,24 @@ export const getLyrics = async (track) => {
     // 无论什么模式，都缓存结果
     await setCache(CACHE_TYPES.LYRICS, cacheKey, lyrics);
     
+        console.log(`[getLyrics] 请求完成: ${requestId}`);
     return lyrics;
+      } finally {
+        // 请求完成后从映射中移除
+        setTimeout(() => {
+          pendingLyricRequests.delete(pendingKey);
+          console.log(`[getLyrics] 请求映射已清理: ${requestId}`);
+        }, 100);
+      }
+    })();
+    
+    // 存储Promise到映射中
+    pendingLyricRequests.set(pendingKey, lyricPromise);
+    
+    // 返回Promise
+    return lyricPromise;
   } catch (error) {
-    console.error('获取歌词失败:', error);
+    console.error('[getLyrics] 获取歌词失败:', error);
     throw error;
   }
 };
@@ -251,26 +326,66 @@ export const getCoverImage = async (source, picId, size = 300) => {
  */
 export const playMusic = async (track, quality = 999) => {
   try {
+    // 使用音频状态管理器加载新曲目
+    const requestId = audioStateManager.loadTrack(track);
+    console.log(`[playMusic] 开始请求: ${track.name} (${track.id}), 请求ID: ${requestId}`);
+    
+    // 生成请求唯一标识符
+    const pendingKey = `${track.source}_${track.id}_${quality}`;
+    
     checkApiAccess();
     
     // 生成缓存键
     const cacheKey = `play_${track.source}_${track.id}_${quality}`;
+    
+    // 创建一个Promise并存储到映射中
+    const playPromise = (async () => {
+      try {
+        // 检查请求是否仍然有效
+        if (!audioStateManager.isValidRequest(requestId)) {
+          console.log(`[playMusic] 请求已取消: ${requestId}`);
+          throw new Error('请求已取消');
+        }
     
     // 检查是否应该使用缓存
     if (shouldUseCache()) {
       // 检查缓存
       const cachedData = await getCache(CACHE_TYPES.AUDIO_METADATA, cacheKey);
       if (cachedData) {
-        console.log('使用缓存的音乐数据');
+            console.log(`[playMusic] 使用缓存的音乐数据: ${requestId}`);
+            
+            // 再次检查请求是否仍然有效
+            if (!audioStateManager.isValidRequest(requestId)) {
+              console.log(`[playMusic] 请求已取消: ${requestId}`);
+              throw new Error('请求已取消');
+            }
+            
+            // 设置URL并播放
+            audioStateManager.setUrlAndPlay(cachedData.url, requestId);
+            
         return cachedData;
       }
     }
+        
+        console.log(`[playMusic] 缓存未命中，调用API: ${requestId}`);
+        
+        // 再次检查请求是否仍然有效
+        if (!audioStateManager.isValidRequest(requestId)) {
+          console.log(`[playMusic] 请求已取消: ${requestId}`);
+          throw new Error('请求已取消');
+        }
     
     // 并行请求URL和歌词
     const [audioData, lyrics] = await Promise.all([
       getAudioUrl(track, quality),
       getLyrics(track)
     ]);
+        
+        // 再次检查请求是否仍然有效
+        if (!audioStateManager.isValidRequest(requestId)) {
+          console.log(`[playMusic] 请求已取消: ${requestId}`);
+          throw new Error('请求已取消');
+        }
     
     // 提取和处理URL
     const url = audioData?.url?.replace(/\\/g, '');
@@ -285,9 +400,33 @@ export const playMusic = async (track, quality = 999) => {
     // 无论什么模式，都缓存结果
     await setCache(CACHE_TYPES.AUDIO_METADATA, cacheKey, musicData);
     
+        // 设置URL并播放
+        audioStateManager.setUrlAndPlay(url, requestId);
+        
+        console.log(`[playMusic] 请求完成: ${requestId}`);
     return musicData;
+      } catch (error) {
+        // 设置错误状态
+        audioStateManager.setError(error);
+        throw error;
+      } finally {
+        // 请求完成后从映射中移除
+        setTimeout(() => {
+          pendingPlayRequests.delete(pendingKey);
+          console.log(`[playMusic] 请求映射已清理: ${requestId}`);
+        }, 100);
+      }
+    })();
+    
+    // 存储Promise到映射中
+    pendingPlayRequests.set(pendingKey, playPromise);
+    
+    // 返回Promise
+    return playPromise;
   } catch (error) {
-    console.error('播放音乐失败:', error);
+    console.error('[playMusic] 播放音乐失败:', error);
+    // 设置错误状态
+    audioStateManager.setError(error);
     throw error;
   }
 }; 

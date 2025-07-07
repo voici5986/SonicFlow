@@ -9,7 +9,7 @@ const HeartButton = ({ track, className = '', size = 'sm', onToggle, variant = '
   const { isFavorite, toggleFavorite } = useFavorites();
 
   // 判断当前歌曲是否已收藏
-  const isFav = track && track.id ? isFavorite(track.id) : false;
+  const isFav = track && track.id && isFavorite ? isFavorite(track.id) : false;
 
   // 处理收藏/取消收藏
   const handleToggleFavorite = async () => {
