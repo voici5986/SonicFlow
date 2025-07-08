@@ -241,8 +241,13 @@ class AudioStateManager {
    * 播放
    */
   play() {
+    console.log(`[AudioStateManager] 尝试播放，当前状态: ${this.currentState}`);
     if (this.currentState === AUDIO_STATES.PAUSED) {
       this.transition(AUDIO_ACTIONS.PLAY);
+    } else if (this.currentState === AUDIO_STATES.PLAYING) {
+      console.log('[AudioStateManager] 已经处于播放状态，忽略重复的播放请求');
+    } else {
+      console.log(`[AudioStateManager] 无法从状态 ${this.currentState} 切换到播放状态`);
     }
   }
 
@@ -250,8 +255,13 @@ class AudioStateManager {
    * 暂停
    */
   pause() {
+    console.log(`[AudioStateManager] 尝试暂停，当前状态: ${this.currentState}`);
     if (this.currentState === AUDIO_STATES.PLAYING) {
       this.transition(AUDIO_ACTIONS.PAUSE);
+    } else if (this.currentState === AUDIO_STATES.PAUSED) {
+      console.log('[AudioStateManager] 已经处于暂停状态，忽略重复的暂停请求');
+    } else {
+      console.log(`[AudioStateManager] 无法从状态 ${this.currentState} 切换到暂停状态`);
     }
   }
 

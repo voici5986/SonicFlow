@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button, Modal } from 'react-bootstrap';
 import { FaTrash } from 'react-icons/fa';
 import { toast } from 'react-toastify';
-import { clearCache, CACHE_TYPES } from '../services/cacheService';
+import { clearMemoryCache, CACHE_TYPES } from '../services/memoryCache';
 import {
   clearHistory,
   clearSearchHistory,
@@ -60,7 +60,7 @@ const ClearDataButton = ({ onClick }) => {
       
       // 清除缓存
       if (selectedOptions.cache) {
-        operations.push(clearCache());
+        operations.push(Promise.resolve(clearMemoryCache()));
         
         // 通知Service Worker清理缓存
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {

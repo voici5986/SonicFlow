@@ -4,7 +4,7 @@
  */
 import axios from 'axios';
 import { getCurrentAppMode, APP_MODES } from '../services/regionDetection';
-import { getCache, setCache, CACHE_TYPES } from './cacheService';
+import { getMemoryCache, setMemoryCache, CACHE_TYPES } from './memoryCache';
 import audioStateManager from './audioStateManager';
 
 // API地址配置
@@ -28,16 +28,6 @@ const checkApiAccess = () => {
 };
 
 /**
- * 检查是否应该使用缓存
- * 只有中国模式和离线模式才使用缓存
- * @returns {boolean} 是否应该使用缓存
- */
-const shouldUseCache = () => {
-  const currentMode = getCurrentAppMode();
-  return currentMode === APP_MODES.CHINA || currentMode === APP_MODES.OFFLINE;
-};
-
-/**
  * 搜索音乐
  * @param {string} query - 搜索关键词
  * @param {string} source - 音乐源
@@ -52,17 +42,14 @@ export const searchMusic = async (query, source, count = 20, page = 1) => {
     // 生成缓存键
     const cacheKey = `${query}_${source}_${count}_${page}`;
     
-    // 检查是否应该使用缓存
-    if (shouldUseCache()) {
-      // 检查缓存
-      const cachedResults = await getCache(CACHE_TYPES.SEARCH_RESULTS, cacheKey);
+    // 检查内存缓存
+    const cachedResults = getMemoryCache(CACHE_TYPES.SEARCH_RESULTS, cacheKey);
       if (cachedResults) {
-        console.log('使用缓存的搜索结果');
+      console.log('[searchMusic] 使用内存缓存的搜索结果');
         return cachedResults;
-      }
     }
     
-    console.log(`开始搜索: ${query}, 源: ${source}`);
+    console.log(`[searchMusic] 开始搜索: ${query}, 源: ${source}`);
     
     // 创建可取消的请求
     const controller = new AbortController();
@@ -84,36 +71,36 @@ export const searchMusic = async (query, source, count = 20, page = 1) => {
     
     // 检查响应
     if (!response.data || response.data.length === 0) {
-      console.log('搜索结果为空');
+      console.log('[searchMusic] 搜索结果为空');
       return [];
     }
     
-    console.log(`搜索成功，找到 ${response.data.length} 条结果`);
+    console.log(`[searchMusic] 搜索成功，找到 ${response.data.length} 条结果`);
     
-    // 无论什么模式，都缓存结果（即使完整模式不使用缓存，也存储以备将来可能切换到其他模式）
-    await setCache(CACHE_TYPES.SEARCH_RESULTS, cacheKey, response.data);
+    // 缓存结果到内存
+    setMemoryCache(CACHE_TYPES.SEARCH_RESULTS, cacheKey, response.data);
     
     return response.data;
   } catch (error) {
     // 处理取消请求的情况
     if (axios.isCancel(error)) {
-      console.error('搜索请求超时或被取消');
+      console.error('[searchMusic] 搜索请求超时或被取消');
       throw new Error('搜索请求超时，请稍后重试');
     }
     
     // 处理API访问限制错误
     if (error.message.includes('中国大陆')) {
-      console.error('API访问受限:', error.message);
+      console.error('[searchMusic] API访问受限:', error.message);
       throw error;
     }
     
     // 处理网络错误
     if (error.code === 'ERR_NETWORK') {
-      console.error('网络连接错误:', error);
+      console.error('[searchMusic] 网络连接错误:', error);
       throw new Error('网络连接错误，请检查您的网络连接');
     }
     
-    console.error('搜索音乐失败:', error);
+    console.error('[searchMusic] 搜索音乐失败:', error);
     throw error;
   }
 };
@@ -146,17 +133,14 @@ export const getAudioUrl = async (track, quality = 999) => {
     // 创建一个Promise并存储到映射中
     const urlPromise = (async () => {
       try {
-    // 检查是否应该使用缓存
-    if (shouldUseCache()) {
-      // 检查缓存
-      const cachedData = await getCache(CACHE_TYPES.AUDIO_URLS, cacheKey);
+        // 检查内存缓存
+        const cachedData = getMemoryCache(CACHE_TYPES.AUDIO_URLS, cacheKey);
       if (cachedData) {
-            console.log(`[getAudioUrl] 使用缓存的音频URL: ${requestId}`);
+          console.log(`[getAudioUrl] 使用内存缓存的音频URL: ${requestId}`);
         return cachedData;
       }
-    }
         
-        console.log(`[getAudioUrl] 缓存未命中，调用API: ${requestId}`);
+        console.log(`[getAudioUrl] 内存缓存未命中，调用API: ${requestId}`);
     
     const response = await axios.get(`${API_BASE}`, {
       params: {
@@ -167,8 +151,8 @@ export const getAudioUrl = async (track, quality = 999) => {
       }
     });
     
-    // 无论什么模式，都缓存结果
-    await setCache(CACHE_TYPES.AUDIO_URLS, cacheKey, response.data);
+        // 缓存结果到内存
+        setMemoryCache(CACHE_TYPES.AUDIO_URLS, cacheKey, response.data);
     
         console.log(`[getAudioUrl] 请求完成: ${requestId}`);
     return response.data;
@@ -224,17 +208,14 @@ export const getLyrics = async (track) => {
     // 创建一个Promise并存储到映射中
     const lyricPromise = (async () => {
       try {
-    // 检查是否应该使用缓存
-    if (shouldUseCache()) {
-      // 检查缓存
-      const cachedLyrics = await getCache(CACHE_TYPES.LYRICS, cacheKey);
+        // 检查内存缓存
+        const cachedLyrics = getMemoryCache(CACHE_TYPES.LYRICS, cacheKey);
       if (cachedLyrics) {
-            console.log(`[getLyrics] 使用缓存的歌词: ${requestId}`);
+          console.log(`[getLyrics] 使用内存缓存的歌词: ${requestId}`);
         return cachedLyrics;
       }
-    }
         
-        console.log(`[getLyrics] 缓存未命中，调用API: ${requestId}`);
+        console.log(`[getLyrics] 内存缓存未命中，调用API: ${requestId}`);
     
     const response = await axios.get(`${API_BASE}`, {
       params: {
@@ -249,8 +230,8 @@ export const getLyrics = async (track) => {
       translated: response.data.tlyric || ''
     };
     
-    // 无论什么模式，都缓存结果
-    await setCache(CACHE_TYPES.LYRICS, cacheKey, lyrics);
+        // 缓存结果到内存
+        setMemoryCache(CACHE_TYPES.LYRICS, cacheKey, lyrics);
     
         console.log(`[getLyrics] 请求完成: ${requestId}`);
     return lyrics;
@@ -283,19 +264,24 @@ export const getLyrics = async (track) => {
  */
 export const getCoverImage = async (source, picId, size = 300) => {
   try {
+    // 验证参数
+    if (!picId || picId === 'undefined' || picId === 'null') {
+      console.warn(`[getCoverImage] 无效的封面ID: ${picId}, 音乐源: ${source}`);
+      return 'default_cover.png';
+    }
+    
     checkApiAccess();
     
     // 生成缓存键
     const cacheKey = `${source}_${picId}_${size}`;
     
-    // 检查是否应该使用缓存
-    if (shouldUseCache()) {
-      // 检查缓存
-      const cachedUrl = await getCache(CACHE_TYPES.COVER_IMAGES, cacheKey);
+    // 检查内存缓存
+    const cachedUrl = getMemoryCache(CACHE_TYPES.COVER_IMAGES, cacheKey);
       if (cachedUrl) {
         return cachedUrl;
       }
-    }
+    
+    console.log(`[getCoverImage] 请求封面: 音乐源=${source}, ID=${picId}, 尺寸=${size}`);
     
     const response = await axios.get(`${API_BASE}`, {
       params: {
@@ -306,14 +292,28 @@ export const getCoverImage = async (source, picId, size = 300) => {
       }
     });
     
+    // 检查API响应
+    if (!response.data || !response.data.url) {
+      console.warn(`[getCoverImage] API未返回有效URL: ${JSON.stringify(response.data)}`);
+      return 'default_cover.png';
+    }
+    
     const url = response.data.url.replace(/\\/g, '');
     
-    // 无论什么模式，都缓存结果
-    await setCache(CACHE_TYPES.COVER_IMAGES, cacheKey, url);
+    // 验证URL格式
+    if (!url.startsWith('http')) {
+      console.warn(`[getCoverImage] 返回的URL格式不正确: ${url}`);
+      return 'default_cover.png';
+    }
+    
+    console.log(`[getCoverImage] 获取成功: ${url.substring(0, 50)}...`);
+    
+    // 缓存结果到内存
+    setMemoryCache(CACHE_TYPES.COVER_IMAGES, cacheKey, url);
     
     return url;
   } catch (error) {
-    console.error('获取封面图片失败:', error);
+    console.error(`[getCoverImage] 获取封面图片失败: ${source}/${picId}`, error);
     return 'default_cover.png'; // 返回默认封面
   }
 };
@@ -347,33 +347,30 @@ export const playMusic = async (track, quality = 999) => {
           throw new Error('请求已取消');
         }
     
-    // 检查是否应该使用缓存
-    if (shouldUseCache()) {
-      // 检查缓存
-      const cachedData = await getCache(CACHE_TYPES.AUDIO_METADATA, cacheKey);
+        // 检查内存缓存
+        const cachedData = getMemoryCache(CACHE_TYPES.AUDIO_METADATA, cacheKey);
       if (cachedData) {
-            console.log(`[playMusic] 使用缓存的音乐数据: ${requestId}`);
-            
-            // 再次检查请求是否仍然有效
-            if (!audioStateManager.isValidRequest(requestId)) {
-              console.log(`[playMusic] 请求已取消: ${requestId}`);
-              throw new Error('请求已取消');
-            }
-            
-            // 设置URL并播放
-            audioStateManager.setUrlAndPlay(cachedData.url, requestId);
-            
+          console.log(`[playMusic] 使用内存缓存的音乐数据: ${requestId}`);
+          
+          // 再次检查请求是否仍然有效
+          if (!audioStateManager.isValidRequest(requestId)) {
+            console.log(`[playMusic] 请求已取消: ${requestId}`);
+            throw new Error('请求已取消');
+          }
+          
+          // 设置URL并播放
+          audioStateManager.setUrlAndPlay(cachedData.url, requestId);
+          
         return cachedData;
       }
-    }
         
-        console.log(`[playMusic] 缓存未命中，调用API: ${requestId}`);
+        console.log(`[playMusic] 内存缓存未命中，调用API: ${requestId}`);
         
         // 再次检查请求是否仍然有效
         if (!audioStateManager.isValidRequest(requestId)) {
           console.log(`[playMusic] 请求已取消: ${requestId}`);
           throw new Error('请求已取消');
-        }
+    }
     
     // 并行请求URL和歌词
     const [audioData, lyrics] = await Promise.all([
@@ -397,8 +394,8 @@ export const playMusic = async (track, quality = 999) => {
       fileSize: audioData.size
     };
     
-    // 无论什么模式，都缓存结果
-    await setCache(CACHE_TYPES.AUDIO_METADATA, cacheKey, musicData);
+        // 缓存结果到内存
+        setMemoryCache(CACHE_TYPES.AUDIO_METADATA, cacheKey, musicData);
     
         // 设置URL并播放
         audioStateManager.setUrlAndPlay(url, requestId);
@@ -425,6 +422,7 @@ export const playMusic = async (track, quality = 999) => {
     return playPromise;
   } catch (error) {
     console.error('[playMusic] 播放音乐失败:', error);
+    console.error(`[playMusic] 失败详情 - 曲目: ${track?.name || '未知'}, ID: ${track?.id || '未知'}, 请求ID: ${audioStateManager.activeRequest || '未知'}`);
     // 设置错误状态
     audioStateManager.setError(error);
     throw error;

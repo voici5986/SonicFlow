@@ -1,12 +1,53 @@
 [build]
   command = "CI=false npm run build"
   publish = "build"
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ':!package-lock.json'"
  
 [build.environment]
   CI = "false" 
+  NODE_VERSION = "16.14.0"
 
+# API重定向
 [[redirects]]
   from = "/api/*"
   to = "https://music-api.gdstudio.xyz/api.php/:splat"
   status = 200
   force = true
+
+# SPA重定向 - 让Netlify正确处理React的路由
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# 安全标头
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Content-Security-Policy = "default-src 'self'; img-src 'self' data: https:; media-src 'self' https:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://music-api.gdstudio.xyz https://*.netlify.app https://ipinfo.io;"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+# 缓存控制
+[[headers]]
+  for = "*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

@@ -9,7 +9,9 @@ const ProgressBar = () => {
   playProgress, 
   totalSeconds, 
   playerRef,
-    formatTime
+    formatTime,
+    isPlaying,
+    setIsPlaying  // 获取setIsPlaying方法来控制播放状态
   } = usePlayer();
   
   // 从DeviceContext获取设备类型（这里假设有默认值）
@@ -25,6 +27,8 @@ const ProgressBar = () => {
   const releaseTimeoutRef = useRef(null);
   // 添加标识，用来跟踪是否已经应用了seek操作
   const hasAppliedSeekRef = useRef(false);
+  // 记录拖动前的播放状态
+  const wasPlayingRef = useRef(false);
   
   // 用于鼠标位置跟踪
   const progressBarRef = useRef(null);
@@ -36,6 +40,13 @@ const ProgressBar = () => {
       mousePositionRef.current.x = playProgress;
     }
   }, [playProgress, isDragging]);
+  
+  // 记录开始拖动时的播放状态
+  useEffect(() => {
+    if (isDragging) {
+      wasPlayingRef.current = isPlaying;
+    }
+  }, [isDragging, isPlaying]);
   
   // 全局事件处理
   useEffect(() => {
@@ -61,6 +72,14 @@ const ProgressBar = () => {
         }, 1000);
         
         setIsDragging(false);
+        
+        // 如果拖动前是播放状态，恢复播放
+        if (wasPlayingRef.current) {
+          console.log('[ProgressBar] 拖动结束后恢复播放');
+          setTimeout(() => {
+            setIsPlaying(true);
+          }, 50); // 短暂延迟确保seekTo操作已完成
+        }
       }
     };
     
@@ -73,7 +92,7 @@ const ProgressBar = () => {
       document.removeEventListener('touchend', handleDragEnd);
       document.removeEventListener('touchcancel', handleDragEnd);
     };
-  }, [isDragging, dragProgress]);
+  }, [isDragging, dragProgress, setIsPlaying]);
   
   // 组件卸载时清理定时器
   useEffect(() => {

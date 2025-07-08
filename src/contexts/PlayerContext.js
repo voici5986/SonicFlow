@@ -3,7 +3,7 @@ import { playMusic, getCoverImage } from '../services/musicApiService';
 import { addToHistory } from '../services/storage';
 import { handleError, ErrorTypes, ErrorSeverity } from '../utils/errorHandler';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
-import { getCachedCoverImageData, cacheCoverImageData } from '../services/cacheService';
+import { imageUrlToBase64 } from '../services/memoryCache';
 import { useAuth } from '../contexts/AuthContext';
 import { useSync } from '../contexts/SyncContext';
 import audioStateManager, { AUDIO_STATES } from '../services/audioStateManager';
@@ -89,6 +89,27 @@ export const PlayerProvider = ({ children }) => {
     return () => removeListener();
   }, [currentTrack, playerUrl, isPlaying]);
   
+  // 监听播放状态变化，同步到audioStateManager
+  useEffect(() => {
+    // 只在有当前曲目时进行同步
+    if (currentTrack && playerUrl) {
+      // 添加防抖，避免快速连续状态变化导致的问题
+      const timeoutId = setTimeout(() => {
+        if (isPlaying) {
+          // 通过状态管理器控制播放
+          console.log('[PlayerContext] 检查是否需要同步到audioStateManager: 播放');
+          audioStateManager.play();
+        } else {
+          // 通过状态管理器控制暂停
+          console.log('[PlayerContext] 检查是否需要同步到audioStateManager: 暂停');
+          audioStateManager.pause();
+        }
+      }, 50); // 短暂延迟，确保React状态已完全更新
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isPlaying, currentTrack, playerUrl]);
+  
   // 歌词解析函数
   const parseLyric = useCallback((text) => {
     if (!text) return [];
@@ -126,39 +147,12 @@ export const PlayerProvider = ({ children }) => {
       // 生成缓存键
       const cacheKey = `${source}-${picId}-${size}`;
       
-      // 1. 首先检查是否有图片数据缓存
-      const cachedImageData = await getCachedCoverImageData(source, picId, size);
-      if (cachedImageData) {
-        // 如果有图片数据缓存，更新内存缓存并返回Base64数据
-        setCoverCache(prev => ({
-          ...prev,
-          [cacheKey]: cachedImageData
-        }));
-        return cachedImageData;
-      }
-      
-      // 2. 检查内存缓存中是否有URL
+      // 1. 检查内存缓存中是否有URL或Base64数据
       if (coverCache[cacheKey]) {
-        // 如果内存中有URL缓存，尝试获取并缓存图片数据
-        try {
-          const imageData = await cacheCoverImageData(source, picId, coverCache[cacheKey], size);
-          if (imageData) {
-            // 更新内存缓存
-            setCoverCache(prev => ({
-              ...prev,
-              [cacheKey]: imageData
-            }));
-            return imageData;
-          }
-          // 如果图片数据获取失败，继续使用URL
           return coverCache[cacheKey];
-        } catch (error) {
-          console.warn('图片数据缓存失败，使用URL:', error);
-          return coverCache[cacheKey];
-        }
       }
       
-      // 3. 如果没有任何缓存，从API获取封面URL
+      // 2. 如果没有任何缓存，从API获取封面URL
       const coverUrl = await getCoverImage(source, picId, size);
       
       // 更新URL内存缓存
@@ -167,9 +161,9 @@ export const PlayerProvider = ({ children }) => {
         [cacheKey]: coverUrl
       }));
       
-      // 4. 尝试缓存图片数据
+      // 3. 尝试将URL转换为Base64数据以便内存缓存
       try {
-        const imageData = await cacheCoverImageData(source, picId, coverUrl, size);
+        const imageData = await imageUrlToBase64(coverUrl);
         if (imageData) {
           // 更新内存缓存为Base64数据
           setCoverCache(prev => ({
@@ -229,13 +223,11 @@ export const PlayerProvider = ({ children }) => {
   const togglePlay = useCallback(() => {
     // 只在有当前曲目时才切换状态
     if (currentTrack && playerUrl) {
-      if (isPlaying) {
-        // 暂停
-        audioStateManager.pause();
-      } else {
-        // 播放
-        audioStateManager.play();
-      }
+      console.log('[PlayerContext] togglePlay 被调用，当前状态:', isPlaying ? '播放中' : '已暂停');
+      // 使用函数形式的setState，确保获取最新状态值
+      setIsPlaying(prevIsPlaying => !prevIsPlaying);
+    } else {
+      console.log('[PlayerContext] togglePlay 被忽略，没有当前曲目或URL');
     }
   }, [currentTrack, playerUrl, isPlaying]);
   

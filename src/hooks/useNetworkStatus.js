@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getNetworkStatus, saveNetworkStatus } from '../services/storage';
-import { adjustCacheForOffline } from '../services/cacheService';
 
 /**
  * 网络状态管理Hook
@@ -8,14 +7,13 @@ import { adjustCacheForOffline } from '../services/cacheService';
  * @param {Object} options 配置选项
  * @param {boolean} options.showToasts 是否显示网络状态变化的提示
  * @param {boolean} options.dispatchEvents 是否分发自定义事件
- * @param {boolean} options.adjustCache 是否根据网络状态调整缓存策略
  * @returns {Object} 网络状态相关数据和方法
  */
 export const useNetworkStatus = (options = {}) => {
+  // eslint-disable-next-line no-unused-vars
   const { 
     showToasts = false, 
-    dispatchEvents = true,
-    adjustCache = true
+    dispatchEvents = true
   } = options;
   
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -86,16 +84,11 @@ export const useNetworkStatus = (options = {}) => {
     saveNetworkStatus({ online: true, lastChecked: timestamp, connectionType: type });
     setLastChecked(timestamp);
     
-    // 根据网络状态调整缓存策略
-    if (adjustCache) {
-      adjustCacheForOffline(true);
-    }
-    
     // 分发网络状态变化事件
     dispatchNetworkStatusChange(true);
     
     // 不显示网络恢复提示
-  }, [dispatchNetworkStatusChange, detectConnectionType, adjustCache]);
+  }, [dispatchNetworkStatusChange, detectConnectionType]);
   
   // 处理网络离线事件
   const handleOffline = useCallback(() => {
@@ -108,16 +101,11 @@ export const useNetworkStatus = (options = {}) => {
     saveNetworkStatus({ online: false, lastChecked: timestamp, connectionType: 'offline' });
     setLastChecked(timestamp);
     
-    // 根据网络状态调整缓存策略
-    if (adjustCache) {
-      adjustCacheForOffline(false);
-    }
-    
     // 分发网络状态变化事件
     dispatchNetworkStatusChange(false);
     
     // 不显示网络断开提示
-  }, [dispatchNetworkStatusChange, adjustCache]);
+  }, [dispatchNetworkStatusChange]);
   
   // 手动检查网络状态
   const checkNetworkStatus = useCallback(async () => {
@@ -131,11 +119,6 @@ export const useNetworkStatus = (options = {}) => {
       // 更新状态
       setIsOnline(online);
       setLastChecked(Date.now());
-      
-      // 根据网络状态调整缓存策略
-      if (adjustCache) {
-        adjustCacheForOffline(online);
-      }
       
       // 如果状态与存储中的不同，则更新并分发事件
       if (status.online !== online || status.connectionType !== type) {
@@ -154,7 +137,7 @@ export const useNetworkStatus = (options = {}) => {
       const online = navigator.onLine;
       return { online, lastChecked: Date.now(), connectionType: online ? 'unknown' : 'offline' };
     }
-  }, [dispatchNetworkStatusChange, detectConnectionType, adjustCache]);
+  }, [dispatchNetworkStatusChange, detectConnectionType]);
 
   // 初始化网络状态并添加事件监听
   useEffect(() => {

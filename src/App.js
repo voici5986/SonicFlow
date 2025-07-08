@@ -26,7 +26,6 @@ import {
   validateSearchParams, 
   checkDownloadStatus 
 } from './utils/errorHandler';
-import { adjustCacheForOffline } from './services/cacheService';
 import SyncProvider from './contexts/SyncContext';
 import FavoritesProvider from './contexts/FavoritesContext';
 // 导入样式文件
@@ -138,16 +137,6 @@ const AppContent = () => {
     showToasts: true,
     dispatchEvents: true
   });
-  
-  // 监听网络状态变化，调整缓存策略
-  useEffect(() => {
-    // 根据网络状态调整缓存策略
-    adjustCacheForOffline(isOnline);
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log(isOnline ? '网络已连接，正常模式' : '网络已断开，离线模式');
-    }
-  }, [isOnline]);
   
   // 使用自定义Hook管理Firebase状态
   useFirebaseStatus({

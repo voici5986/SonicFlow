@@ -1,5 +1,9 @@
 import { toast } from 'react-toastify';
 
+// 用于跟踪最近显示的错误消息，防止短时间内重复显示
+const recentErrors = new Map();
+const ERROR_THROTTLE_TIME = 3000; // 3秒内相同错误消息只显示一次
+
 /**
  * 错误类型枚举
  */
@@ -44,6 +48,32 @@ export const handleError = (error, type = ErrorTypes.UNKNOWN, severity = ErrorSe
   if (!message) {
     message = getErrorMessage(error, type);
   }
+  
+  // 检查是否是重复错误消息
+  const errorKey = `${type}-${message}`;
+  const now = Date.now();
+  const lastShown = recentErrors.get(errorKey);
+  
+  if (lastShown && (now - lastShown) < ERROR_THROTTLE_TIME) {
+    console.log(`[ErrorHandler] 抑制重复错误通知: ${message} (${now - lastShown}ms内)`);
+    
+    // 执行回调但不显示Toast
+    if (callback && typeof callback === 'function') {
+      callback(error, type, severity);
+    }
+    
+    return;
+  }
+  
+  // 更新最近显示的错误记录
+  recentErrors.set(errorKey, now);
+  
+  // 清理旧记录
+  setTimeout(() => {
+    if (recentErrors.get(errorKey) === now) {
+      recentErrors.delete(errorKey);
+    }
+  }, ERROR_THROTTLE_TIME);
   
   // 确定图标
   let icon = '❌';

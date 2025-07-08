@@ -4,13 +4,24 @@
 /node_modules
 /.pnp
 .pnp.js
+/.yarn/*
+!/.yarn/patches
+!/.yarn/plugins
+!/.yarn/releases
+!/.yarn/sdks
+!/.yarn/versions
+.pnpm-store/
 
 # testing
 /coverage
+/.nyc_output
+/cypress/screenshots
+/cypress/videos
 
 # production
 /build
 /dist
+/storybook-static
 
 # misc
 .DS_Store
@@ -25,21 +36,35 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
 logs
 *.log
 
 # IDE/编辑器文件
 .idea/
-.vscode/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
 *.sublime-project
 *.sublime-workspace
 *.swp
 *.swo
 .vs/
+*~
+*.vim
+.project
+.classpath
 
 # 操作系统文件
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
 desktop.ini
+.directory
+*.lnk
 
 # 临时文件
 .tmp/
@@ -53,15 +78,37 @@ desktop.ini
 .firebase/
 .netlify/
 .vercel/
+.npm
+.eslintcache
+.stylelintcache
 
 # 本地配置文件
 firebase-debug.log
 firebase-debug.*.log
 firestore-debug.log
 ui-debug.log
+.firebaserc
+firebase.json
 
 # PWA相关
 **/public/workbox-*.js
 **/public/sw.js
 **/public/service-worker.js.map
 **/public/workbox-*.js.map
+
+# 分析报告
+/bundle-stats.html
+/report.html
+/stats.json
+
+# 性能分析文件
+.lighthouse/
+.webhint/
+
+# 其他工具生成文件
+.history/
+.next/
+out/
+jspm_packages/
+web_modules/
+.trae/rules/project_rules.md

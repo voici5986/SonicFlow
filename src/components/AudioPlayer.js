@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, memo, useMemo, useState } from 'react';
+import React, { useEffect, useCallback, memo, useMemo, useState, useRef } from 'react';
 import { Row, Col, Button, Spinner } from 'react-bootstrap';
 import ReactPlayer from 'react-player';
 import { FaPlay, FaPause, FaDownload, FaMusic, 
@@ -8,15 +8,28 @@ import ProgressBar from './ProgressBar';
 import '../styles/AudioPlayer.css';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useDevice } from '../contexts/DeviceContext';
+import audioStateManager from '../services/audioStateManager';
+import { createPortal } from 'react-dom';
 import { handleError, ErrorTypes, ErrorSeverity } from '../utils/errorHandler';
-import audioStateManager, { AUDIO_STATES } from '../services/audioStateManager';
+import classNames from 'classnames';
+import { toast } from 'react-toastify';
 
 /**
  * 专辑封面组件
  * 封装专辑封面的渲染逻辑，减少代码重复
  */
 const AlbumCover = ({ track, coverCache, size = 'small', onClick, className = '' }) => {
-  const imgSrc = coverCache[`${track.source}-${track.pic_id}-300`] || '/default_cover.png';
+  const [imageError, setImageError] = useState(false);
+  const imgSrc = track && track.pic_id && !imageError ? 
+    (coverCache[`${track.source}-${track.pic_id}-300`] || '/default_cover.png') : 
+    '/default_cover.png';
+  
+  const handleImageError = (e) => {
+    console.warn(`[AlbumCover] 封面加载失败: ${imgSrc}`);
+    e.target.onerror = null; // 防止无限循环
+    e.target.src = '/default_cover.png';
+    setImageError(true);
+  };
   
   return (
     <img 
@@ -25,10 +38,8 @@ const AlbumCover = ({ track, coverCache, size = 'small', onClick, className = ''
       className={`${className} ${size === 'small' ? 'player-thumbnail rounded me-2' : 'album-cover-large'}`}
       onClick={onClick}
       style={{ cursor: onClick ? 'pointer' : 'default' }}
-      onError={(e) => {
-        e.target.onerror = null;
-        e.target.src = '/default_cover.png';
-      }}
+      onError={handleImageError}
+      loading="lazy"
     />
   );
 };
@@ -236,109 +247,50 @@ const AudioPlayer = () => {
   
   // 组件加载时打印日志，用于诊断多个实例问题
   useEffect(() => {
-    // 全局唯一性检测
-    if (window.__audio_player_instance__) {
-      console.error('[AudioPlayer] 检测到已有全局音频播放器实例，当前实例将不再继续播放！');
-      // 若已有实例，主动暂停当前实例
-      setIsPlaying(false);
-      audioStateManager.stop();
-    } else {
-      window.__audio_player_instance__ = true;
-      console.log('[AudioPlayer] 已设置全局唯一标记');
-    }
+    console.log('[AudioPlayer] 组件已挂载', { instanceId: Math.random().toString(36).substring(7) });
+    
     // 检测页面中可能存在的其他音频元素
     const audioElements = document.querySelectorAll('audio');
-    if (audioElements.length > 1) {
-      console.warn(`[AudioPlayer] 检测到多个音频元素: ${audioElements.length}个`);
-      console.log('[AudioPlayer] 音频元素详情:', Array.from(audioElements).map(el => ({
-        src: el.src,
-        paused: el.paused,
-        currentTime: el.currentTime,
-        parent: el.parentElement?.tagName
-      })));
+    if (audioElements.length > 0) {
+      console.warn(`[AudioPlayer] 检测到 ${audioElements.length} 个音频元素:`);
+      Array.from(audioElements).forEach((audio, index) => {
+        console.log(`[AudioPlayer] 音频元素 ${index + 1}:`, {
+          id: audio.id,
+          src: audio.src,
+          paused: audio.paused,
+          currentTime: audio.currentTime,
+          parentNode: audio.parentNode?.tagName || 'unknown'
+        });
+      });
     }
+    
     // 保存当前playerRef的引用，避免清理函数中使用可能变化的ref
     const currentPlayerRef = playerRef.current;
-    const currentIsPlaying = isPlaying;
-    const currentSetIsPlaying = setIsPlaying;
+    
     // 返回清理函数
     return () => {
       console.log('[AudioPlayer] 组件将卸载');
-      // 卸载时清理全局唯一标记
-      if (window.__audio_player_instance__) {
-        delete window.__audio_player_instance__;
-        console.log('[AudioPlayer] 已清理全局唯一标记');
+      
+      // 如果处于播放状态，确保卸载时停止播放
+      if (isPlaying) {
+        console.log('[AudioPlayer] 组件卸载时暂停播放');
+        setIsPlaying(false);
       }
-      // 确保卸载时停止播放
-      if (currentPlayerRef && currentIsPlaying) {
-        currentSetIsPlaying(false);
-        audioStateManager.stop();
-        console.log('[AudioPlayer] 已停止播放并清理状态');
-      }
+      
+      // 检查卸载时的音频元素
+      const audioElementsAtUnmount = document.querySelectorAll('audio');
+      console.log(`[AudioPlayer] 卸载时存在 ${audioElementsAtUnmount.length} 个音频元素`);
     };
-  }, [isPlaying, playerRef, setIsPlaying]);
-  
-  // 添加页面可见性变化监听，处理页面切换时的播放状态
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        console.log('[AudioPlayer] 页面不可见');
-      } else {
-        console.log('[AudioPlayer] 页面可见');
-        // 页面重新可见时，检查是否存在多个音频元素
-        const audioElements = document.querySelectorAll('audio');
-        if (audioElements.length > 1) {
-          console.warn(`[AudioPlayer] 页面可见性变化时检测到多个音频元素: ${audioElements.length}个`);
-          // 如果存在多个音频元素，确保只有一个在播放
-          if (isPlaying) {
-            let playingCount = 0;
-            audioElements.forEach(el => {
-              if (!el.paused) playingCount++;
-            });
-            
-            if (playingCount > 1) {
-              console.warn(`[AudioPlayer] 检测到多个音频同时播放: ${playingCount}个`);
-              // 暂停所有音频，然后只恢复当前实例
-              audioElements.forEach(el => {
-                if (!el.paused) el.pause();
-              });
-              // 确保当前实例继续播放
-              if (playerRef.current && playerRef.current.getInternalPlayer()) {
-                playerRef.current.getInternalPlayer().play();
-              }
-            }
-          }
-        }
-      }
-    };
-    
-    // 添加页面可见性变化监听
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    // 返回清理函数
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [isPlaying, playerRef, setIsPlaying]);
+  }, [isPlaying, setIsPlaying, playerRef]);
   
   // 跟踪播放状态变化的调试日志
   useEffect(() => {
     console.log(`[AudioPlayer] 播放状态变更: ${isPlaying ? '播放' : '暂停'}, URL: ${playerUrl ? '已设置' : '未设置'}`);
     
-    // 确保音频状态管理器和播放器状态同步
-    if (isPlaying) {
-      if (audioStateManager.getState() !== AUDIO_STATES.PLAYING) {
-        console.log('[AudioPlayer] 同步状态管理器: 设置为播放状态');
-        if (audioStateManager.getState() === AUDIO_STATES.PAUSED) {
-          audioStateManager.play();
-        }
-      }
-    } else {
-      if (audioStateManager.getState() === AUDIO_STATES.PLAYING) {
-        console.log('[AudioPlayer] 同步状态管理器: 设置为暂停状态');
-        audioStateManager.pause();
-      }
-    }
+    // 移除直接调用audioStateManager的代码
+    // 播放状态现在完全由PlayerContext的isPlaying状态控制
+    // ReactPlayer的播放状态将通过props自动同步
+    // 这避免了多重控制路径导致的状态不一致问题
   }, [isPlaying, playerUrl]);
 
   // 为虚拟滚动添加的状态
@@ -370,15 +322,15 @@ const AudioPlayer = () => {
       // 设置媒体控制处理程序 - 直接操作ReactPlayer实例，避免状态不同步
       navigator.mediaSession.setActionHandler('play', () => {
         if (playerRef.current) {
-          // 使用音频状态管理器播放
-          audioStateManager.play();
+          // 使用React状态而不是直接调用audioStateManager
+        setIsPlaying(true);
         }
       });
 
       navigator.mediaSession.setActionHandler('pause', () => {
         if (playerRef.current) {
-          // 使用音频状态管理器暂停
-          audioStateManager.pause();
+          // 使用React状态而不是直接调用audioStateManager
+        setIsPlaying(false);
         }
       });
 
@@ -398,7 +350,7 @@ const AudioPlayer = () => {
         }
       });
     }
-  }, [currentTrack, playerUrl, coverCache, currentPlaylist, handlePrevious, handleNext, playerRef]);
+  }, [currentTrack, playerUrl, coverCache, currentPlaylist, handlePrevious, handleNext, playerRef, setIsPlaying]);
 
   // 更新媒体会话播放状态
   useEffect(() => {
@@ -699,8 +651,22 @@ const AudioPlayer = () => {
                       src: el.src,
                       paused: el.paused,
                       currentTime: el.currentTime,
-                      parent: el.parentElement?.tagName
+                      parent: el.parentElement?.tagName,
+                      id: el.id,
+                      className: el.className
                     })));
+                    
+                    // 尝试暂停其他非当前控制的音频元素
+                    Array.from(audioElements).forEach(el => {
+                      if (el.id !== `cl-music-player-${currentTrack?.id || 'null'}`) {
+                        console.log('[ReactPlayer] 尝试暂停其他音频元素:', el.id);
+                        try {
+                          el.pause();
+                        } catch (err) {
+                          console.error('[ReactPlayer] 暂停其他音频元素失败:', err);
+                        }
+                      }
+                    });
                   }
                 }}
               onDuration={(duration) => {
@@ -710,9 +676,22 @@ const AudioPlayer = () => {
                 }}
                 onStart={() => {
                   console.log('[ReactPlayer] 开始播放:', currentTrack?.name);
-                  // 确保音频状态管理器状态同步
-                  if (audioStateManager.getState() !== AUDIO_STATES.PLAYING) {
-                    audioStateManager.play();
+                  // 不再直接调用audioStateManager.play()，避免重复播放
+                  // 让React状态流控制播放，而不是直接控制
+                  
+                  // 尝试停止其他可能的音频播放
+                  const audioElements = document.querySelectorAll('audio');
+                  if (audioElements.length > 1) {
+                    Array.from(audioElements).forEach(el => {
+                      if (el.id !== `cl-music-player-${currentTrack?.id || 'null'}` && !el.paused) {
+                        console.log('[ReactPlayer] 强制暂停检测到的其他播放中的音频:', el.id);
+                        try {
+                          el.pause();
+                        } catch (err) {
+                          console.error('[ReactPlayer] 强制暂停失败:', err);
+                        }
+                      }
+                    });
                   }
                 }}
                 onPlay={() => {
@@ -731,22 +710,21 @@ const AudioPlayer = () => {
               }}
               onError={(e) => {
                   console.error('[ReactPlayer] 播放错误:', e);
-                  // 通知音频状态管理器
+                  // 只通过音频状态管理器处理错误，避免重复处理
                   audioStateManager.setError(e);
                   
-                  handleError(
-                    e,
-                    ErrorTypes.PLAYBACK,
-                    ErrorSeverity.ERROR,
-                    '音频播放失败，该音源可能不可用'
-                  );
+                  // 不再直接调用handleError，因为PlayerContext的监听器会处理这个错误
+                  // handleError(
+                  //   e,
+                  //   ErrorTypes.PLAYBACK,
+                  //   ErrorSeverity.ERROR,
+                  //   '音频播放失败，该音源可能不可用'
+                  // );
                 setIsPlaying(false);
               }}
                 onEnded={() => {
                   console.log('[ReactPlayer] 播放结束');
-                  // 通知音频状态管理器
-                  audioStateManager.stop();
-                  
+                  // 不再直接调用audioStateManager.stop()，让状态流通过handleEnded处理
                   handleEnded();
                 }}
                 config={{ 
@@ -755,7 +733,8 @@ const AudioPlayer = () => {
                     attributes: {
                       // 禁用HTML5音频元素的原生控制
                       controlsList: 'nodownload',
-                      id: `audio-player-${currentTrack?.id || 'null'}`,
+                      id: `cl-music-player-${currentTrack?.id || 'null'}`,
+                      className: 'cl-music-player-audio',
                       'data-testid': 'react-player-audio'
                     },
                     // 强制使用HTML5音频播放器
@@ -825,4 +804,4 @@ const AudioPlayer = () => {
 };
 
 // 使用React.memo包装组件，避免不必要的重渲染
-export default memo(AudioPlayer);
+export default memo(AudioPlayer); 
