@@ -209,8 +209,9 @@ const RegisterForm = ({ onToggleForm, onRegisterSuccess }) => {
           <span className="text-muted small">已有账号? </span>
           <button 
             type="button"
-            className="btn btn-link p-0 text-decoration-none small"
+            className="text-primary small"
             onClick={onToggleForm}
+            style={{ cursor: 'pointer', textDecoration: 'none', background: 'none', border: 'none', padding: '0' }}
           >
             立即登录
           </button>

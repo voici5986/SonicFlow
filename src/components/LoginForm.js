@@ -172,9 +172,9 @@ const LoginForm = ({ onToggleForm, onLoginSuccess }) => {
         <div className="d-flex justify-content-between mb-4">
           <button
             type="button"
-            className="btn btn-link p-0 text-primary"
+            className="text-primary"
             onClick={handleForgotPassword}
-            style={{ cursor: 'pointer', textDecoration: 'none' }}
+            style={{ cursor: 'pointer', textDecoration: 'none', background: 'none', border: 'none', padding: '0' }}
           >
             忘记密码？
           </button>
@@ -217,9 +217,9 @@ const LoginForm = ({ onToggleForm, onLoginSuccess }) => {
             还没有账号？{" "}
             <button
               type="button"
-              className="btn btn-link p-0 text-primary"
+              className="text-primary"
               onClick={onToggleForm}
-              style={{ cursor: 'pointer', textDecoration: 'none' }}
+              style={{ cursor: 'pointer', textDecoration: 'none', background: 'none', border: 'none', padding: '0' }}
             >
               立即注册
             </button>

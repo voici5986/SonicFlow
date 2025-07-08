@@ -35,6 +35,103 @@ export const networkStore = localforage.createInstance({
   storeName: 'networkStatus'
 });
 
+// 添加封面图片缓存存储实例
+export const coverStore = localforage.createInstance({
+  name: 'clMusicApp',
+  storeName: 'coverCache',
+  driver: [localforage.INDEXEDDB, localforage.LOCALSTORAGE]
+});
+
+// 封面缓存过期时间：72小时（毫秒）
+const COVER_CACHE_TTL = 72 * 60 * 60 * 1000;
+
+/**
+ * 将图片保存到本地存储
+ * @param {string} key 缓存键
+ * @param {string} imageUrl 图片URL
+ * @returns {Promise<boolean>} 是否成功
+ */
+export async function saveCoverToStorage(key, imageUrl) {
+  try {
+    // 如果是默认封面，不需要缓存
+    if (!imageUrl || imageUrl === '/default_cover.png' || imageUrl === 'default_cover.png') {
+      return false;
+    }
+
+    // 存储图片URL和时间戳
+    await coverStore.setItem(key, {
+      url: imageUrl,
+      timestamp: Date.now()
+    });
+    
+    console.log(`[saveCoverToStorage] 封面已缓存至本地: ${key}`);
+    return true;
+  } catch (error) {
+    console.error(`[saveCoverToStorage] 保存封面失败: ${key}`, error);
+    return false;
+  }
+}
+
+/**
+ * 从本地存储获取图片
+ * @param {string} key 缓存键
+ * @returns {Promise<string|null>} 图片URL或null
+ */
+export async function getCoverFromStorage(key) {
+  try {
+    const data = await coverStore.getItem(key);
+    
+    // 如果没有数据或数据已过期，返回null
+    if (!data || !data.url || !data.timestamp || 
+        (Date.now() - data.timestamp > COVER_CACHE_TTL)) {
+      
+      // 如果数据已过期，删除它
+      if (data) {
+        await coverStore.removeItem(key);
+        console.log(`[getCoverFromStorage] 封面缓存已过期: ${key}`);
+      }
+      
+      return null;
+    }
+    
+    console.log(`[getCoverFromStorage] 使用本地封面缓存: ${key}`);
+    return data.url;
+  } catch (error) {
+    console.error(`[getCoverFromStorage] 获取封面失败: ${key}`, error);
+    return null;
+  }
+}
+
+/**
+ * 清除过期的封面缓存
+ * @returns {Promise<number>} 清除的项目数量
+ */
+export async function clearExpiredCovers() {
+  try {
+    const now = Date.now();
+    const expireThreshold = now - COVER_CACHE_TTL;
+    let removedCount = 0;
+    
+    // 获取所有键
+    const keys = await coverStore.keys();
+    
+    // 检查每个缓存项
+    for (const key of keys) {
+      const data = await coverStore.getItem(key);
+      if (!data || !data.timestamp || data.timestamp < expireThreshold) {
+        await coverStore.removeItem(key);
+        removedCount++;
+      }
+    }
+    
+    console.log(`[clearExpiredCovers] 已清除 ${removedCount} 个过期的封面缓存`);
+    return removedCount;
+  } catch (error) {
+    console.error('[clearExpiredCovers] 清除过期封面缓存失败:', error);
+    return 0;
+  }
+}
+
 /**
  * 收藏歌曲操作
  */

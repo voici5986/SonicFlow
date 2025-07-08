@@ -10,6 +10,7 @@ import './History.css';
 import { downloadTrack } from '../services/downloadService';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useAuth } from '../contexts/AuthContext';
+import AlbumCover from '../components/AlbumCover';
 
 // 设置moment为中文
 moment.locale('zh-cn');
@@ -40,32 +41,7 @@ const History = () => {
     setLoading(true);
     try {
       const historyItems = await getHistory();
-      
-      // 使用PlayerContext的fetchCover方法获取封面
-      const itemsWithCover = await Promise.all(
-        historyItems.map(async (item) => {
-          if (item.song.pic_id && !item.song.picUrl) {
-            // 先检查PlayerContext的缓存
-            const cacheKey = `${item.song.source}-${item.song.pic_id}-300`;
-            if (coverCache[cacheKey]) {
-              return { 
-                ...item, 
-                song: { ...item.song, picUrl: coverCache[cacheKey] } 
-              };
-            }
-            
-            // 如果缓存中没有，则使用fetchCover获取
-            const coverUrl = await fetchCover(item.song.source, item.song.pic_id);
-            return { 
-              ...item, 
-              song: { ...item.song, picUrl: coverUrl } 
-            };
-          }
-          return item;
-        })
-      );
-      
-      setHistory(itemsWithCover);
+      setHistory(historyItems);
     } catch (error) {
       console.error('加载历史记录失败:', error);
       toast.error('加载历史记录失败，请重试', { icon: '⚠️' });
@@ -188,19 +164,10 @@ const History = () => {
               >
                 <Card.Body>
                   <div className="d-flex align-items-center">
-                    <img
-                      src={item.song.picUrl || 'default_cover.jpg'}
-                      alt="专辑封面"
-                      className="me-3 rounded"
-                      style={{ 
-                        width: '60px', 
-                        height: '60px',
-                        objectFit: 'cover',
-                        backgroundColor: '#f5f5f5' 
-                      }}
-                      onError={(e) => {
-                        e.target.src = 'default_cover.png';
-                      }}
+                    <AlbumCover 
+                      track={item.song} 
+                      size="60px" 
+                      className="me-3" 
                     />
                     <div className="text-truncate">
                       <h6 className="mb-1 text-truncate">{item.song.name}</h6>

@@ -7,6 +7,7 @@ import { downloadTrack, downloadTracks } from '../services/downloadService';
 import { searchMusic } from '../services/musicApiService';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useAuth } from '../contexts/AuthContext';
+import AlbumCover from '../components/AlbumCover';
 
 const Favorites = () => {
   // 从PlayerContext获取状态和方法
@@ -44,101 +45,9 @@ const Favorites = () => {
     try {
       const favItems = await getFavorites();
       
-      // 使用PlayerContext的fetchCover方法获取封面
-      const itemsWithCover = await Promise.all(
-        favItems.map(async (item) => {
-          if (item.pic_id && !item.picUrl) {
-            // 先检查PlayerContext的缓存
-            const cacheKey = `${item.source}-${item.pic_id}-300`;
-            if (coverCache[cacheKey]) {
-              return { ...item, picUrl: coverCache[cacheKey] };
-            }
-            
-            // 如果缓存中没有，则使用fetchCover获取
-            const coverUrl = await fetchCover(item.source, item.pic_id);
-            return { ...item, picUrl: coverUrl };
-          }
-          return item;
-        })
-      );
-      
-      // 添加诊断日志
-      console.log(`收藏项数量: ${itemsWithCover.length}`);
-      
-      // 详细打印收藏数据结构
-      console.log("收藏数据结构诊断:");
-      console.log("第一个收藏项:", itemsWithCover[0]);
-      
-      // 查找包含特定日文字符的项目
-      const testJapanese = "ずっと";
-      const japaneseItems = itemsWithCover.filter(item => {
-        // 检查艺术家字段的所有可能形式
-        const artistString = typeof item.artist === 'string' ? item.artist : '';
-        const artistObj = typeof item.artist === 'object' ? item.artist : null;
-        const artists = Array.isArray(item.artists) ? item.artists : [];
-        
-        // 检查ar字段(网易云音乐常用)
-        const ar = Array.isArray(item.ar) ? item.ar : [];
-        
-        return (
-          artistString.includes(testJapanese) || 
-          (artistObj && JSON.stringify(artistObj).includes(testJapanese)) ||
-          artists.some(a => (typeof a === 'string' && a.includes(testJapanese)) || 
-                           (a && typeof a.name === 'string' && a.name.includes(testJapanese))) ||
-          ar.some(a => (typeof a === 'string' && a.includes(testJapanese)) || 
-                      (a && typeof a.name === 'string' && a.name.includes(testJapanese)))
-        );
-      });
-      
-      console.log(`测试日文字符"${testJapanese}"的匹配结果:`, japaneseItems.length);
-      
-      if (japaneseItems.length > 0) {
-        console.log("包含日文字符的项目:");
-        japaneseItems.forEach((item, index) => {
-          console.log(`项目 ${index+1}:`);
-          console.log("- ID:", item.id);
-          console.log("- 歌名:", item.name);
-          console.log("- 艺术家原始值:", item.artist);
-          console.log("- 艺术家类型:", typeof item.artist);
-          
-          // 如果艺术家是对象，打印其结构
-          if (typeof item.artist === 'object' && item.artist !== null) {
-            console.log("- 艺术家对象结构:", JSON.stringify(item.artist));
-          }
-          
-          // 检查是否有artists数组
-          if (Array.isArray(item.artists)) {
-            console.log("- artists数组:", item.artists);
-          }
-          
-          // 检查是否有ar字段(网易云音乐)
-          if (Array.isArray(item.ar)) {
-            console.log("- ar字段:", item.ar);
-          }
-          
-          // 测试各种字符串方法
-          if (typeof item.artist === 'string') {
-            console.log("- artist.includes测试:", item.artist.includes(testJapanese));
-            console.log("- artist.indexOf测试:", item.artist.indexOf(testJapanese));
-            console.log("- artist.search测试:", item.artist.search(testJapanese));
-            
-            // 打印编码
-            console.log("- 艺术家编码:", Array.from(item.artist).map(c => c.charCodeAt(0).toString(16)).join(' '));
-            console.log("- 测试字符编码:", Array.from(testJapanese).map(c => c.charCodeAt(0).toString(16)).join(' '));
-          }
-        });
-        
-        // 测试所有收藏项的artist字段类型分布
-        const artistTypes = {};
-        itemsWithCover.forEach(item => {
-          const type = typeof item.artist;
-          artistTypes[type] = (artistTypes[type] || 0) + 1;
-        });
-        console.log("艺术家字段类型分布:", artistTypes);
-      }
-      
-      setFavorites(itemsWithCover);
-      setFilteredFavorites(itemsWithCover); // 初始化过滤结果
+      // 不再需要提前获取封面，AlbumCover组件会处理
+      setFavorites(favItems);
+      setFilteredFavorites(favItems); // 初始化过滤结果
     } catch (error) {
       console.error('加载收藏失败:', error);
       toast.error('加载收藏失败，请重试', { icon: '⚠️' });
@@ -953,19 +862,10 @@ const Favorites = () => {
               <Card className="h-100">
                 <Card.Body>
                   <div className="d-flex align-items-center">
-                    <img
-                      src={track.picUrl || 'default_cover.jpg'}
-                      alt="专辑封面"
-                      className="me-3 rounded"
-                      style={{ 
-                        width: '60px', 
-                        height: '60px',
-                        objectFit: 'cover',
-                        backgroundColor: '#f5f5f5' 
-                      }}
-                      onError={(e) => {
-                        e.target.src = 'default_cover.png';
-                      }}
+                    <AlbumCover 
+                      track={track} 
+                      size="60px" 
+                      className="me-3" 
                     />
                     <div className="text-truncate">
                       <h6 className="mb-1 text-truncate">{track.name}</h6>

@@ -1,9 +1,8 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 import { playMusic, getCoverImage } from '../services/musicApiService';
-import { addToHistory } from '../services/storage';
+import { addToHistory, getCoverFromStorage, saveCoverToStorage } from '../services/storage';
 import { handleError, ErrorTypes, ErrorSeverity } from '../utils/errorHandler';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
-import { imageUrlToBase64 } from '../services/memoryCache';
 import { useAuth } from '../contexts/AuthContext';
 import { useSync } from '../contexts/SyncContext';
 import audioStateManager, { AUDIO_STATES } from '../services/audioStateManager';
@@ -144,44 +143,53 @@ export const PlayerProvider = ({ children }) => {
   // 获取封面图片
   const fetchCover = useCallback(async (source, picId, size = 300) => {
     try {
-      // 生成缓存键
-      const cacheKey = `${source}-${picId}-${size}`;
-      
-      // 1. 检查内存缓存中是否有URL或Base64数据
-      if (coverCache[cacheKey]) {
-          return coverCache[cacheKey];
+      // 参数验证
+      if (!picId || picId === 'undefined' || picId === 'null') {
+        console.warn(`[fetchCover] 无效的封面ID: ${picId}, 音乐源: ${source}`);
+        return '/default_cover.png';
       }
       
-      // 2. 如果没有任何缓存，从API获取封面URL
+      // 统一使用下划线作为分隔符，与musicApiService保持一致
+      const cacheKey = `${source}_${picId}_${size}`;
+      
+      // 1. 检查内存缓存中是否已有图片URL
+      if (coverCache[cacheKey]) {
+        return coverCache[cacheKey];
+      }
+      
+      // 2. 检查本地存储缓存
+      const localCachedUrl = await getCoverFromStorage(cacheKey);
+      if (localCachedUrl) {
+        // 更新内存缓存
+        setCoverCache(prev => ({
+          ...prev,
+          [cacheKey]: localCachedUrl
+        }));
+        return localCachedUrl;
+      }
+      
+      // 3. 从API获取封面URL
+      console.log(`[fetchCover] 从API获取封面: source=${source}, picId=${picId}, size=${size}`);
       const coverUrl = await getCoverImage(source, picId, size);
       
-      // 更新URL内存缓存
-      setCoverCache(prev => ({
-        ...prev,
-        [cacheKey]: coverUrl
-      }));
-      
-      // 3. 尝试将URL转换为Base64数据以便内存缓存
-      try {
-        const imageData = await imageUrlToBase64(coverUrl);
-        if (imageData) {
-          // 更新内存缓存为Base64数据
-          setCoverCache(prev => ({
-            ...prev,
-            [cacheKey]: imageData
-          }));
-          return imageData;
-        }
-      } catch (error) {
-        console.warn('获取图片数据失败，使用URL:', error);
+      // 4. 更新内存缓存和本地存储
+      if (coverUrl && coverUrl !== 'default_cover.png') {
+        setCoverCache(prev => ({
+          ...prev,
+          [cacheKey]: coverUrl
+        }));
+        
+        // 异步保存到本地存储，不阻塞主流程
+        saveCoverToStorage(cacheKey, coverUrl).catch(err => 
+          console.error('[fetchCover] 保存封面到本地存储失败:', err)
+        );
       }
       
       return coverUrl;
     } catch (error) {
-      console.error('获取封面失败:', error);
-      // 确保返回绝对路径的默认封面
-      const defaultCover = '/default_cover.png';
-      return defaultCover;
+      console.error('[fetchCover] 获取封面失败:', error);
+      // 返回默认封面
+      return '/default_cover.png';
     }
   }, [coverCache]);
   
@@ -334,9 +342,9 @@ export const PlayerProvider = ({ children }) => {
       });
       setCurrentLyricIndex(-1);
       
-      // 使用音频状态管理器获取播放URL和歌词
+      // 使用音频状态管理器获取播放URL和歌词，强制刷新不使用缓存
       console.log(`[handlePlay] 获取播放URL和歌词: ${track.name} (${track.id})`);
-      const { lyrics } = await playMusic(track, 999); // 默认使用最高音质
+      const { lyrics } = await playMusic(track, 999, true); // 默认使用最高音质，强制刷新URL
       
       // 处理歌词
       if (lyrics && lyrics.raw) {

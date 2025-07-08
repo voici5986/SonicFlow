@@ -24,7 +24,7 @@ const memoryCache = {
 // 缓存配置（过期时间，单位毫秒）
 const CACHE_CONFIG = {
   [CACHE_TYPES.SEARCH_RESULTS]: { ttl: 5 * 60 * 1000 }, // 5分钟
-  [CACHE_TYPES.COVER_IMAGES]: { ttl: 30 * 60 * 1000 },  // 30分钟
+  [CACHE_TYPES.COVER_IMAGES]: { ttl: 72 * 60 * 60 * 1000 },  // 72小时
   [CACHE_TYPES.AUDIO_URLS]: { ttl: 10 * 60 * 1000 },    // 10分钟
   [CACHE_TYPES.AUDIO_METADATA]: { ttl: 10 * 60 * 1000 },// 10分钟
   [CACHE_TYPES.LYRICS]: { ttl: 30 * 60 * 1000 },        // 30分钟

@@ -13,36 +13,7 @@ import { createPortal } from 'react-dom';
 import { handleError, ErrorTypes, ErrorSeverity } from '../utils/errorHandler';
 import classNames from 'classnames';
 import { toast } from 'react-toastify';
-
-/**
- * 专辑封面组件
- * 封装专辑封面的渲染逻辑，减少代码重复
- */
-const AlbumCover = ({ track, coverCache, size = 'small', onClick, className = '' }) => {
-  const [imageError, setImageError] = useState(false);
-  const imgSrc = track && track.pic_id && !imageError ? 
-    (coverCache[`${track.source}-${track.pic_id}-300`] || '/default_cover.png') : 
-    '/default_cover.png';
-  
-  const handleImageError = (e) => {
-    console.warn(`[AlbumCover] 封面加载失败: ${imgSrc}`);
-    e.target.onerror = null; // 防止无限循环
-    e.target.src = '/default_cover.png';
-    setImageError(true);
-  };
-  
-  return (
-    <img 
-      src={imgSrc}
-      alt={size === 'small' ? "当前播放" : "专辑封面"}
-      className={`${className} ${size === 'small' ? 'player-thumbnail rounded me-2' : 'album-cover-large'}`}
-      onClick={onClick}
-      style={{ cursor: onClick ? 'pointer' : 'default' }}
-      onError={handleImageError}
-      loading="lazy"
-    />
-  );
-};
+import AlbumCover from './AlbumCover';
 
 /**
  * 歌词切换按钮组件
@@ -525,7 +496,7 @@ const AudioPlayer = () => {
               <Col xs={5} md={3} className="d-flex align-items-center mb-2 mb-md-0" onClick={(e) => e.stopPropagation()}>
                 <div className="d-flex align-items-center">
                   <div className="position-relative">
-                    <AlbumCover track={currentTrack} coverCache={coverCache} size="small" onClick={handleLyricToggle} />
+                    <AlbumCover track={currentTrack} size="small" onClick={handleLyricToggle} />
                   </div>
                   <div className="track-info-container">
                     <h6 className="mb-0 text-truncate track-name">{currentTrack.name}</h6>

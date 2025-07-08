@@ -28,6 +28,8 @@ import {
 } from './utils/errorHandler';
 import SyncProvider from './contexts/SyncContext';
 import FavoritesProvider from './contexts/FavoritesContext';
+import AlbumCover from './components/AlbumCover';
+import { clearExpiredCovers } from './services/storage';
 // 导入样式文件
 import './styles/NavigationFix.css';
 import './styles/AudioPlayer.css';
@@ -76,19 +78,10 @@ const SearchResultItem = ({ track, searchResults }) => {
     <Card className="h-100">
       <Card.Body>
         <div className="d-flex align-items-center">
-          <img
-            src={track.picUrl || 'default_cover.jpg'}
-            alt="专辑封面"
-            className="me-3 rounded"
-            style={{ 
-              width: '60px', 
-              height: '60px',
-              objectFit: 'cover',
-              backgroundColor: '#f5f5f5' 
-            }}
-            onError={(e) => {
-              e.target.src = 'default_cover.png';
-            }}
+          <AlbumCover 
+            track={track} 
+            size="60px" 
+            className="me-3 rounded" 
           />
           <div className="text-truncate">
             <h6 className="mb-1 text-truncate">{track.name}</h6>
@@ -418,6 +411,18 @@ const AppContent = () => {
     };
     
     initialize();
+  }, []);
+
+  // 启动时清理过期的封面缓存
+  useEffect(() => {
+    // 异步清理过期封面缓存，不阻塞主流程
+    clearExpiredCovers()
+      .then(count => {
+        console.log(`已清理 ${count} 个过期封面缓存`);
+      })
+      .catch(error => {
+        console.error('清理封面缓存失败:', error);
+      });
   }, []);
 
   // 下载上下文值
