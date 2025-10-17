@@ -9,8 +9,6 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
   const [expanded, setExpanded] = useState(false);
   // 添加滚动状态
   const [scrolled, setScrolled] = useState(false);
-  // 检测窗口宽度用于响应式设计
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const { currentUser } = useAuth();
   
   // 监听滚动事件
@@ -27,18 +25,6 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, [scrolled]);
-  
-  // 监听窗口大小变化
-  useEffect(() => {
-    const handleResize = () => {
-      setWindowWidth(window.innerWidth);
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
   
   // 处理菜单项点击事件
   const handleNavItemClick = (id) => {

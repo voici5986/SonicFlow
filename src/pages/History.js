@@ -22,7 +22,7 @@ const History = () => {
   const [currentDownloadingTrack, setCurrentDownloadingTrack] = useState(null);
   
   // 从PlayerContext获取状态和方法
-  const { handlePlay, currentTrack, isPlaying, fetchCover, coverCache } = usePlayer();
+  const { handlePlay, currentTrack, isPlaying } = usePlayer();
   
   // 从AuthContext获取用户状态
   const { currentUser } = useAuth();

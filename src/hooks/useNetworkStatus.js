@@ -10,9 +10,7 @@ import { getNetworkStatus, saveNetworkStatus } from '../services/storage';
  * @returns {Object} 网络状态相关数据和方法
  */
 export const useNetworkStatus = (options = {}) => {
-  // eslint-disable-next-line no-unused-vars
   const { 
-    showToasts = false, 
     dispatchEvents = true
   } = options;
   

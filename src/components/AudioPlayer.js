@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, memo, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useCallback, memo, useMemo, useState } from 'react';
 import { Row, Col, Button, Spinner } from 'react-bootstrap';
 import ReactPlayer from 'react-player';
 import { FaPlay, FaPause, FaDownload, FaMusic, 
@@ -9,10 +9,6 @@ import '../styles/AudioPlayer.css';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useDevice } from '../contexts/DeviceContext';
 import audioStateManager from '../services/audioStateManager';
-import { createPortal } from 'react-dom';
-import { handleError, ErrorTypes, ErrorSeverity } from '../utils/errorHandler';
-import classNames from 'classnames';
-import { toast } from 'react-toastify';
 import AlbumCover from './AlbumCover';
 
 /**
@@ -234,9 +230,6 @@ const AudioPlayer = () => {
         });
       });
     }
-    
-    // 保存当前playerRef的引用，避免清理函数中使用可能变化的ref
-    const currentPlayerRef = playerRef.current;
     
     // 返回清理函数
     return () => {

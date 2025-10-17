@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button, Modal } from 'react-bootstrap';
 import { FaTrash } from 'react-icons/fa';
 import { toast } from 'react-toastify';
-import { clearMemoryCache, CACHE_TYPES } from '../services/memoryCache';
+import { clearMemoryCache } from '../services/memoryCache';
 import {
   clearHistory,
   clearSearchHistory,

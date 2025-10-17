@@ -11,7 +11,7 @@ import AlbumCover from '../components/AlbumCover';
 
 const Favorites = () => {
   // 从PlayerContext获取状态和方法
-  const { handlePlay, currentTrack, isPlaying, fetchCover, coverCache } = usePlayer();
+  const { handlePlay, currentTrack, isPlaying, fetchCover } = usePlayer();
   
   // 从AuthContext获取用户状态
   const { currentUser } = useAuth();
