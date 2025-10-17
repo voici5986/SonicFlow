@@ -3,12 +3,10 @@
  * 统一处理音乐相关API调用，包括搜索、获取URL、歌词和封面
  */
 import axios from 'axios';
+import API_BASE from '../config/apiConfig';
 import { getCurrentAppMode, APP_MODES } from '../services/regionDetection';
 import { getMemoryCache, setMemoryCache, CACHE_TYPES } from './memoryCache';
 import audioStateManager from './audioStateManager';
-
-// API地址配置
-const API_BASE = process.env.REACT_APP_API_BASE || '/api';
 
 // 添加防重复请求映射
 const pendingPlayRequests = new Map();

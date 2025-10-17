@@ -122,14 +122,15 @@
   - 离线模式：无网络环境下的基本功能支持
 
 ## 项目部署
- 生产环境需配置一个环境编辑，`REACT_APP_API_BASE` 后端API地址，由于跨域问题不可以直接使用，一般填写反代 `https://music-api.gdstudio.xyz/api.php` 后地址，可使用nginx、caddy 等web服务反代，也可是cloudflare worker反代，我这边提供了worker反向代理的代码，见 [worker.js](worker.js) 和 [cfworker.js](../cfworker.js)
+ 生产环境需配置 `REACT_APP_MUSIC_API`（或兼容的 `REACT_APP_API_BASE`）为后端 API 地址。由于跨域问题不可以直接使用目标域名，需要提供一个可被前端访问的反向代理地址，推荐直接填写 `https://music-api.gdstudio.xyz/api.php` 或者对应的自建反代地址，可使用 nginx、caddy 等 Web 服务或 Cloudflare Worker，示例见 [worker.js](worker.js) 和 [cfworker.js](../cfworker.js)
     可快速部署到 netlify 、vercel、Cloudflare Pages 等平台。[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvoici5986%2FSonicFlow&project-name=sonicflow&repository-name=sonicflow)  [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/voici5986/SonicFlow)
 
 ## 环境变量配置
 
 项目使用以下环境变量：
 
-- `REACT_APP_API_BASE`: 后端API地址，默认为 `/api`
+- `REACT_APP_MUSIC_API`: 音乐 API 基地址，默认为 `/api`，可填写完整的反代地址（例如 `https://music-api.gdstudio.xyz/api.php`）
+- `REACT_APP_API_BASE`: 兼容旧版本的变量，如已配置则仍会被识别
 - `REACT_APP_IPINFO_TOKEN`: IPinfo.io API令牌，用于IP地区检测
 
 ### 配置方法
@@ -137,7 +138,7 @@
 1. **开发环境**：
    创建 `.env.development.local` 文件，添加以下内容：
    ```
-   REACT_APP_API_BASE=/api
+   REACT_APP_MUSIC_API=/api
    REACT_APP_IPINFO_TOKEN=your_ipinfo_token
    ```
 
