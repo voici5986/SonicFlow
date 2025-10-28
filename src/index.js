@@ -18,47 +18,6 @@ import { AuthProvider } from './contexts/AuthContext';
 import { DeviceProvider } from './contexts/DeviceContext';
 import * as serviceWorkerRegistration from './utils/serviceWorkerRegistration';
 
-// 添加音频元素创建检测
-const originalCreateElement = document.createElement;
-document.createElement = function(tagName, options) {
-  const element = originalCreateElement.call(document, tagName, options);
-  if (tagName.toLowerCase() === 'audio') {
-    console.log('[音频检测] 创建了新的音频元素', {
-      time: new Date().toISOString(),
-      stack: new Error().stack
-    });
-    
-    // 拦截audio.play方法
-    const originalPlay = element.play;
-    element.play = function() {
-      console.log('[音频检测] 音频元素play被调用', {
-        id: this.id,
-        src: this.src,
-        time: new Date().toISOString(),
-        stack: new Error().stack
-      });
-      
-      // 检查并暂停其他音频元素
-      const allAudio = document.querySelectorAll('audio');
-      if (allAudio.length > 1) {
-        Array.from(allAudio).forEach(audio => {
-          if (audio !== this && !audio.paused) {
-            console.warn('[音频检测] 检测到其他正在播放的音频，尝试暂停', audio.id);
-            try {
-              audio.pause();
-            } catch(e) {
-              console.error('[音频检测] 暂停其他音频失败', e);
-            }
-          }
-        });
-      }
-      
-      return originalPlay.apply(this, arguments);
-    };
-  }
-  return element;
-};
-
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
 // 注意：不使用React.StrictMode包裹应用
