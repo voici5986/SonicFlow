@@ -361,14 +361,18 @@ export const PlayerProvider = ({ children }) => {
       // 获取封面（如果还没有）
       const cacheKey = `${track.source}-${track.pic_id}-300`;
       if (!coverCache[cacheKey]) {
-        const coverData = await fetchCover(track.source, track.pic_id);
-        // 确保封面数据被正确缓存
-        setCoverCache(prev => ({
-          ...prev,
-          [cacheKey]: coverData
-        }));
+        try {
+          const coverData = await fetchCover(track.source, track.pic_id);
+          // 确保封面数据被正确缓存
+          setCoverCache(prev => ({
+            ...prev,
+            [cacheKey]: coverData
+          }));
+        } catch (error) {
+          console.error('[handlePlay] 获取封面失败:', error);
+        }
       }
-      
+
       console.log(`[handlePlay] 播放处理完成: ${track.name} (${track.id})`);
     } catch (error) {
       console.error('[handlePlay] 播放失败:', error);

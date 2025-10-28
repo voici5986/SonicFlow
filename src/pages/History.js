@@ -41,7 +41,18 @@ const History = () => {
     setLoading(true);
     try {
       const historyItems = await getHistory();
-      setHistory(historyItems);
+      
+      // 不再需要提前获取封面，AlbumCover组件会处理
+      // 只在需要时加载封面（例如播放时）
+      const itemsWithDefaultCovers = historyItems.map(item => ({
+        ...item,
+        song: {
+          ...item.song,
+          picUrl: 'default_cover.png' // 使用默认封面
+        }
+      }));
+      
+      setHistory(itemsWithDefaultCovers);
     } catch (error) {
       console.error('加载历史记录失败:', error);
       toast.error('加载历史记录失败，请重试', { icon: '⚠️' });
@@ -168,6 +179,7 @@ const History = () => {
                       track={item.song} 
                       size="60px" 
                       className="me-3" 
+                      lazy={true} // 使用延迟加载
                     />
                     <div className="text-truncate">
                       <h6 className="mb-1 text-truncate">{item.song.name}</h6>

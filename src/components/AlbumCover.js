@@ -11,24 +11,30 @@ import { usePlayer } from '../contexts/PlayerContext';
  * @param {Function} props.onClick - 点击事件处理函数
  * @param {string} props.className - 额外的CSS类名
  * @param {number} props.imgSize - 图片尺寸像素值，用于fetchCover（默认300）
+ * @param {boolean} props.lazy - 是否延迟加载，默认为false
  */
 const AlbumCover = ({ 
   track, 
   size = 'small', 
   onClick, 
   className = '',
-  imgSize = 300
+  imgSize = 300,
+  lazy = false
 }) => {
   // 从PlayerContext获取封面缓存和获取方法
   const { coverCache, fetchCover } = usePlayer();
-  const [imageUrl, setImageUrl] = useState(null);
+  const [imageUrl, setImageUrl] = useState('/default_cover.png');
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // 使用effect处理图片加载
   useEffect(() => {
-    const loadCover = async () => {
-      // 重置状态
-      setImageUrl(null);
+    // 如果是延迟加载模式，且尚未强制加载，则使用默认封面
+    if (lazy && !isLoaded) {
+      setImageUrl('/default_cover.png');
+      return;
+    }
 
+    const loadCover = async () => {
       // 如果没有track或pic_id，使用默认封面
       if (!track || !track.pic_id) {
         setImageUrl('/default_cover.png');
@@ -55,12 +61,36 @@ const AlbumCover = ({
     };
 
     loadCover();
-  }, [track, coverCache, fetchCover, imgSize]);
+  }, [track, coverCache, fetchCover, imgSize, lazy, isLoaded]);
 
   // 错误处理
   const handleImageError = () => {
     console.warn(`[AlbumCover] 封面加载失败: ${imageUrl}`);
     setImageUrl('/default_cover.png');
+  };
+
+  // 强制加载封面（用于延迟加载模式）
+  const forceLoadCover = async () => {
+    if (lazy && !isLoaded && track && track.pic_id) {
+      try {
+        const cacheKey = `${track.source}_${track.pic_id}_${imgSize}`;
+        
+        // 检查缓存
+        if (coverCache[cacheKey]) {
+          setImageUrl(coverCache[cacheKey]);
+          setIsLoaded(true);
+          return;
+        }
+        
+        // 获取封面
+        const coverUrl = await fetchCover(track.source, track.pic_id, imgSize);
+        setImageUrl(coverUrl);
+        setIsLoaded(true);
+      } catch (error) {
+        console.error('[AlbumCover] 强制加载封面失败:', error);
+        setImageUrl('/default_cover.png');
+      }
+    }
   };
 
   // 确定样式和尺寸
@@ -85,14 +115,26 @@ const AlbumCover = ({
   const sizeClass = size === 'small' ? 'player-thumbnail rounded me-2' : 
                    (size === 'large' ? 'album-cover-large' : 'rounded');
   
+  // 点击处理函数
+  const handleClick = () => {
+    // 如果是延迟加载模式，点击时强制加载
+    if (lazy && !isLoaded) {
+      forceLoadCover();
+    }
+    // 调用传入的onClick处理函数
+    if (onClick) {
+      onClick();
+    }
+  };
+  
   return (
     <img 
-      src={imageUrl || '/default_cover.png'}
+      src={imageUrl}
       alt={size === 'small' ? "当前播放" : "专辑封面"}
       className={`${className} ${sizeClass}`}
-      onClick={onClick}
+      onClick={handleClick}
       style={{ 
-        cursor: onClick ? 'pointer' : 'default',
+        cursor: (lazy && !isLoaded) || onClick ? 'pointer' : 'default',
         ...getStyles()
       }}
       onError={handleImageError}
@@ -101,4 +143,4 @@ const AlbumCover = ({
   );
 };
 
-export default AlbumCover; 
+export default AlbumCover;

@@ -46,8 +46,14 @@ const Favorites = () => {
       const favItems = await getFavorites();
       
       // 不再需要提前获取封面，AlbumCover组件会处理
-      setFavorites(favItems);
-      setFilteredFavorites(favItems); // 初始化过滤结果
+      // 只在需要时加载封面（例如播放时）
+      const itemsWithDefaultCovers = favItems.map(item => ({
+        ...item,
+        picUrl: 'default_cover.png' // 使用默认封面
+      }));
+      
+      setFavorites(itemsWithDefaultCovers);
+      setFilteredFavorites(itemsWithDefaultCovers); // 初始化过滤结果
     } catch (error) {
       console.error('加载收藏失败:', error);
       toast.error('加载收藏失败，请重试', { icon: '⚠️' });
@@ -866,6 +872,7 @@ const Favorites = () => {
                       track={track} 
                       size="60px" 
                       className="me-3" 
+                      lazy={true} // 使用延迟加载
                     />
                     <div className="text-truncate">
                       <h6 className="mb-1 text-truncate">{track.name}</h6>

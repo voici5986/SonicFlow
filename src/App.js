@@ -107,6 +107,7 @@ const SearchResultItem = ({ track, searchResults }) => {
             track={track} 
             size="60px" 
             className="me-3 rounded" 
+            lazy={true} // 使用延迟加载
           />
           <div className="text-truncate">
             <h6 className="mb-1 text-truncate">{track.name}</h6>
@@ -207,33 +208,17 @@ const AppContent = () => {
     try {
       const searchResults = await searchMusic(query, source, 20, 1);
       
-      // 为每个结果添加封面URL
-      const resultsWithCover = await Promise.all(
-        searchResults.map(async (track) => {
-          if (track.pic_id) {
-            try {
-              const cacheKey = `${track.source}-${track.pic_id}-300`;
-              if (coverCache[cacheKey]) {
-                return { ...track, picUrl: coverCache[cacheKey] };
-              }
-              
-              const coverUrl = await fetchCover(track.source, track.pic_id);
-              return { ...track, picUrl: coverUrl };
-            } catch (error) {
-              if (process.env.NODE_ENV === 'development') {
-              console.error('获取封面失败:', error);
-              }
-              return { ...track, picUrl: 'default_cover.png' };
-            }
-          }
-          return { ...track, picUrl: 'default_cover.png' };
-        })
-      );
+      // 不再预先获取封面图片，只在需要时获取（例如播放时）
+      // 这样可以显著减少API调用次数
+      const resultsWithoutCovers = searchResults.map(track => ({
+        ...track,
+        picUrl: 'default_cover.png' // 使用默认封面
+      }));
       
-      dispatch({ type: 'SEARCH_SUCCESS', payload: resultsWithCover });
+      dispatch({ type: 'SEARCH_SUCCESS', payload: resultsWithoutCovers });
       
       // 如果没有结果，显示提示
-      if (resultsWithCover.length === 0) {
+      if (resultsWithoutCovers.length === 0) {
         toast.info(`未找到"${query}"的相关结果`);
       }
       
@@ -256,7 +241,7 @@ const AppContent = () => {
         '搜索失败，请重试'
       );
     }
-  }, [query, source, isOnline, fetchCover, coverCache]);
+  }, [query, source, isOnline]);
 
   // 处理下载
   const handleDownload = useCallback(async (track) => {
