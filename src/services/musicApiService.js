@@ -350,6 +350,12 @@ export const playMusic = async (track, quality = 999, forceRefresh = false) => {
     // 生成请求唯一标识符
     const pendingKey = `${track.source}_${track.id}_${quality}`;
     
+    // 检查是否有相同播放请求正在进行中
+    if (pendingPlayRequests.has(pendingKey) && !forceRefresh) {
+      console.log(`[playMusic] 检测到重复播放请求: ${track.name} (${track.id}), 使用现有请求`);
+      return pendingPlayRequests.get(pendingKey);
+    }
+    
     checkApiAccess();
     
     // 生成缓存键
