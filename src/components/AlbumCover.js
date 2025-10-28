@@ -73,6 +73,7 @@ const AlbumCover = ({
   const forceLoadCover = async () => {
     if (lazy && !isLoaded && track && track.pic_id) {
       try {
+        // 生成缓存键
         const cacheKey = `${track.source}_${track.pic_id}_${imgSize}`;
         
         // 检查缓存

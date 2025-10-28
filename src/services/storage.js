@@ -42,8 +42,8 @@ export const coverStore = localforage.createInstance({
   driver: [localforage.INDEXEDDB, localforage.LOCALSTORAGE]
 });
 
-// 封面缓存过期时间：72小时（毫秒）
-const COVER_CACHE_TTL = 72 * 60 * 60 * 1000;
+// 封面缓存过期时间：30天（毫秒）
+const COVER_CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
 
 /**
  * 将图片保存到本地存储
