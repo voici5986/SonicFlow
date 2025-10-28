@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { usePlayer } from '../contexts/PlayerContext';
 
+const DEFAULT_COVER = '/default_cover.svg';
+
 /**
  * 统一的专辑封面组件
  * 处理专辑封面的加载、错误处理和缓存使用
@@ -23,21 +25,21 @@ const AlbumCover = ({
 }) => {
   // 从PlayerContext获取封面缓存和获取方法
   const { coverCache, fetchCover } = usePlayer();
-  const [imageUrl, setImageUrl] = useState('/default_cover.png');
+  const [imageUrl, setImageUrl] = useState(DEFAULT_COVER);
   const [isLoaded, setIsLoaded] = useState(false);
 
   // 使用effect处理图片加载
   useEffect(() => {
     // 如果是延迟加载模式，且尚未强制加载，则使用默认封面
     if (lazy && !isLoaded) {
-      setImageUrl('/default_cover.png');
+      setImageUrl(DEFAULT_COVER);
       return;
     }
 
     const loadCover = async () => {
       // 如果没有track或pic_id，使用默认封面
       if (!track || !track.pic_id) {
-        setImageUrl('/default_cover.png');
+        setImageUrl(DEFAULT_COVER);
         return;
       }
 
@@ -56,7 +58,7 @@ const AlbumCover = ({
         setImageUrl(coverUrl);
       } catch (error) {
         console.error('[AlbumCover] 加载封面失败:', error);
-        setImageUrl('/default_cover.png');
+        setImageUrl(DEFAULT_COVER);
       }
     };
 
@@ -66,7 +68,7 @@ const AlbumCover = ({
   // 错误处理
   const handleImageError = () => {
     console.warn(`[AlbumCover] 封面加载失败: ${imageUrl}`);
-    setImageUrl('/default_cover.png');
+    setImageUrl(DEFAULT_COVER);
   };
 
   // 强制加载封面（用于延迟加载模式）
@@ -89,7 +91,7 @@ const AlbumCover = ({
         setIsLoaded(true);
       } catch (error) {
         console.error('[AlbumCover] 强制加载封面失败:', error);
-        setImageUrl('/default_cover.png');
+        setImageUrl(DEFAULT_COVER);
       }
     }
   };
@@ -129,8 +131,6 @@ const AlbumCover = ({
   };
   
   // 检查是否使用默认封面
-  const isDefaultCover = imageUrl === '/default_cover.png';
-  
   return (
     <div 
       className={`${className} ${sizeClass} album-cover-wrapper`}
@@ -158,12 +158,6 @@ const AlbumCover = ({
         onError={handleImageError}
         loading="lazy"
       />
-      {/* 当使用默认封面时，显示音乐符号覆盖层 */}
-      {isDefaultCover && (
-        <div className="default-cover-overlay">
-          <span className="default-cover-icon">♪</span>
-        </div>
-      )}
     </div>
   );
 };

@@ -125,7 +125,7 @@ export const clearMemoryCache = (type) => {
 export const imageUrlToBase64 = async (imageUrl) => {
   try {
     // 验证URL
-    if (!imageUrl || imageUrl === 'default_cover.png' || !imageUrl.startsWith('http')) {
+    if (!imageUrl || imageUrl.includes('default_cover') || !imageUrl.startsWith('http')) {
       console.warn('[imageUrlToBase64] 无效的图片URL:', imageUrl);
       return null;
     }

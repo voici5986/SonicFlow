@@ -20,7 +20,7 @@ const STATIC_CACHE_URLS = [
   '/lyric.svg',
   '/offline.html', // 离线页面
   '/china.html',   // 中国模式页面
-  '/default_cover.png', // 默认封面图
+  '/default_cover.svg', // 默认封面图
 ];
 
 // 需要缓存的CSS和JS资源
@@ -235,7 +235,7 @@ self.addEventListener('fetch', (event) => {
             .catch(() => {
               // 如果网络请求失败，尝试返回默认图片
               if (url.href.includes('cover') || /\.(jpg|jpeg|png|webp)$/.test(url.href)) {
-                return caches.match('/default_cover.png');
+                return caches.match('/default_cover.svg');
               }
             });
         })

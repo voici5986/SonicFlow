@@ -277,7 +277,7 @@ export const getCoverImage = async (source, picId, size = 300) => {
     // 验证参数
     if (!picId || picId === 'undefined' || picId === 'null') {
       console.warn(`[getCoverImage] 无效的封面ID: ${picId}, 音乐源: ${source}`);
-      return 'default_cover.png';
+      return 'default_cover.svg';
     }
     
     // 验证size参数 - 根据API文档只支持300和500
@@ -311,7 +311,7 @@ export const getCoverImage = async (source, picId, size = 300) => {
     // 检查API响应
     if (!response.data || !response.data.url) {
       console.warn(`[getCoverImage] API未返回有效URL: ${JSON.stringify(response.data)}`);
-      return 'default_cover.png';
+      return 'default_cover.svg';
     }
     
     const url = response.data.url.replace(/\\/g, '');
@@ -319,7 +319,7 @@ export const getCoverImage = async (source, picId, size = 300) => {
     // 验证URL格式
     if (!url.startsWith('http')) {
       console.warn(`[getCoverImage] 返回的URL格式不正确: ${url}`);
-      return 'default_cover.png';
+      return 'default_cover.svg';
     }
     
     console.log(`[getCoverImage] 获取成功: ${url.substring(0, 50)}...`);
@@ -330,7 +330,7 @@ export const getCoverImage = async (source, picId, size = 300) => {
     return url;
   } catch (error) {
     console.error(`[getCoverImage] 获取封面图片失败: ${source}/${picId}`, error);
-    return 'default_cover.png'; // 返回默认封面
+    return 'default_cover.svg'; // 返回默认封面
   }
 };
 

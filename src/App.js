@@ -212,7 +212,7 @@ const AppContent = () => {
       // 这样可以显著减少API调用次数
       const resultsWithoutCovers = searchResults.map(track => ({
         ...track,
-        picUrl: 'default_cover.png' // 使用默认封面
+        picUrl: 'default_cover.svg' // 使用默认封面
       }));
       
       dispatch({ type: 'SEARCH_SUCCESS', payload: resultsWithoutCovers });

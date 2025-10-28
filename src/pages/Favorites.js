@@ -49,7 +49,7 @@ const Favorites = () => {
       // 只在需要时加载封面（例如播放时）
       const itemsWithDefaultCovers = favItems.map(item => ({
         ...item,
-        picUrl: 'default_cover.png' // 使用默认封面
+        picUrl: 'default_cover.svg' // 使用默认封面
       }));
       
       setFavorites(itemsWithDefaultCovers);

@@ -48,7 +48,7 @@ const History = () => {
         ...item,
         song: {
           ...item.song,
-          picUrl: 'default_cover.png' // 使用默认封面
+          picUrl: 'default_cover.svg' // 使用默认封面
         }
       }));
       

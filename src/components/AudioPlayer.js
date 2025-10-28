@@ -283,7 +283,7 @@ const AudioPlayer = () => {
         album: currentTrack.album || '',
         artwork: [
           {
-            src: coverCache[`${currentTrack.source}-${currentTrack.pic_id}-300`] || '/default_cover.png',
+            src: coverCache[`${currentTrack.source}-${currentTrack.pic_id}-300`] || '/default_cover.svg',
             sizes: '300x300',
             type: 'image/png'
           }

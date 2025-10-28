@@ -7,6 +7,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSync } from '../contexts/SyncContext';
 import audioStateManager, { AUDIO_STATES } from '../services/audioStateManager';
 
+const DEFAULT_COVER = '/default_cover.svg';
+
 // 创建Context
 const PlayerContext = createContext();
 
@@ -134,7 +136,7 @@ export const PlayerProvider = ({ children }) => {
       // 参数验证
       if (!picId || picId === 'undefined' || picId === 'null') {
         console.warn(`[fetchCover] 无效的封面ID: ${picId}, 音乐源: ${source}`);
-        return '/default_cover.png';
+        return DEFAULT_COVER;
       }
       
       // 统一使用下划线作为分隔符，与musicApiService保持一致
@@ -161,7 +163,7 @@ export const PlayerProvider = ({ children }) => {
       const coverUrl = await getCoverImage(source, picId, size);
       
       // 4. 更新内存缓存和本地存储
-      if (coverUrl && coverUrl !== 'default_cover.png') {
+      if (coverUrl && !coverUrl.includes('default_cover')) {
         setCoverCache(prev => ({
           ...prev,
           [cacheKey]: coverUrl
@@ -177,7 +179,7 @@ export const PlayerProvider = ({ children }) => {
     } catch (error) {
       console.error('[fetchCover] 获取封面失败:', error);
       // 返回默认封面
-      return '/default_cover.png';
+      return DEFAULT_COVER;
     }
   }, [coverCache]);
   

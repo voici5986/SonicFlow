@@ -54,7 +54,7 @@ const COVER_CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
 export async function saveCoverToStorage(key, imageUrl) {
   try {
     // 如果是默认封面，不需要缓存
-    if (!imageUrl || imageUrl === '/default_cover.png' || imageUrl === 'default_cover.png') {
+    if (!imageUrl || imageUrl.includes('default_cover')) {
       return false;
     }
 
