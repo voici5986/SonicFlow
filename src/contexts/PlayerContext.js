@@ -88,27 +88,6 @@ export const PlayerProvider = ({ children }) => {
     return () => removeListener();
   }, [currentTrack, playerUrl, isPlaying]);
   
-  // 监听播放状态变化，同步到audioStateManager
-  useEffect(() => {
-    // 只在有当前曲目时进行同步
-    if (currentTrack && playerUrl) {
-      // 添加防抖，避免快速连续状态变化导致的问题
-      const timeoutId = setTimeout(() => {
-        if (isPlaying) {
-          // 通过状态管理器控制播放
-          console.log('[PlayerContext] 检查是否需要同步到audioStateManager: 播放');
-          audioStateManager.play();
-        } else {
-          // 通过状态管理器控制暂停
-          console.log('[PlayerContext] 检查是否需要同步到audioStateManager: 暂停');
-          audioStateManager.pause();
-        }
-      }, 50); // 短暂延迟，确保React状态已完全更新
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [isPlaying, currentTrack, playerUrl]);
-  
   // 歌词解析函数
   const parseLyric = useCallback((text) => {
     if (!text) return [];
@@ -535,6 +514,7 @@ export const PlayerProvider = ({ children }) => {
     // 方法
     setIsPlaying,
     setTotalSeconds,
+    setCurrentPlaylist,
     togglePlay,
     setLyricExpanded,
     toggleLyric,

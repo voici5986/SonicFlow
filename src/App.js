@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, useReducer } from 'react';
 import { Container, Row, Col, Form, Button, Card, Spinner } from 'react-bootstrap';
 import { FaPlay, FaPause, FaDownload } from 'react-icons/fa';
 import { toast } from 'react-toastify';
@@ -56,6 +56,31 @@ const offlineBannerStyle = {
   fontWeight: 500,
   boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
 };
+
+// 搜索状态管理
+const searchInitialState = {
+  query: '',
+  results: [],
+  source: 'netease',
+  quality: 999,
+  loading: false,
+  error: null,
+};
+
+function searchReducer(state, action) {
+  switch (action.type) {
+    case 'SET_FIELD':
+      return { ...state, [action.field]: action.value };
+    case 'SEARCH_START':
+      return { ...state, loading: true, error: null };
+    case 'SEARCH_SUCCESS':
+      return { ...state, loading: false, results: action.payload };
+    case 'SEARCH_FAILURE':
+      return { ...state, loading: false, error: action.payload };
+    default:
+      return state;
+  }
+}
 
 // 下载上下文
 const DownloadContext = React.createContext();
@@ -138,11 +163,8 @@ const AppContent = () => {
   });
   
   // 搜索相关状态
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
-  const [source, setSource] = useState('netease');
-  const [quality, setQuality] = useState(999);
-  const [loading, setLoading] = useState(false);
+  const [searchState, dispatch] = useReducer(searchReducer, searchInitialState);
+  const { query, results, source, quality, loading } = searchState;
   
   // 下载相关状态
   const [downloading, setDownloading] = useState(false);
@@ -159,7 +181,7 @@ const AppContent = () => {
   const qualities = [128, 192, 320, 740, 999];
 
   // 从PlayerContext获取封面相关方法
-  const { fetchCover, coverCache } = usePlayer();
+  const { fetchCover, coverCache, setCurrentPlaylist } = usePlayer();
 
   // 搜索处理函数
   const handleSearch = useCallback(async (e) => {
@@ -181,7 +203,7 @@ const AppContent = () => {
       return;
     }
 
-    setLoading(true);
+    dispatch({ type: 'SEARCH_START' });
     try {
       const searchResults = await searchMusic(query, source, 20, 1);
       
@@ -208,7 +230,7 @@ const AppContent = () => {
         })
       );
       
-      setResults(resultsWithCover);
+      dispatch({ type: 'SEARCH_SUCCESS', payload: resultsWithCover });
       
       // 如果没有结果，显示提示
       if (resultsWithCover.length === 0) {
@@ -226,14 +248,13 @@ const AppContent = () => {
       }
       
     } catch (error) {
+      dispatch({ type: 'SEARCH_FAILURE', payload: error });
       handleError(
         error,
         ErrorTypes.SEARCH,
         ErrorSeverity.ERROR,
         '搜索失败，请重试'
       );
-    } finally {
-      setLoading(false);
     }
   }, [query, source, isOnline, fetchCover, coverCache]);
 
@@ -268,6 +289,13 @@ const AppContent = () => {
     }
   }, [downloading, isOnline, quality]);
 
+  // 当搜索结果变化时，同步更新播放列表
+  useEffect(() => {
+    if (results && results.length > 0) {
+      setCurrentPlaylist(results);
+    }
+  }, [results, setCurrentPlaylist]);
+
   // 渲染首页内容
   const renderHomePage = () => {
     return (
@@ -280,7 +308,7 @@ const AppContent = () => {
                   type="text"
                   placeholder="输入歌曲、歌手或专辑名称"
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
+                  onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'query', value: e.target.value })}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
@@ -292,9 +320,9 @@ const AppContent = () => {
             </Col>
             <Col xs={6} md={2}>
               <Form.Group>
-                <Form.Select 
+                <Form.Select
                   value={source}
-                  onChange={(e) => setSource(e.target.value)}
+                  onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'source', value: e.target.value })}
                 >
                   {sources.map((src) => (
                     <option key={src} value={src}>
@@ -308,7 +336,7 @@ const AppContent = () => {
               <Form.Group>
                 <Form.Select
                   value={quality}
-                  onChange={(e) => setQuality(parseInt(e.target.value))}
+                  onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'quality', value: parseInt(e.target.value) })}
                 >
                   {qualities.map((q) => (
                     <option key={q} value={q}>

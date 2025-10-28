@@ -6,10 +6,10 @@ module.exports = function(app) {
   app.use(
     '/api',
     createProxyMiddleware({
-      target: 'https://music-api.gdstudio.xyz/api.php',
+      target: 'https://music-api.gdstudio.xyz',
       changeOrigin: true,
       pathRewrite: {
-        '^/api': '', // 把 "/api" 从路径中移除
+        '^/api': '/api.php', // 把 "/api" 替换为 "/api.php"
       },
       logLevel: 'warn', // 减少日志输出，只显示警告和错误
     })

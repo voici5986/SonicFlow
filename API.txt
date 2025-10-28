@@ -1,4 +1,24 @@
-地址：https://music-api.gdstudio.xyz/api.php
+GD Studio's Online Music Platform API
+To report any unlawful activity or to protect your local authority, please contact us: gdstudio@email.com
+
+Based on open-source projects Meting & MKOnlineMusicPlayer.
+
+Written by metowolf & mengkun. Modded by GD Studio.
+
+This platform is for study purposes only. Do NOT use it commercially!
+
+
+
+免责声明：本站资源来自网络，仅限本人学习参考，严禁下载、传播或商用，如侵权请与我联系删除。继续使用将视为同意本声明
+
+若使用本站提供的API，请注明出处“GD音乐台(music.gdstudio.xyz)”，尊重作者。使用过程如遇问题可B站私信：GD-Studio
+
+当前稳定音乐源（动态更新）：netease、kuwo、joox
+
+当前访问频率限制（动态更新）：5分钟内不超60次请求
+
+更新日期：2025-10-1
+
 
 搜索
 API：https://music-api.gdstudio.xyz/api.php?types=search&source=[MUSIC SOURCE]&name=[KEYWORD]&count=[PAGE LENGTH]&pages=[PAGE NUM]

@@ -4,8 +4,10 @@
  */
 import axios from 'axios';
 import { getCurrentAppMode, APP_MODES } from '../services/regionDetection';
+import { ERROR_MESSAGES } from '../constants/strings';
 import { getMemoryCache, setMemoryCache, CACHE_TYPES } from './memoryCache';
 import audioStateManager from './audioStateManager';
+import { validateSearchResults } from '../utils/dataValidator';
 
 // API地址配置
 const API_BASE = process.env.REACT_APP_API_BASE || '/api';
@@ -22,7 +24,7 @@ const pendingLyricRequests = new Map();
 const checkApiAccess = () => {
   const currentMode = getCurrentAppMode();
   if (currentMode === APP_MODES.CHINA) {
-    throw new Error('因法律风险，本服务不对IP为中国大陆地区的用户开放');
+    throw new Error(ERROR_MESSAGES.REGION_RESTRICTED);
   }
   return true;
 };
@@ -69,18 +71,25 @@ export const searchMusic = async (query, source, count = 20, page = 1) => {
     // 清除超时
     clearTimeout(timeoutId);
     
-    // 检查响应
-    if (!response.data || response.data.length === 0) {
-      console.log('[searchMusic] 搜索结果为空');
+    // 检查响应并校验数据
+    if (!response.data) {
+      console.log('[searchMusic] API未返回数据');
+      return [];
+    }
+
+    const validatedData = validateSearchResults(response.data);
+    
+    if (validatedData.length === 0) {
+      console.log('[searchMusic] 搜索结果为空或数据无效');
       return [];
     }
     
-    console.log(`[searchMusic] 搜索成功，找到 ${response.data.length} 条结果`);
+    console.log(`[searchMusic] 搜索成功，找到 ${validatedData.length} 条有效结果`);
     
-    // 缓存结果到内存
-    setMemoryCache(CACHE_TYPES.SEARCH_RESULTS, cacheKey, response.data);
+    // 缓存校验后的结果到内存
+    setMemoryCache(CACHE_TYPES.SEARCH_RESULTS, cacheKey, validatedData);
     
-    return response.data;
+    return validatedData;
   } catch (error) {
     // 处理取消请求的情况
     if (axios.isCancel(error)) {
