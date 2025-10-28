@@ -671,14 +671,20 @@ const AudioPlayer = () => {
                   if (!isPlaying) {
                     setIsPlaying(true);
                   }
+                  
+                  // 通知音频状态管理器
+                  audioStateManager.play();
                 }}
                 onPause={() => {
                   console.log('[ReactPlayer] 暂停事件触发');
                   // 确保状态同步
                   if (isPlaying) {
                     setIsPlaying(false);
-                }
-              }}
+                  }
+                  
+                  // 通知音频状态管理器
+                  audioStateManager.pause();
+                }}
               onError={(e) => {
                   console.error('[ReactPlayer] 播放错误:', e);
                   // 只通过音频状态管理器处理错误，避免重复处理
