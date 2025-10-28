@@ -53,6 +53,10 @@ export const PlayerProvider = ({ children }) => {
   const playerRef = useRef(null);
   const lyricsContainerRef = useRef(null);
   
+  // 添加播放防抖相关引用
+  const playDebounceRef = useRef(null);
+  const lastPlayTimeRef = useRef(0);
+  
   // 监听音频状态管理器的状态变化
   useEffect(() => {
     const removeListener = audioStateManager.addListener((state) => {
@@ -82,6 +86,11 @@ export const PlayerProvider = ({ children }) => {
           ErrorSeverity.ERROR,
           '播放失败，请重试'
         );
+        // 清除防抖定时器
+        if (playDebounceRef.current) {
+          clearTimeout(playDebounceRef.current);
+          playDebounceRef.current = null;
+        }
       }
     });
     
@@ -244,8 +253,20 @@ export const PlayerProvider = ({ children }) => {
     setLyricExpanded(prev => !prev);
   }, []);
   
-  // 处理播放
+  // 处理播放 - 添加防抖机制
   const handlePlay = useCallback(async (track, index = -1, playlist = null) => {
+    // 获取当前时间
+    const now = Date.now();
+    
+    // 检查是否在防抖时间内
+    if (now - lastPlayTimeRef.current < 1000) {
+      console.log('[handlePlay] 防抖机制生效，忽略重复播放请求');
+      return;
+    }
+    
+    // 更新最后播放时间
+    lastPlayTimeRef.current = now;
+    
     try {
       console.log(`[handlePlay] 开始播放: ${track.name} (${track.id})`);
       
@@ -540,4 +561,4 @@ export const PlayerProvider = ({ children }) => {
   );
 };
 
-export default PlayerProvider; 
+export default PlayerProvider;
