@@ -202,6 +202,60 @@ img.rounded:hover {
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12);
 }
 
+/* 专辑封面包装器 */
+.album-cover-wrapper {
+  position: relative;
+  overflow: hidden;
+  background-color: #f8f9fa; /* 浅灰色背景 */
+  border-radius: var(--border-radius);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.07);
+  transition: all 0.3s var(--ease-out-back);
+}
+
+.album-cover-wrapper:hover {
+  transform: scale(1.03);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* 默认封面覆盖层 */
+.default-cover-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(106, 17, 203, 0.1); /* 紫色半透明背景 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 默认封面图标 */
+.default-cover-icon {
+  font-size: 24px;
+  color: #6a11cb; /* 紫色 */
+  opacity: 0.7;
+  font-weight: bold;
+}
+
+/* 小尺寸默认封面 */
+.player-thumbnail .default-cover-overlay {
+  background-color: rgba(106, 17, 203, 0.05);
+}
+
+.player-thumbnail .default-cover-icon {
+  font-size: 16px;
+}
+
+/* 大尺寸默认封面 */
+.album-cover-large .default-cover-overlay {
+  background-color: rgba(106, 17, 203, 0.15);
+}
+
+.album-cover-large .default-cover-icon {
+  font-size: 48px;
+}
+
 /* 美化表单控件 */
 .form-control, .form-select, .dropdown-toggle {
   border-radius: var(--border-radius);
