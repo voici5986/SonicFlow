@@ -28,7 +28,6 @@ import {
 } from './utils/errorHandler';
 import SyncProvider from './contexts/SyncContext';
 import FavoritesProvider from './contexts/FavoritesContext';
-import AlbumCover from './components/AlbumCover';
 import { clearExpiredCovers } from './services/storage';
 // 导入样式文件
 import './styles/NavigationFix.css';
@@ -102,18 +101,10 @@ const SearchResultItem = ({ track, searchResults }) => {
   return (
     <Card className="h-100">
       <Card.Body>
-        <div className="d-flex align-items-center">
-          <AlbumCover 
-            track={track} 
-            size="60px" 
-            className="me-3 rounded" 
-            lazy={true} // 使用延迟加载
-          />
-          <div className="text-truncate">
-            <h6 className="mb-1 text-truncate">{track.name}</h6>
-            <small className="text-muted d-block text-truncate">{track.artist}</small>
-            <small className="text-muted d-block text-truncate">{track.album}</small>
-          </div>
+        <div>
+          <h6 className="mb-1 text-truncate">{track.name}</h6>
+          <small className="text-muted d-block text-truncate">{track.artist}</small>
+          <small className="text-muted d-block text-truncate">{track.album}</small>
         </div>
         
         <div className="mt-2 d-flex justify-content-end">
@@ -210,10 +201,7 @@ const AppContent = () => {
       
       // 不再预先获取封面图片，只在需要时获取（例如播放时）
       // 这样可以显著减少API调用次数
-      const resultsWithoutCovers = searchResults.map(track => ({
-        ...track,
-        picUrl: 'default_cover.svg' // 使用默认封面
-      }));
+      const resultsWithoutCovers = searchResults.map(track => ({ ...track }));
       
       dispatch({ type: 'SEARCH_SUCCESS', payload: resultsWithoutCovers });
       

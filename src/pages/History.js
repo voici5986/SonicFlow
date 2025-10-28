@@ -10,7 +10,6 @@ import './History.css';
 import { downloadTrack } from '../services/downloadService';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useAuth } from '../contexts/AuthContext';
-import AlbumCover from '../components/AlbumCover';
 
 // 设置moment为中文
 moment.locale('zh-cn');
@@ -22,7 +21,7 @@ const History = () => {
   const [currentDownloadingTrack, setCurrentDownloadingTrack] = useState(null);
   
   // 从PlayerContext获取状态和方法
-  const { handlePlay, currentTrack, isPlaying, fetchCover, coverCache } = usePlayer();
+  const { handlePlay, currentTrack, isPlaying } = usePlayer();
   
   // 从AuthContext获取用户状态
   const { currentUser } = useAuth();
@@ -41,18 +40,7 @@ const History = () => {
     setLoading(true);
     try {
       const historyItems = await getHistory();
-      
-      // 不再需要提前获取封面，AlbumCover组件会处理
-      // 只在需要时加载封面（例如播放时）
-      const itemsWithDefaultCovers = historyItems.map(item => ({
-        ...item,
-        song: {
-          ...item.song,
-          picUrl: 'default_cover.svg' // 使用默认封面
-        }
-      }));
-      
-      setHistory(itemsWithDefaultCovers);
+      setHistory(historyItems);
     } catch (error) {
       console.error('加载历史记录失败:', error);
       toast.error('加载历史记录失败，请重试', { icon: '⚠️' });
@@ -174,18 +162,10 @@ const History = () => {
                 data-timestamp={formatCompactTimestamp(item.timestamp)}
               >
                 <Card.Body>
-                  <div className="d-flex align-items-center">
-                    <AlbumCover 
-                      track={item.song} 
-                      size="60px" 
-                      className="me-3" 
-                      lazy={true} // 使用延迟加载
-                    />
-                    <div className="text-truncate">
-                      <h6 className="mb-1 text-truncate">{item.song.name}</h6>
-                      <small className="text-muted d-block text-truncate">{item.song.artist}</small>
-                      <small className="text-muted d-block text-truncate">{item.song.album}</small>
-                    </div>
+                  <div>
+                    <h6 className="mb-1 text-truncate">{item.song.name}</h6>
+                    <small className="text-muted d-block text-truncate">{item.song.artist}</small>
+                    <small className="text-muted d-block text-truncate">{item.song.album}</small>
                   </div>
                   
                   <div className="mt-2 d-flex justify-content-end">

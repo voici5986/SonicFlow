@@ -7,11 +7,10 @@ import { downloadTrack, downloadTracks } from '../services/downloadService';
 import { searchMusic } from '../services/musicApiService';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useAuth } from '../contexts/AuthContext';
-import AlbumCover from '../components/AlbumCover';
 
 const Favorites = () => {
   // 从PlayerContext获取状态和方法
-  const { handlePlay, currentTrack, isPlaying, fetchCover, coverCache } = usePlayer();
+  const { handlePlay, currentTrack, isPlaying } = usePlayer();
   
   // 从AuthContext获取用户状态
   const { currentUser } = useAuth();
@@ -44,16 +43,8 @@ const Favorites = () => {
     setLoading(true);
     try {
       const favItems = await getFavorites();
-      
-      // 不再需要提前获取封面，AlbumCover组件会处理
-      // 只在需要时加载封面（例如播放时）
-      const itemsWithDefaultCovers = favItems.map(item => ({
-        ...item,
-        picUrl: 'default_cover.svg' // 使用默认封面
-      }));
-      
-      setFavorites(itemsWithDefaultCovers);
-      setFilteredFavorites(itemsWithDefaultCovers); // 初始化过滤结果
+      setFavorites(favItems);
+      setFilteredFavorites(favItems); // 初始化过滤结果
     } catch (error) {
       console.error('加载收藏失败:', error);
       toast.error('加载收藏失败，请重试', { icon: '⚠️' });
@@ -582,15 +573,6 @@ const Favorites = () => {
           );
           
           if (!isDuplicate) {
-            // 添加相关的URL字段和封面
-            if (!matchedTrack.picUrl && matchedTrack.pic_id) {
-              try {
-                matchedTrack.picUrl = await fetchCover(matchedTrack.source, matchedTrack.pic_id);
-              } catch (error) {
-                console.error("获取封面失败:", error);
-              }
-            }
-            
             // 确保添加到新收藏列表开头（与toggleFavorite逻辑一致）
             newFavorites.unshift(matchedTrack);
             importedCount++;
@@ -867,18 +849,10 @@ const Favorites = () => {
             <Col key={track.id} xs={12} sm={6} md={4} lg={3}>
               <Card className="h-100">
                 <Card.Body>
-                  <div className="d-flex align-items-center">
-                    <AlbumCover 
-                      track={track} 
-                      size="60px" 
-                      className="me-3" 
-                      lazy={true} // 使用延迟加载
-                    />
-                    <div className="text-truncate">
-                      <h6 className="mb-1 text-truncate">{track.name}</h6>
-                      <small className="text-muted d-block text-truncate">{track.artist}</small>
-                      <small className="text-muted d-block text-truncate">{track.album}</small>
-                    </div>
+                  <div>
+                    <h6 className="mb-1 text-truncate">{track.name}</h6>
+                    <small className="text-muted d-block text-truncate">{track.artist}</small>
+                    <small className="text-muted d-block text-truncate">{track.album}</small>
                   </div>
                   
                   <div className="mt-2 d-flex justify-content-end">
