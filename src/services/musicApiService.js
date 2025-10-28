@@ -11,6 +11,7 @@ import { validateSearchResults } from '../utils/dataValidator';
 
 // API地址配置
 const API_BASE = process.env.REACT_APP_API_BASE || '/api';
+const REQUEST_TIMEOUT = 12000; // 12秒请求超时
 
 // 添加防重复请求映射
 const pendingPlayRequests = new Map();
@@ -65,7 +66,8 @@ export const searchMusic = async (query, source, count = 20, page = 1) => {
         count: count,
         pages: page
       },
-      signal: controller.signal
+      signal: controller.signal,
+      timeout: REQUEST_TIMEOUT
     });
     
     // 清除超时
@@ -152,13 +154,14 @@ export const getAudioUrl = async (track, quality = 999, forceRefresh = false) =>
         
         console.log(`[getAudioUrl] ${forceRefresh ? '强制刷新' : '内存缓存未命中'}，调用API: ${requestId}`);
     
-        const response = await axios.get(`${API_BASE}`, {
+    const response = await axios.get(`${API_BASE}`, {
           params: {
             types: 'url',
             source: track.source,
             id: track.id,
             br: quality
-          }
+      },
+      timeout: REQUEST_TIMEOUT
         });
     
         // 缓存结果到内存
@@ -181,7 +184,11 @@ export const getAudioUrl = async (track, quality = 999, forceRefresh = false) =>
     // 返回Promise
     return urlPromise;
   } catch (error) {
-    console.error('[getAudioUrl] 获取音频URL失败:', error);
+    if (error.code === 'ECONNABORTED' || error.name === 'AbortError') {
+      console.error('[getAudioUrl] 请求超时或被取消');
+    } else {
+      console.error('[getAudioUrl] 获取音频URL失败:', error);
+    }
     throw error;
   }
 };
@@ -232,7 +239,8 @@ export const getLyrics = async (track) => {
         types: 'lyric',
         source: track.source,
         id: track.lyric_id
-      }
+      },
+      timeout: REQUEST_TIMEOUT
     });
     
     const lyrics = {
@@ -260,7 +268,11 @@ export const getLyrics = async (track) => {
     // 返回Promise
     return lyricPromise;
   } catch (error) {
-    console.error('[getLyrics] 获取歌词失败:', error);
+    if (error.code === 'ECONNABORTED' || error.name === 'AbortError') {
+      console.error('[getLyrics] 请求超时或被取消');
+    } else {
+      console.error('[getLyrics] 获取歌词失败:', error);
+    }
     throw error;
   }
 };
@@ -305,7 +317,8 @@ export const getCoverImage = async (source, picId, size = 300) => {
         source: source,
         id: picId,
         size: size
-      }
+      },
+      timeout: REQUEST_TIMEOUT
     });
     
     // 检查API响应
@@ -329,7 +342,11 @@ export const getCoverImage = async (source, picId, size = 300) => {
     
     return url;
   } catch (error) {
-    console.error(`[getCoverImage] 获取封面图片失败: ${source}/${picId}`, error);
+    if (error.code === 'ECONNABORTED' || error.name === 'AbortError') {
+      console.error(`[getCoverImage] 请求超时或被取消: ${source}/${picId}`);
+    } else {
+      console.error(`[getCoverImage] 获取封面图片失败: ${source}/${picId}`, error);
+    }
     return 'default_cover.svg'; // 返回默认封面
   }
 };
@@ -395,12 +412,15 @@ export const playMusic = async (track, quality = 999, forceRefresh = false) => {
           throw new Error('请求已取消');
         }
     
-        // 并行请求URL和歌词
-        const [audioData, lyrics] = await Promise.all([
-          // 传递forceRefresh参数给getAudioUrl
-          getAudioUrl(track, quality, forceRefresh),
-          getLyrics(track)
-        ]);
+        // 先获取音频URL
+        const audioData = await getAudioUrl(track, quality, forceRefresh);
+        
+        let lyrics = { raw: '', translated: '' };
+        try {
+          lyrics = await getLyrics(track);
+        } catch (lyricError) {
+          console.error('[playMusic] 获取歌词失败，将继续播放音频:', lyricError);
+        }
         
         // 再次检查请求是否仍然有效
         if (!audioStateManager.isValidRequest(requestId)) {
