@@ -108,7 +108,7 @@ const AlbumCover = ({
       width: typeof size === 'number' ? `${size}px` : size,
       height: typeof size === 'number' ? `${size}px` : size,
       objectFit: 'cover',
-      backgroundColor: '#f5f5f5'
+      backgroundColor: '#f8f9fa' // 添加浅灰色背景
     };
   };
   
@@ -128,19 +128,43 @@ const AlbumCover = ({
     }
   };
   
+  // 检查是否使用默认封面
+  const isDefaultCover = imageUrl === '/default_cover.png';
+  
   return (
-    <img 
-      src={imageUrl}
-      alt={size === 'small' ? "当前播放" : "专辑封面"}
-      className={`${className} ${sizeClass}`}
+    <div 
+      className={`${className} ${sizeClass} album-cover-wrapper`}
       onClick={handleClick}
-      style={{ 
+      style={{
+        display: 'inline-block',
         cursor: (lazy && !isLoaded) || onClick ? 'pointer' : 'default',
+        position: 'relative',
+        overflow: 'hidden',
+        backgroundColor: '#f8f9fa',
+        borderRadius: size === 'small' ? '6px' : '10px',
         ...getStyles()
       }}
-      onError={handleImageError}
-      loading="lazy"
-    />
+    >
+      <img 
+        src={imageUrl}
+        alt={size === 'small' ? "当前播放" : "专辑封面"}
+        className="album-cover-image"
+        style={{ 
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          borderRadius: 'inherit'
+        }}
+        onError={handleImageError}
+        loading="lazy"
+      />
+      {/* 当使用默认封面时，显示音乐符号覆盖层 */}
+      {isDefaultCover && (
+        <div className="default-cover-overlay">
+          <span className="default-cover-icon">♪</span>
+        </div>
+      )}
+    </div>
   );
 };
 
