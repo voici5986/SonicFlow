@@ -4,7 +4,7 @@
  */
 
 // 缓存版本和名称定义
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3'; // 更新版本以强制刷新Service Worker
 const STATIC_CACHE_NAME = 'sonicflow-static-' + CACHE_VERSION;
 const API_CACHE_NAME = 'sonicflow-api-' + CACHE_VERSION;
 const AUDIO_CACHE_NAME = 'sonicflow-audio-' + CACHE_VERSION;
@@ -41,10 +41,10 @@ const API_REGEX = /\/api\?/;
 // 安装事件：设置缓存
 self.addEventListener('install', (event) => {
   console.log('[Service Worker] 正在安装');
-  
+
   // 跳过等待，直接激活
   self.skipWaiting();
-  
+
   // 缓存核心资源
   event.waitUntil(
     caches.open(STATIC_CACHE_NAME)
@@ -61,10 +61,10 @@ self.addEventListener('install', (event) => {
 // 激活事件：清理旧缓存
 self.addEventListener('activate', (event) => {
   console.log('[Service Worker] 激活');
-  
+
   // 立即接管所有客户端
   event.waitUntil(clients.claim());
-  
+
   // 清理旧版本缓存
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -72,7 +72,7 @@ self.addEventListener('activate', (event) => {
         cacheNames.map((cacheName) => {
           // 检查是否是旧版本缓存
           if (
-            cacheName.startsWith('sonicflow-') && 
+            cacheName.startsWith('sonicflow-') &&
             !cacheName.includes(CACHE_VERSION)
           ) {
             console.log('[Service Worker] 删除旧缓存:', cacheName);
@@ -87,10 +87,10 @@ self.addEventListener('activate', (event) => {
 // 资源请求处理
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  
+
   // 跳过不需要缓存的请求和非GET请求
   if (
-    event.request.method !== 'GET' || 
+    event.request.method !== 'GET' ||
     url.href.includes('chrome-extension')
   ) {
     return;
@@ -115,7 +115,7 @@ self.addEventListener('fetch', (event) => {
                 });
               } else {
                 // 默认返回离线页面
-          return caches.match('/offline.html');
+                return caches.match('/offline.html');
               }
             });
         })
@@ -123,14 +123,23 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 处理API请求 - 网络优先，失败时使用缓存
+  // 处理API请求 - 在生产环境跳过Service Worker拦截,让Netlify重定向处理
+  // 这样可以避免Service Worker干扰Netlify的代理配置
   if (API_REGEX.test(url.href)) {
+    // 在生产环境(部署到Netlify),跳过Service Worker,让浏览器直接处理
+    // 这样Netlify的重定向规则才能正确应用
+    if (self.location.hostname !== 'localhost' && self.location.hostname !== '127.0.0.1') {
+      console.log('[Service Worker] 生产环境,跳过API请求拦截,让Netlify重定向处理:', url.href);
+      return; // 不拦截,让浏览器直接处理
+    }
+
+    // 在本地开发环境,使用网络优先策略
     event.respondWith(
       fetch(event.request)
         .then((response) => {
           // 克隆响应以便缓存
           const clonedResponse = response.clone();
-          
+
           // 只缓存成功的响应
           if (response.ok) {
             caches.open(API_CACHE_NAME)
@@ -138,7 +147,7 @@ self.addEventListener('fetch', (event) => {
                 cache.put(event.request, clonedResponse);
               });
           }
-          
+
           return response;
         })
         .catch(() => {
@@ -158,17 +167,17 @@ self.addEventListener('fetch', (event) => {
             // 如果有缓存，返回缓存
             return cachedResponse;
           }
-          
+
           // 如果没有缓存，则从网络获取
           return fetch(event.request)
             .then((response) => {
               if (!response || !response.ok) {
                 return response;
               }
-              
+
               // 克隆响应以便缓存
               const clonedResponse = response.clone();
-              
+
               // 检查响应大小
               const contentLength = response.headers.get('content-length');
               if (contentLength) {
@@ -178,7 +187,7 @@ self.addEventListener('fetch', (event) => {
                   console.log(`[Service Worker] 缓存大型音频文件: ${url.href}, 大小: ${(size / (1024 * 1024)).toFixed(2)}MB`);
                 }
               }
-              
+
               // 无论大小，都缓存音频文件
               caches.open(AUDIO_CACHE_NAME)
                 .then((cache) => {
@@ -190,7 +199,7 @@ self.addEventListener('fetch', (event) => {
                       console.error(`[Service Worker] 缓存音频失败: ${err.message}`);
                     });
                 });
-                
+
               return response;
             })
             .catch(error => {
@@ -214,22 +223,22 @@ self.addEventListener('fetch', (event) => {
             incrementalCacheUpdate(event.request, cachedResponse, IMAGE_CACHE_NAME);
             return cachedResponse;
           }
-          
+
           // 如果缓存中没有，则从网络获取并缓存
           return fetch(event.request)
             .then((response) => {
               if (!response || !response.ok) {
                 return response;
               }
-              
+
               // 克隆响应以便缓存
               const clonedResponse = response.clone();
-              
+
               caches.open(IMAGE_CACHE_NAME)
                 .then((cache) => {
                   cache.put(event.request, clonedResponse);
                 });
-                
+
               return response;
             })
             .catch(() => {
@@ -245,7 +254,7 @@ self.addEventListener('fetch', (event) => {
 
   // 对于静态资源，使用缓存优先策略，增量更新
   const isStaticAsset = RUNTIME_CACHE_REGEX.some(pattern => pattern.test(event.request.url));
-  
+
   if (isStaticAsset) {
     event.respondWith(
       caches.match(event.request)
@@ -255,22 +264,22 @@ self.addEventListener('fetch', (event) => {
             incrementalCacheUpdate(event.request, cachedResponse, STATIC_CACHE_NAME);
             return cachedResponse;
           }
-          
+
           // 如果缓存中没有，则从网络获取并缓存
           return fetch(event.request)
             .then((response) => {
               if (!response || !response.ok) {
                 return response;
               }
-              
+
               // 克隆响应以便缓存
               const clonedResponse = response.clone();
-              
+
               caches.open(STATIC_CACHE_NAME)
-                  .then((cache) => {
+                .then((cache) => {
                   cache.put(event.request, clonedResponse);
-                  });
-                
+                });
+
               return response;
             });
         })
@@ -309,7 +318,7 @@ self.addEventListener('periodicsync', (event) => {
 // 监听消息事件
 self.addEventListener('message', (event) => {
   const data = event.data;
-  
+
   if (data && data.type === 'APP_MODE_CHANGE') {
     // 更新缓存中的应用模式
     caches.open(STATIC_CACHE_NAME)
@@ -321,7 +330,7 @@ self.addEventListener('message', (event) => {
             'Cache-Control': 'no-cache'
           }
         });
-        
+
         // 缓存应用模式
         cache.put('app_mode', modeResponse);
         console.log(`[Service Worker] 应用模式已缓存: ${data.payload.mode}`);
@@ -338,19 +347,19 @@ self.addEventListener('message', (event) => {
 // 清理过期缓存
 async function cleanupExpiredCache() {
   console.log('[Service Worker] 开始清理过期缓存');
-  
+
   // 清理API缓存
   const apiCache = await caches.open(API_CACHE_NAME);
   const apiRequests = await apiCache.keys();
-  
+
   // 删除超过24小时的API缓存
   const now = Date.now();
   const maxAge = 24 * 60 * 60 * 1000; // 24小时
-  
+
   for (const request of apiRequests) {
     const response = await apiCache.match(request);
     const headers = response.headers;
-    
+
     // 尝试获取缓存时间
     const dateHeader = headers.get('date');
     if (dateHeader) {
@@ -361,22 +370,22 @@ async function cleanupExpiredCache() {
       }
     }
   }
-  
+
   // 限制音频缓存大小、数量和时间
   try {
     const audioCache = await caches.open(AUDIO_CACHE_NAME);
     const audioRequests = await audioCache.keys();
-    
+
     // 音频缓存限制参数
     const MAX_AUDIO_CACHE_SIZE = 2 * 1024 * 1024 * 1024; // 2GB
     const MAX_AUDIO_FILES = 50; // 最多50首歌
     const MAX_AUDIO_AGE = 7 * 24 * 60 * 60 * 1000; // 7天
-    
+
     // 计算当前音频缓存信息
     let totalSize = 0;
     const audioFiles = await Promise.all(audioRequests.map(async (request) => {
       const response = await audioCache.match(request);
-      
+
       // 尝试从响应头获取文件大小
       let size = 0;
       const contentLength = response.headers.get('content-length');
@@ -392,11 +401,11 @@ async function cleanupExpiredCache() {
           size = 5 * 1024 * 1024; // 假设平均5MB
         }
       }
-      
+
       // 获取缓存时间
       const dateHeader = response.headers.get('date');
       const cacheTime = dateHeader ? new Date(dateHeader).getTime() : 0;
-      
+
       return {
         request,
         size,
@@ -404,17 +413,17 @@ async function cleanupExpiredCache() {
         age: now - cacheTime
       };
     }));
-    
+
     // 按时间排序（最旧的在前）
     audioFiles.sort((a, b) => a.date - b.date);
-    
+
     // 计算总大小
     totalSize = audioFiles.reduce((sum, file) => sum + file.size, 0);
     console.log(`[Service Worker] 当前音频缓存: ${audioFiles.length}首歌, ${(totalSize / (1024 * 1024)).toFixed(2)}MB`);
-    
+
     // 标记要删除的文件
     const filesToDelete = [];
-    
+
     // 1. 先标记超过7天的文件
     audioFiles.forEach(file => {
       if (file.age > MAX_AUDIO_AGE) {
@@ -424,17 +433,17 @@ async function cleanupExpiredCache() {
         });
       }
     });
-    
+
     // 2. 如果文件数量仍然超过限制，继续标记最旧的文件
     if (audioFiles.length - filesToDelete.length > MAX_AUDIO_FILES) {
       // 过滤掉已标记的文件
-      const remainingFiles = audioFiles.filter(file => 
+      const remainingFiles = audioFiles.filter(file =>
         !filesToDelete.some(f => f.request.url === file.request.url)
       );
-      
+
       // 需要额外删除的文件数量
       const extraToDelete = remainingFiles.length - MAX_AUDIO_FILES;
-      
+
       // 标记最旧的文件
       for (let i = 0; i < extraToDelete; i++) {
         filesToDelete.push({
@@ -443,46 +452,46 @@ async function cleanupExpiredCache() {
         });
       }
     }
-    
+
     // 3. 如果大小仍然超过限制，继续标记文件直到低于限制
     if (totalSize > MAX_AUDIO_CACHE_SIZE) {
       // 计算当前标记删除后的大小
       const sizeAfterDelete = totalSize - filesToDelete.reduce((sum, file) => sum + file.size, 0);
-      
+
       if (sizeAfterDelete > MAX_AUDIO_CACHE_SIZE) {
         // 仍然超过大小限制，需要继续删除
         let sizeToFree = sizeAfterDelete - (MAX_AUDIO_CACHE_SIZE * 0.9); // 释放到90%以下
-        
+
         // 过滤掉已标记的文件
-        const remainingFiles = audioFiles.filter(file => 
+        const remainingFiles = audioFiles.filter(file =>
           !filesToDelete.some(f => f.request.url === file.request.url)
         );
-        
+
         // 从最旧的文件开始标记
         for (const file of remainingFiles) {
           if (sizeToFree <= 0) break;
-          
+
           filesToDelete.push({
             ...file,
             reason: '超过大小限制'
           });
-          
+
           sizeToFree -= file.size;
         }
       }
     }
-    
+
     // 执行删除
     if (filesToDelete.length > 0) {
       console.log(`[Service Worker] 需要删除 ${filesToDelete.length} 个音频缓存文件`);
-      
+
       let deletedSize = 0;
       for (const file of filesToDelete) {
         await audioCache.delete(file.request);
         deletedSize += file.size;
         console.log(`[Service Worker] 删除音频缓存: ${file.request.url}, 大小: ${(file.size / (1024 * 1024)).toFixed(2)}MB, 原因: ${file.reason}`);
       }
-      
+
       console.log(`[Service Worker] 已释放 ${(deletedSize / (1024 * 1024)).toFixed(2)}MB 缓存空间`);
     } else {
       console.log('[Service Worker] 音频缓存在限制范围内，无需清理');
@@ -490,7 +499,7 @@ async function cleanupExpiredCache() {
   } catch (error) {
     console.error('[Service Worker] 清理音频缓存失败:', error);
   }
-  
+
   console.log('[Service Worker] 缓存清理完成');
 }
 
@@ -498,7 +507,7 @@ async function cleanupExpiredCache() {
 self.addEventListener('push', (event) => {
   if (event.data) {
     const data = event.data.json();
-    
+
     const options = {
       body: data.body || '有新消息',
       icon: '/logo.svg',
@@ -507,7 +516,7 @@ self.addEventListener('push', (event) => {
         url: data.url || '/'
       }
     };
-    
+
     event.waitUntil(
       self.registration.showNotification(data.title || 'SonicFlow通知', options)
     );
@@ -517,13 +526,13 @@ self.addEventListener('push', (event) => {
 // 通知点击
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  
+
   if (event.notification.data && event.notification.data.url) {
     event.waitUntil(
       clients.openWindow(event.notification.data.url)
     );
   }
-}); 
+});
 
 /**
  * 增量缓存更新函数 - 使用条件请求检查资源是否已更新
@@ -534,15 +543,15 @@ self.addEventListener('notificationclick', (event) => {
 async function incrementalCacheUpdate(request, cachedResponse, cacheName) {
   // 如果没有缓存响应，直接返回
   if (!cachedResponse) return;
-  
+
   try {
     // 创建一个新的请求，添加条件头
     const headers = new Headers(request.headers);
-    
+
     // 获取缓存的ETag和Last-Modified
     const etag = cachedResponse.headers.get('ETag');
     const lastModified = cachedResponse.headers.get('Last-Modified');
-    
+
     // 添加条件请求头
     if (etag) {
       headers.set('If-None-Match', etag);
@@ -550,31 +559,31 @@ async function incrementalCacheUpdate(request, cachedResponse, cacheName) {
     if (lastModified) {
       headers.set('If-Modified-Since', lastModified);
     }
-    
+
     // 如果没有ETag和Last-Modified，不进行增量更新
     if (!etag && !lastModified) {
       // 回退到普通更新，但添加缓存破坏参数避免使用浏览器缓存
       const url = new URL(request.url);
       url.searchParams.set('_sw_cache_bust', Date.now());
-      
+
       fetch(new Request(url, {
         method: request.method,
         headers: request.headers,
         mode: 'no-cors',
         credentials: request.credentials
       }))
-      .then((response) => {
-        if (response && response.ok) {
-          caches.open(cacheName).then((cache) => {
-            cache.put(request, response);
-          });
-        }
-      })
-      .catch(() => {});
-      
+        .then((response) => {
+          if (response && response.ok) {
+            caches.open(cacheName).then((cache) => {
+              cache.put(request, response);
+            });
+          }
+        })
+        .catch(() => { });
+
       return;
     }
-    
+
     // 创建条件请求
     const conditionalRequest = new Request(request.url, {
       method: request.method,
@@ -582,7 +591,7 @@ async function incrementalCacheUpdate(request, cachedResponse, cacheName) {
       mode: 'no-cors',
       credentials: request.credentials
     });
-    
+
     // 发送条件请求
     fetch(conditionalRequest)
       .then((response) => {
@@ -590,7 +599,7 @@ async function incrementalCacheUpdate(request, cachedResponse, cacheName) {
         if (response.status === 304) {
           return;
         }
-        
+
         // 如果资源已更新，更新缓存
         if (response.ok) {
           caches.open(cacheName)
