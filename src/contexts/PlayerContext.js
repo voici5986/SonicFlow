@@ -346,7 +346,7 @@ export const PlayerProvider = ({ children }) => {
 
       // 使用音频状态管理器获取播放URL和歌词，强制刷新不使用缓存
       console.log(`[handlePlay] 获取播放URL和歌词: ${track.name} (${track.id})`);
-      const { lyrics } = await playMusic(track, 999, true); // 默认使用最高音质，强制刷新URL
+      const { lyrics } = await playMusic(track, 320, true); // 默认使用320kbps音质，强制刷新URL
 
       // 处理歌词
       if (lyrics && lyrics.raw) {

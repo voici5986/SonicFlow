@@ -18,13 +18,13 @@ import { downloadTrack } from './services/downloadService';
 import { searchMusic } from './services/musicApiService';
 import useNetworkStatus from './hooks/useNetworkStatus';
 import useFirebaseStatus from './hooks/useFirebaseStatus';
-import { 
-  handleError, 
-  ErrorTypes, 
-  ErrorSeverity, 
-  checkNetworkStatus, 
-  validateSearchParams, 
-  checkDownloadStatus 
+import {
+  handleError,
+  ErrorTypes,
+  ErrorSeverity,
+  checkNetworkStatus,
+  validateSearchParams,
+  checkDownloadStatus
 } from './utils/errorHandler';
 import SyncProvider from './contexts/SyncContext';
 import FavoritesProvider from './contexts/FavoritesContext';
@@ -61,7 +61,7 @@ const searchInitialState = {
   query: '',
   results: [],
   source: 'netease',
-  quality: 999,
+  quality: 320,
   loading: false,
   error: null,
 };
@@ -89,7 +89,7 @@ const useDownloadContext = () => React.useContext(DownloadContext);
 const SearchResultItem = ({ track, searchResults }) => {
   const { handlePlay, currentTrack, isPlaying } = usePlayer();
   const { downloading, handleDownload } = useDownloadContext();
-  
+
   // 添加单独的播放处理函数
   const handleTrackPlay = (track) => {
     console.log('从搜索结果播放曲目:', track.id, track.name);
@@ -97,7 +97,7 @@ const SearchResultItem = ({ track, searchResults }) => {
     const trackIndex = searchResults.findIndex(item => item.id === track.id);
     handlePlay(track, trackIndex >= 0 ? trackIndex : -1, searchResults);
   };
-  
+
   return (
     <Card className="h-100">
       <Card.Body>
@@ -106,22 +106,22 @@ const SearchResultItem = ({ track, searchResults }) => {
           <small className="text-muted d-block text-truncate">{track.artist}</small>
           <small className="text-muted d-block text-truncate">{track.album}</small>
         </div>
-        
+
         <div className="mt-2 d-flex justify-content-end">
-          <Button 
-            variant="outline-primary" 
+          <Button
+            variant="outline-primary"
             size="sm"
             className="me-1"
             onClick={() => handleTrackPlay(track)}
           >
             {currentTrack?.id === track.id && isPlaying ? <FaPause /> : <FaPlay />}
           </Button>
-          <HeartButton 
-            track={track} 
-            className="me-1" 
+          <HeartButton
+            track={track}
+            className="me-1"
           />
-          <Button 
-            variant="outline-success" 
+          <Button
+            variant="outline-success"
             size="sm"
             onClick={() => handleDownload(track)}
             disabled={downloading}
@@ -136,37 +136,35 @@ const SearchResultItem = ({ track, searchResults }) => {
 
 const AppContent = () => {
   const [activeTab, setActiveTab] = useState('home');
-  
+
   const handleTabChange = useCallback((tab) => {
     setActiveTab(tab);
   }, []);
-  
+
   const { isOfflineMode } = useAuth();
-  
+
   const { isOnline } = useNetworkStatus({
     showToasts: true,
     dispatchEvents: true
   });
-  
+
   // 使用自定义Hook管理Firebase状态
   useFirebaseStatus({
     showToasts: true,
     manualCheck: false
   });
-  
+
   // 搜索相关状态
   const [searchState, dispatch] = useReducer(searchReducer, searchInitialState);
   const { query, results, source, quality, loading } = searchState;
-  
+
   // 下载相关状态
   const [downloading, setDownloading] = useState(false);
   const [currentDownloadingTrack, setCurrentDownloadingTrack] = useState(null);
-  
+
   // 可选音乐源
   const sources = [
-    'netease', 'tencent', 'tidal', 'spotify', 'ytmusic',
-    'qobuz', 'joox', 'deezer', 'migu', 'kugou', 
-    'kuwo', 'ximalaya', 'apple',
+    'netease', 'ytmusic',
   ];
 
   // 可选音质
@@ -180,16 +178,16 @@ const AppContent = () => {
     if (e) {
       e.preventDefault();
     }
-    
+
     if (process.env.NODE_ENV === 'development') {
-    console.log('Search triggered with query:', query);
+      console.log('Search triggered with query:', query);
     }
-    
+
     // 检查网络状态
     if (!checkNetworkStatus(isOnline, '搜索音乐')) {
       return;
     }
-    
+
     // 验证搜索参数
     if (!validateSearchParams(query)) {
       return;
@@ -198,28 +196,28 @@ const AppContent = () => {
     dispatch({ type: 'SEARCH_START' });
     try {
       const searchResults = await searchMusic(query, source, 20, 1);
-      
+
       // 不再预先获取封面图片，只在需要时获取（例如播放时）
       // 这样可以显著减少API调用次数
       const resultsWithoutCovers = searchResults.map(track => ({ ...track }));
-      
+
       dispatch({ type: 'SEARCH_SUCCESS', payload: resultsWithoutCovers });
-      
+
       // 如果没有结果，显示提示
       if (resultsWithoutCovers.length === 0) {
         toast.info(`未找到"${query}"的相关结果`);
       }
-      
+
       // 添加到搜索历史
       try {
         const { addSearchHistory } = await import('./services/storage');
         addSearchHistory(query, source);
       } catch (error) {
         if (process.env.NODE_ENV === 'development') {
-        console.error('添加搜索历史失败:', error);
+          console.error('添加搜索历史失败:', error);
         }
       }
-      
+
     } catch (error) {
       dispatch({ type: 'SEARCH_FAILURE', payload: error });
       handleError(
@@ -237,16 +235,16 @@ const AppContent = () => {
     if (!checkDownloadStatus(downloading)) {
       return;
     }
-    
+
     // 检查网络状态
     if (!checkNetworkStatus(isOnline, '下载音乐')) {
       return;
     }
-    
+
     try {
       setDownloading(true);
       setCurrentDownloadingTrack(track);
-      
+
       await downloadTrack(track, quality);
 
     } catch (error) {
@@ -320,10 +318,10 @@ const AppContent = () => {
               </Form.Group>
             </Col>
             <Col xs={12} md={2}>
-              <Button 
-                type="submit" 
-                variant="primary" 
-                className="w-100" 
+              <Button
+                type="submit"
+                variant="primary"
+                className="w-100"
                 disabled={loading}
               >
                 {loading ? <Spinner animation="border" size="sm" /> : '搜索'}
@@ -382,14 +380,14 @@ const AppContent = () => {
 
   // 使用设备检测功能
   const deviceInfo = useDevice();
-  
+
   // 尝试锁定屏幕方向为竖屏（仅在移动设备和平板上）
   useEffect(() => {
     if (deviceInfo.isMobile || deviceInfo.isTablet) {
       lockToPortrait().then(success => {
         if (process.env.NODE_ENV === 'development') {
-          console.log(success ? 
-            '成功锁定屏幕方向为竖屏' : 
+          console.log(success ?
+            '成功锁定屏幕方向为竖屏' :
             '无法锁定屏幕方向，将使用备选方案'
           );
         }
@@ -402,15 +400,15 @@ const AppContent = () => {
     const initialize = async () => {
       try {
         if (process.env.NODE_ENV === 'development') {
-        console.log("应用初始化中...");
+          console.log("应用初始化中...");
         }
       } catch (error) {
         if (process.env.NODE_ENV === 'development') {
-        console.error("初始化失败:", error);
+          console.error("初始化失败:", error);
         }
       }
     };
-    
+
     initialize();
   }, []);
 
@@ -437,23 +435,23 @@ const AppContent = () => {
     <DownloadContext.Provider value={downloadContextValue}>
       <div className="app-container">
         <OrientationPrompt />
-        <Navigation 
-          activeTab={activeTab} 
+        <Navigation
+          activeTab={activeTab}
           onTabChange={handleTabChange}
         />
-        
+
         {isOfflineMode && (
           <div style={offlineBannerStyle}>
             当前处于离线模式，仅可访问已缓存的内容
           </div>
         )}
-        
+
         <Container fluid className="mt-4 pb-5">
           {renderContent()}
         </Container>
-        
+
         <AudioPlayer />
-        
+
         <InstallPWA />
         <UpdateNotification />
         {process.env.NODE_ENV === 'development' && <DeviceDebugger />}
@@ -467,11 +465,11 @@ const App = () => {
   return (
     <RegionProvider>
       <SyncProvider>
-      <PlayerProvider>
-        <FavoritesProvider>
-        <AppContent />
-        </FavoritesProvider>
-      </PlayerProvider>
+        <PlayerProvider>
+          <FavoritesProvider>
+            <AppContent />
+          </FavoritesProvider>
+        </PlayerProvider>
       </SyncProvider>
     </RegionProvider>
   );
