@@ -7,13 +7,12 @@
   CI = "false" 
   NODE_VERSION = "16.14.0"
 
-# API重定向 - 使用代理服务器避免403错误
-# 原项目使用music-proxy.gdstudio.org代理来绕过API服务器的Referer/CORS限制
-[[redirects]]
-  from = "/api"
-  to = "https://music-proxy.gdstudio.org/music-api.gdstudio.xyz/api.php"
-  status = 200
-  force = true
+# 移除API重定向 - 让前端直接访问API服务器
+# [[redirects]]
+#   from = "/api"
+#   to = "https://music-api.gdstudio.xyz/api.php"
+#   status = 200
+#   force = true
 
 # SPA重定向 - 让Netlify正确处理React的路由
 [[redirects]]
