@@ -7,10 +7,10 @@
   CI = "false" 
   NODE_VERSION = "16.14.0"
 
-# API重定向
+# API重定向 - 关键修复:不使用:splat,让查询参数自动传递
 [[redirects]]
-  from = "/api/*"
-  to = "https://music-api.gdstudio.xyz/api.php/:splat"
+  from = "/api"
+  to = "https://music-api.gdstudio.xyz/api.php"
   status = 200
   force = true
 
