@@ -1,6 +1,5 @@
-# API代理重定向规则
-# 将所有 /api 请求重定向到实际的API服务器
-/api/*  https://music-api.gdstudio.xyz/api.php?:splat  200!
+# API代理已迁移到 netlify.toml 和 Netlify Functions
+# /api/*  https://music-api.gdstudio.xyz/api.php?:splat  200!
 
 # SPA路由支持 - 必须放在最后
 /*  /index.html  200

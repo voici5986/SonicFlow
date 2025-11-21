@@ -7,11 +7,11 @@
   CI = "false" 
   NODE_VERSION = "16.14.0"
 
-# API Proxy Configuration
-# Redirect /api requests to the music API with query string passthrough
+# API Proxy via Netlify Functions
+# Using serverless function to add proper headers and bypass Cloudflare protection
 [[redirects]]
   from = "/api"
-  to = "https://music-api.gdstudio.xyz/api.php:splat"
+  to = "/.netlify/functions/api"
   status = 200
   force = true
 
