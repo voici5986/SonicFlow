@@ -24,34 +24,39 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 // 严格模式会导致组件在开发环境下重复渲染，可能导致多次播放音频问题
 // 仅在开发环境影响，不影响生产环境
 root.render(
-    <AuthProvider>
-      <DeviceProvider>
-    <App />
-    <ToastContainer
+  <AuthProvider>
+    <DeviceProvider>
+      <App />
+      <ToastContainer
         position="bottom-right"
-      autoClose={3000}
-      hideProgressBar={false}
+        autoClose={3000}
+        hideProgressBar={false}
         newestOnTop
-      closeOnClick
-      rtl={false}
-      pauseOnFocusLoss
-      draggable
-      pauseOnHover
-      theme="colored"
-    />
-      </DeviceProvider>
-    </AuthProvider>
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+      />
+    </DeviceProvider>
+  </AuthProvider>
 );
 
 // 注册Service Worker，启用PWA功能
-serviceWorkerRegistration.register({
-  onUpdate: (registration) => {
-    console.log('应用有新的更新可用');
-    // 可以在这里触发更新通知
-  },
-  onSuccess: (registration) => {
-    console.log('内容已成功缓存，可离线使用');
-  }
+// ⚠️ 临时禁用: 先解决 API 问题,之后再启用
+// serviceWorkerRegistration.register({
+//   onUpdate: (registration) => {
+//     console.log('应用有新的更新可用');
+//   },
+//   onSuccess: (registration) => {
+//     console.log('内容已成功缓存，可离线使用');
+//   }
+// });
+
+// 强制注销旧的 Service Worker
+serviceWorkerRegistration.unregister().then(() => {
+  console.log('✅ Service Worker 已注销,API 请求现在直接访问 Netlify 代理');
 });
 
 // If you want to start measuring performance in your app, pass a function
