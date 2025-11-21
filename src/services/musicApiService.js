@@ -8,10 +8,10 @@ import { ERROR_MESSAGES } from '../constants/strings';
 import { getMemoryCache, setMemoryCache, CACHE_TYPES } from './memoryCache';
 import audioStateManager from './audioStateManager';
 import { validateSearchResults } from '../utils/dataValidator';
-import { generateSignature } from '../utils/apiSignature';
 
-// API地址配置 - 直接使用完整URL
-const API_BASE = process.env.REACT_APP_API_BASE || 'https://music-api.gdstudio.xyz/api.php';
+// Constants
+// Use Netlify proxy: /api will be redirected to https://music-api.gdstudio.xyz/api.php
+const API_BASE = '/api';
 const REQUEST_TIMEOUT = 12000; // 12秒请求超时
 
 // 添加防重复请求映射
@@ -66,8 +66,7 @@ export const searchMusic = async (query, source, count = 20, page = 1) => {
         source: source,
         name: query,
         count: count,
-        pages: page,
-        s: generateSignature(query)
+        pages: page
       },
       signal: controller.signal,
       timeout: REQUEST_TIMEOUT
@@ -162,8 +161,7 @@ export const getAudioUrl = async (track, quality = 999, forceRefresh = false) =>
             types: 'url',
             source: track.source,
             id: track.id,
-            br: quality,
-            s: generateSignature(track.id)
+            br: quality
           },
           timeout: REQUEST_TIMEOUT
         });
@@ -242,8 +240,7 @@ export const getLyrics = async (track) => {
           params: {
             types: 'lyric',
             source: track.source,
-            id: track.lyric_id,
-            s: generateSignature(track.lyric_id)
+            id: track.lyric_id
           },
           timeout: REQUEST_TIMEOUT
         });
@@ -321,8 +318,7 @@ export const getCoverImage = async (source, picId, size = 300) => {
         types: 'pic',
         source: source,
         id: picId,
-        size: size,
-        s: generateSignature(picId)
+        size: size
       },
       timeout: REQUEST_TIMEOUT
     });

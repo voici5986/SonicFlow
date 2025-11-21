@@ -7,12 +7,14 @@
   CI = "false" 
   NODE_VERSION = "16.14.0"
 
-# 移除API重定向 - 让前端直接访问API服务器
-# [[redirects]]
-#   from = "/api"
-#   to = "https://music-api.gdstudio.xyz/api.php"
-#   status = 200
-#   force = true
+# API Proxy Configuration
+# This redirects /api to the actual music API endpoint
+[[redirects]]
+  from = "/api"
+  to = "https://music-api.gdstudio.xyz/api.php"
+  query = {types = ":types", source = ":source", id = ":id", name = ":name", pages = ":pages", count = ":count", br = ":br", size = ":size"}
+  status = 200
+  force = true
 
 # SPA重定向 - 让Netlify正确处理React的路由
 [[redirects]]
