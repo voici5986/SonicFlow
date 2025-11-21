@@ -56,7 +56,7 @@ root.render(
 
 // 强制注销旧的 Service Worker
 serviceWorkerRegistration.unregister().then(() => {
-  console.log('✅ Service Worker 已注销,API 请求现在直接访问 Netlify 代理');
+  console.log('✅ Service Worker 已注销,应用现在直接从浏览器请求 API');
 });
 
 // If you want to start measuring performance in your app, pass a function
