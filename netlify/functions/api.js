@@ -4,15 +4,16 @@ exports.handler = async (event) => {
     // 获取查询参数
     const params = event.queryStringParameters || {};
 
-    // 使用官方代理服务器(已经配置好了绕过 Cloudflare 的逻辑)
-    const targetUrl = 'https://music-proxy.gdstudio.org/music-api.gdstudio.xyz/api.php';
+    //直接请求 API(从服务器端请求,不会被 Cloudflare 阻止)
+    const targetUrl = 'https://music-api.gdstudio.xyz/api.php';
 
     try {
-        // 发送请求到代理服务器
+        // 从服务器端发送请求
         const response = await axios.get(targetUrl, {
             params: params,
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Referer': 'https://music.gdstudio.xyz/',
                 'Accept': 'application/json, text/plain, */*'
             },
             timeout: 15000
