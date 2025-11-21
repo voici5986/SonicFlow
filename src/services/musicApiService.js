@@ -10,8 +10,8 @@ import audioStateManager from './audioStateManager';
 import { validateSearchResults } from '../utils/dataValidator';
 
 // Constants
-// Use Netlify proxy: /api will be redirected to https://music-api.gdstudio.xyz/api.php
-const API_BASE = '/api';
+// 直接从浏览器请求 API,每个用户使用自己的 IP,避免共享限制
+const API_BASE = 'https://music-api.gdstudio.xyz/api.php';
 const REQUEST_TIMEOUT = 12000; // 12秒请求超时
 
 // 添加防重复请求映射
