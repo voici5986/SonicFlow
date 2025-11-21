@@ -4,7 +4,7 @@
  */
 
 // 缓存版本和名称定义
-const CACHE_VERSION = 'v3'; // 更新版本以强制刷新Service Worker
+const CACHE_VERSION = 'v4'; // 更新版本以强制刷新Service Worker并修复API拦截问题
 const STATIC_CACHE_NAME = 'sonicflow-static-' + CACHE_VERSION;
 const API_CACHE_NAME = 'sonicflow-api-' + CACHE_VERSION;
 const AUDIO_CACHE_NAME = 'sonicflow-audio-' + CACHE_VERSION;
@@ -96,7 +96,14 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 对于HTML导航请求，使用网络优先策略
+  // ⚠️ 关键修复: 完全不拦截 API 请求,让 Netlify 代理处理
+  // 必须在最前面检查,否则 Service Worker 会干扰 Netlify 的重定向规则
+  if (url.pathname.startsWith('/api')) {
+    console.log('[Service Worker] 跳过 API 请求,让 Netlify 代理处理:', url.href);
+    return; // 完全不拦截,让浏览器直接处理,触发 Netlify 重定向
+  }
+
+  // 对于HTML导航请求,使用网络优先策略
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
@@ -118,41 +125,6 @@ self.addEventListener('fetch', (event) => {
                 return caches.match('/offline.html');
               }
             });
-        })
-    );
-    return;
-  }
-
-  // 处理API请求 - 在生产环境跳过Service Worker拦截,让Netlify重定向处理
-  // 这样可以避免Service Worker干扰Netlify的代理配置
-  if (API_REGEX.test(url.href)) {
-    // 在生产环境(部署到Netlify),跳过Service Worker,让浏览器直接处理
-    // 这样Netlify的重定向规则才能正确应用
-    if (self.location.hostname !== 'localhost' && self.location.hostname !== '127.0.0.1') {
-      console.log('[Service Worker] 生产环境,跳过API请求拦截,让Netlify重定向处理:', url.href);
-      return; // 不拦截,让浏览器直接处理
-    }
-
-    // 在本地开发环境,使用网络优先策略
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          // 克隆响应以便缓存
-          const clonedResponse = response.clone();
-
-          // 只缓存成功的响应
-          if (response.ok) {
-            caches.open(API_CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, clonedResponse);
-              });
-          }
-
-          return response;
-        })
-        .catch(() => {
-          console.log('[Service Worker] API请求失败，尝试使用缓存');
-          return caches.match(event.request);
         })
     );
     return;
