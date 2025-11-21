@@ -1,5 +1,0 @@
-# API代理已迁移到 netlify.toml 和 Netlify Functions
-# /api/*  https://music-api.gdstudio.xyz/api.php?:splat  200!
-
-# SPA路由支持 - 必须放在最后
-/*  /index.html  200

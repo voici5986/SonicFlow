@@ -1,20 +1,12 @@
 [build]
   command = "CI=false npm run build"
   publish = "build"
-  functions = "netlify/functions"  # 指定 Netlify Functions 目录
   ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ':!package-lock.json'"
  
 [build.environment]
   CI = "false" 
   NODE_VERSION = "16.14.0"
 
-# API Proxy via Netlify Functions
-# Using serverless function to add proper headers and bypass Cloudflare protection
-[[redirects]]
-  from = "/api"
-  to = "/.netlify/functions/api"
-  status = 200
-  force = true
 
 # SPA重定向 - 让Netlify正确处理React的路由
 [[redirects]]
