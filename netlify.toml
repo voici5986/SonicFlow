@@ -8,11 +8,10 @@
   NODE_VERSION = "16.14.0"
 
 # API Proxy Configuration
-# This redirects /api to the actual music API endpoint
+# Redirect /api requests to the music API with query string passthrough
 [[redirects]]
   from = "/api"
-  to = "https://music-api.gdstudio.xyz/api.php"
-  query = {types = ":types", source = ":source", id = ":id", name = ":name", pages = ":pages", count = ":count", br = ":br", size = ":size"}
+  to = "https://music-api.gdstudio.xyz/api.php:splat"
   status = 200
   force = true
 
