@@ -249,7 +249,7 @@ const AudioPlayer = () => {
           <div className="player-content">
             <Row className="align-items-center player-info-controls">
               <Col xs={5} md={3} className="d-flex align-items-center">
-                <AlbumCover track={currentTrack} size="small" onClick={toggleLyric} />
+                <AlbumCover track={currentTrack} size="small" onClick={toggleLyric} forceFetch={true} />
                 <div className="track-info-container">
                   <h6 className="mb-0 text-truncate track-name">{currentTrack.name}</h6>
                   <small className="text-muted text-truncate track-artist">{currentTrack.artist}</small>
@@ -282,7 +282,7 @@ const AudioPlayer = () => {
       <div className="player-expanded-view" style={{ display: lyricExpanded ? 'flex' : 'none' }}>
         <Button variant="link" onClick={toggleLyric} className="close-lyrics-btn"><FaTimes /></Button>
         <div className="album-cover-container">
-          <AlbumCover track={currentTrack} size="large" />
+          <AlbumCover track={currentTrack} size="large" forceFetch={true} />
         </div>
         <div className="track-info-expanded">
           <h2 className="track-title">{currentTrack.name}</h2>

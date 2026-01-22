@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
-import { playMusic } from '../services/musicApiService';
-import { addToHistory, getCoverFromStorage } from '../services/storage';
+import { playMusic, forceGetCoverImage } from '../services/musicApiService';
+import { addToHistory, getCoverFromStorage, saveCoverToStorage } from '../services/storage';
 import { handleError, ErrorTypes, ErrorSeverity } from '../utils/errorHandler';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { useAuth } from '../contexts/AuthContext';
@@ -185,6 +185,38 @@ export const PlayerProvider = ({ children }) => {
     audioEngine.seek(seconds);
   }, []);
 
+  // 获取封面的统一方法
+  const fetchCover = useCallback(async (source, picId, size = 300) => {
+    const cacheKey = `${source}_${picId}_${size}`;
+    
+    // 1. 检查内存缓存
+    if (coverCache[cacheKey]) return coverCache[cacheKey];
+
+    // 2. 检查本地存储
+    try {
+      const storedUrl = await getCoverFromStorage(cacheKey);
+      if (storedUrl) {
+        setCoverCache(prev => ({ ...prev, [cacheKey]: storedUrl }));
+        return storedUrl;
+      }
+    } catch (e) {
+      console.warn('[PlayerContext] 从本地存储获取封面失败:', e);
+    }
+
+    // 3. 强制获取并缓存
+    try {
+      const url = await forceGetCoverImage(source, picId, size);
+      if (url && !url.includes('default_cover')) {
+        setCoverCache(prev => ({ ...prev, [cacheKey]: url }));
+        saveCoverToStorage(cacheKey, url).catch(() => {});
+      }
+      return url;
+    } catch (e) {
+      console.error('[PlayerContext] fetchCover 失败:', e);
+      return DEFAULT_COVER;
+    }
+  }, [coverCache]);
+
   const contextValue = {
     currentTrack, playerUrl, isPlaying, playProgress, playedSeconds, totalSeconds,
     currentPlaylist, currentIndex, playMode, lyricData, currentLyricIndex, lyricExpanded,
@@ -192,7 +224,7 @@ export const PlayerProvider = ({ children }) => {
     setIsPlaying, setTotalSeconds, setCurrentPlaylist, togglePlay, setLyricExpanded,
     toggleLyric, handleProgress: () => { }, // 兼容性空函数，现在由监听器处理
     handleEnded, handlePlay, handleNext, handlePrevious, handleTogglePlayMode,
-    formatTime, parseLyric, seekTo
+    formatTime, parseLyric, seekTo, fetchCover
   };
 
   return <PlayerContext.Provider value={contextValue}>{children}</PlayerContext.Provider>;

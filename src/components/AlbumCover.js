@@ -21,7 +21,8 @@ const AlbumCover = ({
   onClick, 
   className = '',
   imgSize = 300,
-  lazy = false
+  lazy = false,
+  forceFetch = false // 新增属性，用于强制获取封面
 }) => {
   // 从PlayerContext获取封面缓存和获取方法
   const { coverCache, fetchCover } = usePlayer();
@@ -47,8 +48,8 @@ const AlbumCover = ({
         // 生成缓存键 - 使用下划线与PlayerContext保持一致
         const cacheKey = `${track.source}_${track.pic_id}_${imgSize}`;
         
-        // 检查缓存
-        if (coverCache[cacheKey]) {
+        // 检查缓存（除非强制获取）
+        if (!forceFetch && coverCache[cacheKey]) {
           setImageUrl(coverCache[cacheKey]);
           return;
         }
@@ -63,7 +64,7 @@ const AlbumCover = ({
     };
 
     loadCover();
-  }, [track, coverCache, fetchCover, imgSize, lazy, isLoaded]);
+  }, [track, coverCache, fetchCover, imgSize, lazy, isLoaded, forceFetch]);
 
   // 错误处理
   const handleImageError = () => {
