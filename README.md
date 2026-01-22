@@ -2,7 +2,8 @@
 
 一款基于 React + Vite 开发的现代化在线音乐搜索与播放应用，支持多平台聚合搜索、无损音质下载及云端数据同步。
 
-[![Demo](https://img.shields.io/badge/🚀_在线演示-Visit-blue)](https://sonicflow-2gv.pages.dev/)
+[![Demo](https://img.shields.io/badge/🚀_在线演示-Visit-blue?style=for-the-badge)](https://sonicflow-2gv.pages.dev/)
+
 [![License](https://img.shields.io/github/license/voici5986/SonicFlow)](LICENSE)
 
 🎵 现代化音乐流媒体平台
