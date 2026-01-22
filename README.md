@@ -1,7 +1,7 @@
 # SonicFlow (原CL-Music) 全平台音乐搜索
 
 一款基于React开发的在线音乐搜索和播放应用。
-[![Netlify Status](https://api.netlify.com/api/v1/badges/a55b97dc-1ba1-4859-994a-db396b196aa7/deploy-status)](https://app.netlify.com/sites/cl-music/deploys)  [![GitHub](https://img.shields.io/github/license/voici5986/SonicFlow)](https://github.com/voici5986/SonicFlow)
+[![GitHub](https://img.shields.io/github/license/voici5986/SonicFlow)](https://github.com/voici5986/SonicFlow)
 
 
 ![1744334065693](image/README/1744334065693.png)
