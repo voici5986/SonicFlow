@@ -4,10 +4,6 @@
 
 [![GitHub](https://img.shields.io/github/license/voici5986/SonicFlow)](https://github.com/voici5986/SonicFlow)
 
-![1744334065693](image/README/1744334065693.png)
-![1744334075944](image/README/1744334075944.png)
-![1744334087360](image/README/1744334087360.png)
-
 ## ✨ 核心功能
 
 *   **全平台聚合搜索**：支持网易云、QQ音乐、Spotify、YouTube Music 等 10+ 音乐平台。
@@ -22,7 +18,7 @@
 ### 方式一：Cloudflare Pages (推荐)
 利用 Cloudflare 强大的边缘网络解决 API 跨域与限流问题。
 
-[![Deploy to Cloudflare Pages](https://img.shields.io/badge/Deploy%20to-Cloudflare%20Pages-orange?logo=cloudflare)](https://dash.cloudflare.com/?to=/:account/pages/new) 
+[![Deploy to Cloudflare Pages](https://img.shields.io/badge/Deploy%20to-Cloudflare%20Pages-orange?logo=cloudflare)](https://dash.cloudflare.com/?to=/:account/workers-and-pages/create/pages) 
 
 *(点击按钮跳转 Cloudflare Dashboard，选择 "Create application" -> "Pages" -> "Connect to Git" 即可)*
 
