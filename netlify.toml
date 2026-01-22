@@ -8,6 +8,13 @@
   NODE_VERSION = "24.13.0"
 
 
+# API代理重定向 - 模拟 Vite 的 proxy 行为
+[[redirects]]
+  from = "/api-v1/*"
+  to = "https://music-api.gdstudio.xyz/:splat"
+  status = 200
+  force = true
+
 # SPA重定向 - 让Netlify正确处理React的路由
 [[redirects]]
   from = "/*"

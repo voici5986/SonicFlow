@@ -12,7 +12,7 @@ export const APP_EVENTS = {
   NETWORK_CHANGE: 'networkStatusChange',
 };
 
-// IPinfo.io API令牌 - 必须通过环境变量设置以保证安全
+// IPinfo.io API令牌 - 必须通过环境变量设置。若未设置，系统将跳过区域检测并默认进入完整模式。
 const IPINFO_TOKEN = process.env.REACT_APP_IPINFO_TOKEN;
 
 // 本地存储键
@@ -47,9 +47,10 @@ export const detectIpRegion = async () => {
   try {
     console.log("开始检测IP区域...");
 
-    // 检查API令牌是否设置(开发环境友好提示)
-    if (process.env.NODE_ENV === 'development' && !process.env.REACT_APP_IPINFO_TOKEN) {
-      console.warn("注意：使用了默认IP检测API令牌，建议在.env文件中设置REACT_APP_IPINFO_TOKEN");
+    // 检查API令牌是否设置。若未设置，直接进入完整模式，避免因缺少配置导致功能被误杀。
+    if (!IPINFO_TOKEN) {
+      console.warn("[detectIpRegion] 未检测到 REACT_APP_IPINFO_TOKEN，系统将默认进入完整模式。");
+      return { region: 'INTERNATIONAL', isChina: false };
     }
 
     const response = await fetch(`https://ipinfo.io/json?token=${IPINFO_TOKEN}`);
