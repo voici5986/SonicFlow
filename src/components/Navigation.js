@@ -9,10 +9,8 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
   const [expanded, setExpanded] = useState(false);
   // 添加滚动状态
   const [scrolled, setScrolled] = useState(false);
-  // 检测窗口宽度用于响应式设计
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const { currentUser } = useAuth();
-  
+
   // 监听滚动事件
   useEffect(() => {
     const handleScroll = () => {
@@ -21,25 +19,15 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
         setScrolled(isScrolled);
       }
     };
-    
+
     window.addEventListener('scroll', handleScroll);
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, [scrolled]);
-  
-  // 监听窗口大小变化
-  useEffect(() => {
-    const handleResize = () => {
-      setWindowWidth(window.innerWidth);
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
-  
+
+
+
   // 处理菜单项点击事件
   const handleNavItemClick = (id) => {
     // 如果当前已经在用户页面，且点击的还是用户图标，则跳转到搜索页
@@ -73,25 +61,25 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
   };
 
   // 用户初始头像
-  const userInitial = currentUser && currentUser.displayName ? 
-    currentUser.displayName[0].toUpperCase() : 
+  const userInitial = currentUser && currentUser.displayName ?
+    currentUser.displayName[0].toUpperCase() :
     (currentUser && currentUser.email ? currentUser.email[0].toUpperCase() : null);
 
   return (
-    <Navbar 
-      expand="lg" 
-      expanded={expanded} 
-      onToggle={setExpanded} 
+    <Navbar
+      expand="lg"
+      expanded={expanded}
+      onToggle={setExpanded}
       className={`nav-animated ${scrolled ? 'scrolled' : ''}`}
     >
       <Container fluid>
         <Navbar.Brand className="d-flex align-items-center">
-          <img 
-            src="/logo.svg" 
-            alt="SonicFlow Logo" 
-            width="38" 
-            height="38" 
-            className="logo-pulse me-1" 
+          <img
+            src="/logo.svg"
+            alt="SonicFlow Logo"
+            width="38"
+            height="38"
+            className="logo-pulse me-1"
             style={{
               filter: 'drop-shadow(0 0 3px rgba(106, 17, 203, 0.4))',
               marginBottom: '2px' // 微调垂直对齐
@@ -111,14 +99,14 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
               style={{ width: '40px', height: '40px' }}
             >
               {currentUser.photoURL ? (
-                <img 
+                <img
                   src={currentUser.photoURL}
-                  alt="Profile" 
+                  alt="Profile"
                   className="rounded-circle"
                   style={{ width: '32px', height: '32px' }}
                 />
               ) : userInitial ? (
-                <div 
+                <div
                   className="rounded-circle bg-primary text-white d-flex justify-content-center align-items-center"
                   style={{ width: '32px', height: '32px', fontSize: '1rem' }}
                 >
@@ -129,9 +117,9 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
               )}
             </Nav.Link>
           ) : (
-            <Button 
-              variant="outline-primary" 
-              size="sm" 
+            <Button
+              variant="outline-primary"
+              size="sm"
               className="d-flex align-items-center justify-content-center"
               onClick={() => handleNavItemClick('user')}
               style={{ width: '40px', height: '40px', borderRadius: '50%' }}

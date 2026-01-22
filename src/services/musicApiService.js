@@ -11,7 +11,7 @@ import { validateSearchResults } from '../utils/dataValidator';
 
 // Constants
 // 直接从浏览器请求 API,每个用户使用自己的 IP,避免共享限制
-const API_BASE = 'https://music-api.gdstudio.xyz/api.php';
+const API_BASE = '/api-v1/api.php';
 const REQUEST_TIMEOUT = 12000; // 12秒请求超时
 
 // 添加防重复请求映射
@@ -290,66 +290,54 @@ export const getCoverImage = async (source, picId, size = 300) => {
   try {
     // 验证参数
     if (!picId || picId === 'undefined' || picId === 'null') {
-      console.warn(`[getCoverImage] 无效的封面ID: ${picId}, 音乐源: ${source}`);
       return 'default_cover.svg';
     }
 
-    // 验证size参数 - 根据API文档只支持300和500
+    // 验证size参数
     if (size !== 300 && size !== 500) {
-      console.warn(`[getCoverImage] 不支持的尺寸: ${size}, 使用默认300`);
       size = 300;
     }
 
-    checkApiAccess();
-
-    // 生成缓存键
     const cacheKey = `${source}_${picId}_${size}`;
 
-    // 检查内存缓存
+    // 1. 严格检查内存缓存 (最高优先级)
     const cachedUrl = getMemoryCache(CACHE_TYPES.COVER_IMAGES, cacheKey);
     if (cachedUrl) {
       return cachedUrl;
     }
 
-    console.log(`[getCoverImage] 请求封面: 音乐源=${source}, ID=${picId}, 尺寸=${size}`);
+    // 2. 策略调整：为了节省 API 额度，不再主动发起 types=pic 请求
+    // 只有在 playMusic 等核心流程明确需要时，才会考虑请求
+    console.log(`[getCoverImage] 为节省额度，跳过主动请求: ${source}/${picId}`);
+    return 'default_cover.svg';
+  } catch (error) {
+    return 'default_cover.svg';
+  }
+};
 
+/**
+ * 强制获取封面图片 (仅限播放等核心场景按需使用，以节省API额度)
+ */
+export const forceGetCoverImage = async (source, picId, size = 300) => {
+  try {
+    const cacheKey = `${source}_${picId}_${size}`;
+    const cachedUrl = getMemoryCache(CACHE_TYPES.COVER_IMAGES, cacheKey);
+    if (cachedUrl && !cachedUrl.includes('default_cover')) return cachedUrl;
+
+    console.log(`[forceGetCoverImage] 开始按需请求封面: ${source}/${picId}`);
     const response = await axios.get(`${API_BASE}`, {
-      params: {
-        types: 'pic',
-        source: source,
-        id: picId,
-        size: size
-      },
-      timeout: REQUEST_TIMEOUT
+      params: { types: 'pic', source, id: picId, size },
+      timeout: 5000
     });
 
-    // 检查API响应
-    if (!response.data || !response.data.url) {
-      console.warn(`[getCoverImage] API未返回有效URL: ${JSON.stringify(response.data)}`);
-      return 'default_cover.svg';
+    if (response.data?.url) {
+      const url = response.data.url.replace(/\\/g, '');
+      setMemoryCache(CACHE_TYPES.COVER_IMAGES, cacheKey, url);
+      return url;
     }
-
-    const url = response.data.url.replace(/\\/g, '');
-
-    // 验证URL格式
-    if (!url.startsWith('http')) {
-      console.warn(`[getCoverImage] 返回的URL格式不正确: ${url}`);
-      return 'default_cover.svg';
-    }
-
-    console.log(`[getCoverImage] 获取成功: ${url.substring(0, 50)}...`);
-
-    // 缓存结果到内存
-    setMemoryCache(CACHE_TYPES.COVER_IMAGES, cacheKey, url);
-
-    return url;
-  } catch (error) {
-    if (error.code === 'ECONNABORTED' || error.name === 'AbortError') {
-      console.error(`[getCoverImage] 请求超时或被取消: ${source}/${picId}`);
-    } else {
-      console.error(`[getCoverImage] 获取封面图片失败: ${source}/${picId}`, error);
-    }
-    return 'default_cover.svg'; // 返回默认封面
+    return 'default_cover.svg';
+  } catch (e) {
+    return 'default_cover.svg';
   }
 };
 
@@ -362,115 +350,38 @@ export const getCoverImage = async (source, picId, size = 300) => {
  */
 export const playMusic = async (track, quality = 999, forceRefresh = false) => {
   try {
-    // 使用音频状态管理器加载新曲目
-    const requestId = audioStateManager.loadTrack(track);
-    console.log(`[playMusic] 开始请求: ${track.name} (${track.id}), 请求ID: ${requestId}, 强制刷新: ${forceRefresh}`);
-
-    // 生成请求唯一标识符
-    const pendingKey = `${track.source}_${track.id}_${quality}`;
-
-    // 检查是否有相同播放请求正在进行中
-    if (pendingPlayRequests.has(pendingKey) && !forceRefresh) {
-      console.log(`[playMusic] 检测到重复播放请求: ${track.name} (${track.id}), 使用现有请求`);
-      return pendingPlayRequests.get(pendingKey);
-    }
+    console.log(`[playMusic] 开始请求: ${track.name} (${track.id}), 强制刷新: ${forceRefresh}`);
 
     checkApiAccess();
 
-    // 生成缓存键
-    const cacheKey = `play_${track.source}_${track.id}_${quality}`;
+    // 先获取音频数据
+    const audioData = await getAudioUrl(track, quality, forceRefresh);
+    const url = audioData?.url?.replace(/\\/g, '');
 
-    // 创建一个Promise并存储到映射中
-    const playPromise = (async () => {
-      try {
-        // 检查请求是否仍然有效
-        if (!audioStateManager.isValidRequest(requestId)) {
-          console.log(`[playMusic] 请求已取消: ${requestId}`);
-          throw new Error('请求已取消');
-        }
+    if (!url) throw new Error('无效的音频链接');
 
-        // 检查内存缓存
-        const cachedData = !forceRefresh ? getMemoryCache(CACHE_TYPES.AUDIO_METADATA, cacheKey) : null;
-        if (cachedData) {
-          console.log(`[playMusic] 使用内存缓存的音乐数据: ${requestId}`);
+    // 异步获取歌词（非阻塞播放）
+    const lyricsPromise = getLyrics(track).catch(e => {
+      console.error('[playMusic] 获取歌词失败:', e);
+      return { raw: '', translated: '' };
+    });
 
-          // 再次检查请求是否仍然有效
-          if (!audioStateManager.isValidRequest(requestId)) {
-            console.log(`[playMusic] 请求已取消: ${requestId}`);
-            throw new Error('请求已取消');
-          }
+    // 将播放任务交给状态管理器（底层分发到 AudioEngine）
+    audioStateManager.loadTrack(track, url);
 
-          // 设置URL并播放
-          audioStateManager.setUrlAndPlay(cachedData.url, requestId);
+    // 后台异步补全封面
+    forceGetCoverImage(track.source, track.pic_id).catch(() => { });
 
-          return cachedData;
-        }
+    const lyrics = await lyricsPromise;
 
-        console.log(`[playMusic] ${forceRefresh ? '强制刷新' : '内存缓存未命中'}，调用API: ${requestId}`);
-
-        // 再次检查请求是否仍然有效
-        if (!audioStateManager.isValidRequest(requestId)) {
-          console.log(`[playMusic] 请求已取消: ${requestId}`);
-          throw new Error('请求已取消');
-        }
-
-        // 先获取音频URL
-        const audioData = await getAudioUrl(track, quality, forceRefresh);
-
-        let lyrics = { raw: '', translated: '' };
-        try {
-          lyrics = await getLyrics(track);
-        } catch (lyricError) {
-          console.error('[playMusic] 获取歌词失败，将继续播放音频:', lyricError);
-        }
-
-        // 再次检查请求是否仍然有效
-        if (!audioStateManager.isValidRequest(requestId)) {
-          console.log(`[playMusic] 请求已取消: ${requestId}`);
-          throw new Error('请求已取消');
-        }
-
-        // 提取和处理URL
-        const url = audioData?.url?.replace(/\\/g, '');
-        if (!url) throw new Error('无效的音频链接');
-
-        const musicData = {
-          url,
-          lyrics,
-          fileSize: audioData.size
-        };
-
-        // 缓存结果到内存
-        setMemoryCache(CACHE_TYPES.AUDIO_METADATA, cacheKey, musicData);
-
-        // 设置URL并播放
-        audioStateManager.setUrlAndPlay(url, requestId);
-
-        console.log(`[playMusic] 请求完成: ${requestId}`);
-        return musicData;
-      } catch (error) {
-        // 设置错误状态
-        audioStateManager.setError(error);
-        throw error;
-      } finally {
-        // 请求完成后从映射中移除
-        setTimeout(() => {
-          pendingPlayRequests.delete(pendingKey);
-          console.log(`[playMusic] 请求映射已清理: ${requestId}`);
-        }, 100);
-      }
-    })();
-
-    // 存储Promise到映射中
-    pendingPlayRequests.set(pendingKey, playPromise);
-
-    // 返回Promise
-    return playPromise;
+    return {
+      url,
+      lyrics,
+      fileSize: audioData.size
+    };
   } catch (error) {
     console.error('[playMusic] 播放音乐失败:', error);
-    console.error(`[playMusic] 失败详情 - 曲目: ${track?.name || '未知'}, ID: ${track?.id || '未知'}, 请求ID: ${audioStateManager.activeRequest || '未知'}`);
-    // 设置错误状态
     audioStateManager.setError(error);
     throw error;
   }
-}; 
+};

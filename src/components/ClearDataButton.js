@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button, Modal } from 'react-bootstrap';
 import { FaTrash } from 'react-icons/fa';
 import { toast } from 'react-toastify';
-import { clearMemoryCache, CACHE_TYPES } from '../services/memoryCache';
+import { clearMemoryCache } from '../services/memoryCache';
 import {
   clearHistory,
   clearSearchHistory,
@@ -22,7 +22,7 @@ const ClearDataButton = ({ onClick }) => {
     cache: true,
     syncTimestamp: true
   });
-  
+
   const { currentUser } = useAuth();
 
   const handleClose = () => setShowModal(false);
@@ -42,26 +42,26 @@ const ClearDataButton = ({ onClick }) => {
     setLoading(true);
     try {
       const operations = [];
-      
+
       // 清除收藏
       if (selectedOptions.favorites) {
         operations.push(saveFavorites([]));
       }
-      
+
       // 清除历史记录
       if (selectedOptions.history) {
         operations.push(clearHistory());
       }
-      
+
       // 清除搜索历史
       if (selectedOptions.searchHistory) {
         operations.push(clearSearchHistory());
       }
-      
+
       // 清除缓存
       if (selectedOptions.cache) {
         operations.push(Promise.resolve(clearMemoryCache()));
-        
+
         // 通知Service Worker清理缓存
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
           navigator.serviceWorker.controller.postMessage({
@@ -69,25 +69,25 @@ const ClearDataButton = ({ onClick }) => {
           });
         }
       }
-      
+
       // 清除同步时间戳
       if (selectedOptions.syncTimestamp) {
         const uid = currentUser ? currentUser.uid : null;
         operations.push(clearSyncTimestamp(uid));
       }
-      
+
       // 重置待同步变更计数
       operations.push(resetPendingChanges());
-      
+
       // 等待所有操作完成
       await Promise.all(operations);
-      
+
       // 显示成功消息
       toast.success('本地数据已清除');
-      
+
       // 触发自定义事件以通知其他组件刷新
       window.dispatchEvent(new CustomEvent('local:data_cleared'));
-      
+
       // 关闭模态框
       handleClose();
     } catch (error) {
@@ -184,9 +184,9 @@ const ClearDataButton = ({ onClick }) => {
           <Button variant="secondary" onClick={handleClose} disabled={loading}>
             取消
           </Button>
-          <Button 
-            variant="danger" 
-            onClick={handleClearData} 
+          <Button
+            variant="danger"
+            onClick={handleClearData}
             disabled={loading || !Object.values(selectedOptions).some(value => value)}
           >
             {loading ? '清除中...' : '确认清除'}

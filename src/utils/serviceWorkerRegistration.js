@@ -6,8 +6,8 @@
 // 当前环境是否为生产环境
 const isLocalhost = Boolean(
   window.location.hostname === 'localhost' ||
-    window.location.hostname === '[::1]' ||
-    window.location.hostname.match(/^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/)
+  window.location.hostname === '[::1]' ||
+  window.location.hostname.match(/^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/)
 );
 
 /**
@@ -18,7 +18,7 @@ export function register(config = {}) {
   if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
     // URL构造函数在所有浏览器中可用
     const publicUrl = new URL(process.env.PUBLIC_URL, window.location.href);
-    
+
     // 如果我们的源与PUBLIC_URL的源不同，则PWA不会工作
     if (publicUrl.origin !== window.location.origin) {
       console.log('PUBLIC_URL的源与页面源不匹配，Service Worker将不会被注册');
@@ -128,14 +128,15 @@ function checkValidServiceWorker(swUrl, config) {
  */
 export function unregister() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.ready
+    return navigator.serviceWorker.ready
       .then((registration) => {
-        registration.unregister();
+        return registration.unregister();
       })
       .catch((error) => {
         console.error('Service Worker注销失败:', error);
       });
   }
+  return Promise.resolve(false);
 }
 
 /**
@@ -171,11 +172,11 @@ export function checkForUpdates() {
 }
 
 // 创建一个命名对象，代替匿名导出
-const serviceWorkerRegistration = { 
-  register, 
-  unregister, 
-  sendMessageToSW, 
-  checkForUpdates 
+const serviceWorkerRegistration = {
+  register,
+  unregister,
+  sendMessageToSW,
+  checkForUpdates
 };
 
 export default serviceWorkerRegistration; 

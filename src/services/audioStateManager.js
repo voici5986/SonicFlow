@@ -1,24 +1,13 @@
-/**
- * 音频播放状态管理器
- * 使用状态机模式管理音频播放状态，确保在任何时刻只有一个活跃的音频播放请求
- */
+import audioEngine from './AudioEngine';
 
-// 播放状态枚举
+// 播放状态枚举 (保持兼容)
 export const AUDIO_STATES = {
-  IDLE: 'idle',        // 空闲状态，没有活跃的音频
-  LOADING: 'loading',  // 正在加载音频
-  PLAYING: 'playing',  // 正在播放
-  PAUSED: 'paused',    // 已暂停
-  STOPPED: 'stopped'   // 已停止
-};
-
-// 播放动作枚举
-export const AUDIO_ACTIONS = {
-  LOAD: 'load',        // 加载新音频
-  PLAY: 'play',        // 播放
-  PAUSE: 'pause',      // 暂停
-  STOP: 'stop',        // 停止
-  ERROR: 'error'       // 发生错误
+  IDLE: 'idle',
+  LOADING: 'loading',
+  PLAYING: 'playing',
+  PAUSED: 'paused',
+  STOPPED: 'stopped',
+  ERROR: 'error'
 };
 
 class AudioStateManager {
@@ -29,63 +18,48 @@ class AudioStateManager {
     this.isLoading = false;
     this.error = null;
     this.listeners = [];
-    this.activeRequest = null;
-    this.requestId = 0;
+
+    this._initEngineListeners();
   }
 
-  /**
-   * 获取当前状态
-   * @returns {string} 当前状态
-   */
+  _initEngineListeners() {
+    audioEngine.on('play', () => this._updateState(AUDIO_STATES.PLAYING));
+    audioEngine.on('playing', () => {
+      this.isLoading = false;
+      this._updateState(AUDIO_STATES.PLAYING);
+    });
+    audioEngine.on('pause', () => this._updateState(AUDIO_STATES.PAUSED));
+    audioEngine.on('waiting', () => {
+      this.isLoading = true;
+      this.notifyListeners();
+    });
+    audioEngine.on('canplay', () => {
+      this.isLoading = false;
+      this.notifyListeners();
+    });
+    audioEngine.on('ended', () => this._updateState(AUDIO_STATES.STOPPED));
+    audioEngine.on('error', (e) => {
+      this.isLoading = false;
+      this.error = e;
+      this._updateState(AUDIO_STATES.ERROR);
+    });
+  }
+
+  _updateState(state) {
+    if (this.currentState !== state) {
+      this.currentState = state;
+      this.notifyListeners();
+    }
+  }
+
   getState() {
     return this.currentState;
   }
 
-  /**
-   * 获取当前曲目
-   * @returns {Object|null} 当前曲目
-   */
   getCurrentTrack() {
     return this.currentTrack;
   }
 
-  /**
-   * 获取当前URL
-   * @returns {string|null} 当前URL
-   */
-  getCurrentUrl() {
-    return this.currentUrl;
-  }
-
-  /**
-   * 是否正在加载
-   * @returns {boolean} 是否正在加载
-   */
-  isLoadingState() {
-    return this.isLoading;
-  }
-
-  /**
-   * 是否正在播放
-   * @returns {boolean} 是否正在播放
-   */
-  isPlayingState() {
-    return this.currentState === AUDIO_STATES.PLAYING;
-  }
-
-  /**
-   * 获取错误信息
-   * @returns {Error|null} 错误信息
-   */
-  getError() {
-    return this.error;
-  }
-
-  /**
-   * 添加状态变化监听器
-   * @param {Function} listener 监听器函数
-   * @returns {Function} 移除监听器的函数
-   */
   addListener(listener) {
     this.listeners.push(listener);
     return () => {
@@ -93,214 +67,57 @@ class AudioStateManager {
     };
   }
 
-  /**
-   * 通知所有监听器状态变化
-   * @private
-   */
   notifyListeners() {
-    const state = {
+    const stateSnapshot = {
       state: this.currentState,
       track: this.currentTrack,
-      url: this.currentUrl,
+      url: audioEngine.audio.src,
       isLoading: this.isLoading,
       error: this.error
     };
-
-    this.listeners.forEach(listener => {
-      try {
-        listener(state);
-      } catch (error) {
-        console.error('音频状态监听器错误:', error);
-      }
-    });
+    this.listeners.forEach(l => l(stateSnapshot));
   }
 
-  /**
-   * 转换状态
-   * @private
-   * @param {string} action 动作
-   * @param {Object} payload 附加数据
-   */
-  transition(action, payload = {}) {
-    console.log(`[AudioStateManager] 状态转换: ${this.currentState} -> ${action}`, payload);
+  // 核心控制代理到引擎
+  loadTrack(track, url) {
+    console.log('[AudioStateManager] 开始加载曲目:', track.name);
+    this.currentTrack = track;
+    this.isLoading = true;
+    this.error = null;
+    this._updateState(AUDIO_STATES.LOADING);
 
-    const prevState = this.currentState;
-
-    switch (this.currentState) {
-      case AUDIO_STATES.IDLE:
-        if (action === AUDIO_ACTIONS.LOAD) {
-          this.currentState = AUDIO_STATES.LOADING;
-          this.currentTrack = payload.track || null;
-          this.currentUrl = null;
-          this.isLoading = true;
-          this.error = null;
-        }
-        break;
-
-      case AUDIO_STATES.LOADING:
-        if (action === AUDIO_ACTIONS.PLAY && payload.url) {
-          this.currentState = AUDIO_STATES.PLAYING;
-          this.currentUrl = payload.url;
-          this.isLoading = false;
-        } else if (action === AUDIO_ACTIONS.ERROR) {
-          this.currentState = AUDIO_STATES.IDLE;
-          this.error = payload.error || new Error('未知错误');
-          this.isLoading = false;
-        } else if (action === AUDIO_ACTIONS.STOP) {
-          this.currentState = AUDIO_STATES.IDLE;
-          this.isLoading = false;
-        }
-        break;
-
-      case AUDIO_STATES.PLAYING:
-        if (action === AUDIO_ACTIONS.PAUSE) {
-          this.currentState = AUDIO_STATES.PAUSED;
-        } else if (action === AUDIO_ACTIONS.STOP) {
-          this.currentState = AUDIO_STATES.STOPPED;
-        } else if (action === AUDIO_ACTIONS.LOAD) {
-          this.currentState = AUDIO_STATES.LOADING;
-          this.currentTrack = payload.track || null;
-          this.currentUrl = null;
-          this.isLoading = true;
-        } else if (action === AUDIO_ACTIONS.ERROR) {
-          this.currentState = AUDIO_STATES.IDLE;
-          this.error = payload.error || new Error('播放错误');
-        }
-        break;
-
-      case AUDIO_STATES.PAUSED:
-        if (action === AUDIO_ACTIONS.PLAY) {
-          this.currentState = AUDIO_STATES.PLAYING;
-        } else if (action === AUDIO_ACTIONS.STOP) {
-          this.currentState = AUDIO_STATES.STOPPED;
-        } else if (action === AUDIO_ACTIONS.LOAD) {
-          this.currentState = AUDIO_STATES.LOADING;
-          this.currentTrack = payload.track || null;
-          this.currentUrl = null;
-          this.isLoading = true;
-        }
-        break;
-
-      case AUDIO_STATES.STOPPED:
-        if (action === AUDIO_ACTIONS.LOAD) {
-          this.currentState = AUDIO_STATES.LOADING;
-          this.currentTrack = payload.track || null;
-          this.currentUrl = null;
-          this.isLoading = true;
-        } else if (action === AUDIO_ACTIONS.PLAY) {
-          this.currentState = AUDIO_STATES.PLAYING;
-        }
-        break;
-
-      default:
-        console.warn(`[AudioStateManager] 未知状态: ${this.currentState}`);
-        this.currentState = AUDIO_STATES.IDLE;
-    }
-
-    if (prevState !== this.currentState) {
-      console.log(`[AudioStateManager] 状态已变更: ${prevState} -> ${this.currentState}`);
-      this.notifyListeners();
+    if (url) {
+      audioEngine.setSource(url, track);
     }
   }
 
-  /**
-   * 加载新音频
-   * @param {Object} track 曲目信息
-   * @returns {number} 请求ID
-   */
-  loadTrack(track) {
-    // 生成新的请求ID
-    const requestId = ++this.requestId;
-    this.activeRequest = requestId;
-
-    // 转换到加载状态
-    this.transition(AUDIO_ACTIONS.LOAD, { track });
-
-    return requestId;
+  play() {
+    audioEngine.play();
   }
 
-  /**
-   * 设置URL并播放
-   * @param {string} url 音频URL
-   * @param {number} requestId 请求ID
-   * @returns {boolean} 是否成功设置
-   */
-  setUrlAndPlay(url, requestId) {
-    // 检查是否是当前活跃的请求
-    if (requestId !== this.activeRequest) {
-      console.log(`[AudioStateManager] 忽略过时的请求: ${requestId}, 当前请求: ${this.activeRequest}`);
-      return false;
-    }
+  pause() {
+    audioEngine.pause();
+  }
 
-    // 转换到播放状态
-    this.transition(AUDIO_ACTIONS.PLAY, { url });
+  stop() {
+    audioEngine.pause();
+    this._updateState(AUDIO_STATES.STOPPED);
+  }
+
+  setError(error) {
+    this.error = error;
+    this._updateState(AUDIO_STATES.ERROR);
+  }
+
+  isValidRequest() {
+    // 简化逻辑，由 AudioEngine 保证唯一性
     return true;
   }
 
-  /**
-   * 播放
-   */
-  play() {
-    console.log(`[AudioStateManager] 尝试播放，当前状态: ${this.currentState}`);
-    if (this.currentState === AUDIO_STATES.PAUSED) {
-      this.transition(AUDIO_ACTIONS.PLAY);
-    } else if (this.currentState === AUDIO_STATES.PLAYING) {
-      console.log('[AudioStateManager] 已经处于播放状态，忽略重复的播放请求');
-    } else {
-      console.log(`[AudioStateManager] 无法从状态 ${this.currentState} 切换到播放状态`);
-    }
-  }
-
-  /**
-   * 暂停
-   */
-  pause() {
-    console.log(`[AudioStateManager] 尝试暂停，当前状态: ${this.currentState}`);
-    if (this.currentState === AUDIO_STATES.PLAYING) {
-      this.transition(AUDIO_ACTIONS.PAUSE);
-    } else if (this.currentState === AUDIO_STATES.PAUSED) {
-      console.log('[AudioStateManager] 已经处于暂停状态，忽略重复的暂停请求');
-    } else {
-      console.log(`[AudioStateManager] 无法从状态 ${this.currentState} 切换到暂停状态`);
-    }
-  }
-
-  /**
-   * 停止
-   */
-  stop() {
-    this.transition(AUDIO_ACTIONS.STOP);
-  }
-
-  /**
-   * 设置错误
-   * @param {Error} error 错误信息
-   */
-  setError(error) {
-    this.transition(AUDIO_ACTIONS.ERROR, { error });
-  }
-
-  /**
-   * 取消当前请求
-   */
   cancelCurrentRequest() {
-    if (this.isLoading) {
-      console.log(`[AudioStateManager] 取消当前请求: ${this.activeRequest}`);
-      this.activeRequest = null;
-      this.transition(AUDIO_ACTIONS.STOP);
-    }
-  }
-
-  /**
-   * 检查请求是否有效
-   * @param {number} requestId 请求ID
-   * @returns {boolean} 是否有效
-   */
-  isValidRequest(requestId) {
-    return requestId === this.activeRequest;
+    // 抽象层不再需要复杂的取消逻辑，引擎重设 src 即可
   }
 }
 
-// 导出单例实例
 const audioStateManager = new AudioStateManager();
-export default audioStateManager; 
+export default audioStateManager;

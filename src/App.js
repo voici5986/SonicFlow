@@ -164,14 +164,14 @@ const AppContent = () => {
 
   // 可选音乐源
   const sources = [
-    'netease', 'ytmusic',
+    'netease', 'ytmusic', 'kuwo', 'joox', 'bilibili'
   ];
 
   // 可选音质
   const qualities = [128, 192, 320, 740, 999];
 
   // 从PlayerContext获取封面相关方法
-  const { fetchCover, coverCache, setCurrentPlaylist } = usePlayer();
+  const { setCurrentPlaylist } = usePlayer();
 
   // 搜索处理函数
   const handleSearch = useCallback(async (e) => {

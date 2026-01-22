@@ -10,7 +10,6 @@ import './styles/NavigationFix.css';
 import './styles/Orientation.css';
 import './styles/UserProfile.css';
 import App from './App';
-import reportWebVitals from './reportWebVitals';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -55,11 +54,7 @@ root.render(
 // });
 
 // 强制注销旧的 Service Worker
-serviceWorkerRegistration.unregister().then(() => {
-  console.log('✅ Service Worker 已注销,应用现在直接从浏览器请求 API');
-});
+serviceWorkerRegistration.unregister();
+console.log('✅ 已发起 Service Worker 注销请求');
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();
+

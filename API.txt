@@ -13,11 +13,11 @@ This platform is for study purposes only. Do NOT use it commercially!
 
 若使用本站提供的API，请注明出处“GD音乐台(music.gdstudio.xyz)”，尊重作者。使用过程如遇问题可B站私信：GD-Studio
 
-当前稳定音乐源（动态更新）：netease、kuwo、joox
+当前稳定音乐源（动态更新）：netease、kuwo、joox、bilibili
 
-当前访问频率限制（动态更新）：5分钟内不超60次请求
+当前访问频率限制（动态更新）：5分钟内不超50次请求
 
-更新日期：2025-10-1
+更新日期：2026-01-21
 
 
 搜索
@@ -68,5 +68,4 @@ source：音乐源。可选项，参数值netease（默认）、tencent、tidal�
 id：歌词ID。必选项，歌词ID即lyric_id（一般与曲目ID相同），可通过本站提供的搜索接口获取
 
 返回：lyric（LRC格式的原语种歌词）、tlyric（LRC格式的中文翻译歌词，不一定会返回）
-
 
