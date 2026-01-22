@@ -20,9 +20,9 @@
 
 首先 Fork 本仓库：[![Fork](https://img.shields.io/github/forks/voici5986/SonicFlow?style=social)](https://github.com/voici5986/SonicFlow/fork)
 
-开始一键部署到cloudflare pages [![Deploy to Cloudflare Pages](https://img.shields.io/badge/Deploy%20to-Cloudflare%20Pages-orange?logo=cloudflare)](https://dash.cloudflare.com/?to=/:account/workers-and-pages/create/pages) 
+然后[![Deploy to Cloudflare Pages](https://img.shields.io/badge/Deploy%20to-Cloudflare%20Pages-orange?logo=cloudflare)](https://dash.cloudflare.com/?to=/:account/workers-and-pages/create/pages) 
 
-*(点击按钮跳转 Cloudflare Dashboard，选择 "Create application" -> "Pages" -> "Connect to Git" 即可)*
+
 
 ### 方式二：Docker 部署
 
