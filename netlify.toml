@@ -5,7 +5,7 @@
  
 [build.environment]
   CI = "false" 
-  NODE_VERSION = "16.14.0"
+  NODE_VERSION = "20.0.0"
 
 
 # SPA重定向 - 让Netlify正确处理React的路由

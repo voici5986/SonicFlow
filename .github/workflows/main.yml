@@ -3,7 +3,7 @@ on:
     tags:
       - 'v*'
 env:
-  IMAGE_NAME: cl-music
+  IMAGE_NAME: sonicflow
 
 jobs:
   build:

@@ -170,10 +170,9 @@ services:
 
 ## 技术栈
 
-- React
 - React Bootstrap
 - Axios
-- React Player
+- New Native Audio Engine (基于原生 HTML5 Audio 对象)
 - React Icons
 - React Toastify
 - Localforage (本地数据存储)
