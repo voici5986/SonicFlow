@@ -123,7 +123,9 @@
 
 ## 项目部署
  生产环境需配置一个环境编辑，`REACT_APP_API_BASE` 后端API地址，由于跨域问题不可以直接使用，一般填写反代 `https://music-api.gdstudio.xyz/api.php` 后地址，可使用nginx、caddy 等web服务反代，也可是cloudflare worker反代，我这边提供了worker反向代理的代码，见 [worker.js](worker.js) 和 [cfworker.js](../cfworker.js)
-    可快速部署到 netlify 、vercel、Cloudflare Pages 等平台。[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvoici5986%2FSonicFlow&project-name=sonicflow&repository-name=sonicflow)  [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/voici5986/SonicFlow)
+    推荐部署到 **Cloudflare Pages**，利用其强大的边缘计算能力解决限流和跨域问题。
+    [![Deploy to Cloudflare Pages](https://img.shields.io/badge/Deploy%20to-Cloudflare%20Pages-orange?logo=cloudflare)](https://dash.cloudflare.com/?to=/:account/pages/new) 
+    *(一键部署：点击后选择此仓库，所有 API 转发逻辑将通过内置的 `functions` 自动生效。)*
 
 ## 环境变量配置
 
@@ -143,7 +145,7 @@
 
 2. **生产环境**：
    - 创建 `.env.production.local` 文件（本地构建），或
-   - 在部署平台（Netlify/Vercel/Cloudflare Pages等）设置这些环境变量
+    - 在部署平台（Cloudflare Pages 面板）的项目设置 -> 环境变量中配置。
 
 **注意**：环境变量文件应添加到 `.gitignore` 中，避免将敏感信息提交到代码库。
 
