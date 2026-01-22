@@ -182,6 +182,11 @@ services:
 
 ## 本地开发
 
+### 环境要求
+
+- Node.js 24.13.0 或更高版本 (最新 LTS，支持最新 Vite 构建)
+- npm 或 pnpm
+
 1. 克隆项目
 
 ```bash

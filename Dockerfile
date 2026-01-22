@@ -1,4 +1,4 @@
-FROM node:22-slim AS base
+FROM node:24.13.0-slim AS base
 
 ENV NPM_HOME="/npm"
 ENV PATH="$NPM_HOME:$PATH"
