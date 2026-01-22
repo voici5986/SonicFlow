@@ -66,7 +66,18 @@ export const downloadTrack = async (track, quality = 999, onStartDownload, onFin
     }
     
     // 获取音频URL数据
-    const audioData = await getAudioUrl(track, quality);
+    let audioData;
+    try {
+      audioData = await getAudioUrl(track, quality);
+    } catch (error) {
+      console.warn(`[downloadService] 音质 ${quality} 下载请求失败，尝试降级到 320:`, error);
+      if (quality !== 320) {
+        audioData = await getAudioUrl(track, 320);
+        quality = 320; // 更新实际下载的音质
+      } else {
+        throw error;
+      }
+    }
     
     // 获取下载链接
     const downloadUrl = audioData.url.replace(/\\/g, '');
@@ -81,7 +92,14 @@ export const downloadTrack = async (track, quality = 999, onStartDownload, onFin
     // 确定音质描述
     const qualityDesc = getQualityDescription(quality);
     
-    toast.info(`正在准备下载${qualityDesc}音频: ${fileName}`, {
+    // 准备文件大小信息
+    let fileSizeMsg = '';
+    if (audioData.size) {
+      const sizeMB = (parseInt(audioData.size) / 1024).toFixed(2);
+      fileSizeMsg = ` (${sizeMB} MB)`;
+    }
+    
+    toast.info(`正在准备下载${qualityDesc}音频: ${fileName}${fileSizeMsg}`, {
       icon: '⏬',
       duration: 2000
     });
@@ -195,7 +213,17 @@ export const downloadTracks = async (tracks, quality = 999, callbacks = {}) => {
       }
       
       // 获取下载链接，使用新的musicApiService
-      const audioData = await getAudioUrl(track, quality);
+      let audioData;
+      try {
+        audioData = await getAudioUrl(track, quality);
+      } catch (error) {
+        console.warn(`[downloadService] 批量下载歌曲 "${track.name}" 音质 ${quality} 失败，尝试降级到 320:`, error);
+        if (quality !== 320) {
+          audioData = await getAudioUrl(track, 320);
+        } else {
+          throw error;
+        }
+      }
       
       const downloadUrl = audioData.url.replace(/\\/g, '');
       if (!downloadUrl) {
@@ -209,7 +237,7 @@ export const downloadTracks = async (tracks, quality = 999, callbacks = {}) => {
       // 准备文件大小信息（如果API返回）
       let fileSize = '';
       if (audioData.size) {
-        const sizeMB = (parseInt(audioData.size) / (1024 * 1024)).toFixed(2);
+        const sizeMB = (parseInt(audioData.size) / 1024).toFixed(2);
         fileSize = ` (${sizeMB} MB)`;
         
         if (typeof onProgress === 'function') {

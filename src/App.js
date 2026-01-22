@@ -61,7 +61,7 @@ const searchInitialState = {
   query: '',
   results: [],
   source: 'netease',
-  quality: 320,
+  quality: 999,
   loading: false,
   error: null,
 };
@@ -86,17 +86,17 @@ const DownloadContext = React.createContext();
 const useDownloadContext = () => React.useContext(DownloadContext);
 
 // 搜索结果项组件
-const SearchResultItem = ({ track, searchResults }) => {
-  const { handlePlay, currentTrack, isPlaying } = usePlayer();
-  const { downloading, handleDownload } = useDownloadContext();
-
-  // 添加单独的播放处理函数
-  const handleTrackPlay = (track) => {
-    console.log('从搜索结果播放曲目:', track.id, track.name);
-    // 使用当前搜索结果作为播放列表
-    const trackIndex = searchResults.findIndex(item => item.id === track.id);
-    handlePlay(track, trackIndex >= 0 ? trackIndex : -1, searchResults);
-  };
+  const SearchResultItem = ({ track, searchResults, quality }) => {
+    const { handlePlay, currentTrack, isPlaying } = usePlayer();
+    const { downloading, handleDownload } = useDownloadContext();
+  
+    // 添加单独的播放处理函数
+    const handleTrackPlay = (track) => {
+      console.log('从搜索结果播放曲目:', track.id, track.name, '音质:', quality);
+      // 使用当前搜索结果作为播放列表
+      const trackIndex = searchResults.findIndex(item => item.id === track.id);
+      handlePlay(track, trackIndex >= 0 ? trackIndex : -1, searchResults, quality);
+    };
 
   return (
     <Card className="h-100">
@@ -164,7 +164,7 @@ const AppContent = () => {
 
   // 可选音乐源
   const sources = [
-    'netease', 'ytmusic', 'kuwo', 'joox', 'bilibili'
+    'netease', 'kuwo', 'joox', 'bilibili'
   ];
 
   // 可选音质
@@ -334,7 +334,7 @@ const AppContent = () => {
           <Row className="g-4">
             {results.map((track) => (
               <Col key={track.id} xs={12} sm={6} md={4} lg={3}>
-                <SearchResultItem track={track} searchResults={results} />
+                <SearchResultItem track={track} searchResults={results} quality={quality} />
               </Col>
             ))}
           </Row>

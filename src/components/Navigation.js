@@ -89,7 +89,7 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
         </Navbar.Brand>
 
         {/* 用户头像/登录按钮 */}
-        <div className="order-lg-last ms-auto me-2">
+        <div className="order-lg-last ms-auto me-2 d-flex align-items-center">
           {/* 用户头像按钮 */}
           {currentUser ? (
             <Nav.Link

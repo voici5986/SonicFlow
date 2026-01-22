@@ -19,16 +19,15 @@ const pendingPlayRequests = new Map();
 const pendingUrlRequests = new Map();
 const pendingLyricRequests = new Map();
 
-
 /**
  * 检查是否允许API请求
- * @returns {boolean} 是否允许API请求
  */
 const checkApiAccess = () => {
   const currentMode = getCurrentAppMode();
   if (currentMode === APP_MODES.CHINA) {
     throw new Error(ERROR_MESSAGES.REGION_RESTRICTED);
   }
+
   return true;
 };
 
@@ -223,18 +222,33 @@ export const getLyrics = async (track) => {
 
     // 生成缓存键
     const cacheKey = `${track.source}_${track.lyric_id}`;
+    const STORAGE_KEY_PREFIX = 'sonicflow_lyric_';
 
     // 创建一个Promise并存储到映射中
     const lyricPromise = (async () => {
       try {
-        // 检查内存缓存
+        // 1. 检查内存缓存
         const cachedLyrics = getMemoryCache(CACHE_TYPES.LYRICS, cacheKey);
         if (cachedLyrics) {
           console.log(`[getLyrics] 使用内存缓存的歌词: ${requestId}`);
           return cachedLyrics;
         }
 
-        console.log(`[getLyrics] 内存缓存未命中，调用API: ${requestId}`);
+        // 2. 检查 LocalStorage 持久化缓存
+        try {
+          const storedLyrics = localStorage.getItem(`${STORAGE_KEY_PREFIX}${cacheKey}`);
+          if (storedLyrics) {
+            const parsedLyrics = JSON.parse(storedLyrics);
+            console.log(`[getLyrics] 使用 LocalStorage 缓存的歌词: ${requestId}`);
+            // 同时更新到内存缓存，提高下次访问速度
+            setMemoryCache(CACHE_TYPES.LYRICS, cacheKey, parsedLyrics);
+            return parsedLyrics;
+          }
+        } catch (e) {
+          console.warn('[getLyrics] 读取 LocalStorage 缓存失败:', e);
+        }
+
+        console.log(`[getLyrics] 缓存未命中，调用API: ${requestId}`);
 
         const response = await axios.get(`${API_BASE}`, {
           params: {
@@ -250,10 +264,17 @@ export const getLyrics = async (track) => {
           translated: response.data.tlyric || ''
         };
 
-        // 缓存结果到内存
+        // 3. 缓存结果到内存
         setMemoryCache(CACHE_TYPES.LYRICS, cacheKey, lyrics);
 
-        console.log(`[getLyrics] 请求完成: ${requestId}`);
+        // 4. 持久化到 LocalStorage
+        try {
+          localStorage.setItem(`${STORAGE_KEY_PREFIX}${cacheKey}`, JSON.stringify(lyrics));
+        } catch (e) {
+          console.warn('[getLyrics] 写入 LocalStorage 缓存失败:', e);
+        }
+
+        console.log(`[getLyrics] 请求完成并存入双层缓存: ${requestId}`);
         return lyrics;
       } finally {
         // 请求完成后从映射中移除
@@ -360,23 +381,14 @@ export const playMusic = async (track, quality = 999, forceRefresh = false) => {
 
     if (!url) throw new Error('无效的音频链接');
 
-    // 异步获取歌词（非阻塞播放）
-    const lyricsPromise = getLyrics(track).catch(e => {
-      console.error('[playMusic] 获取歌词失败:', e);
-      return { raw: '', translated: '' };
-    });
-
     // 将播放任务交给状态管理器（底层分发到 AudioEngine）
     audioStateManager.loadTrack(track, url);
 
     // 后台异步补全封面
     forceGetCoverImage(track.source, track.pic_id).catch(() => { });
 
-    const lyrics = await lyricsPromise;
-
     return {
       url,
-      lyrics,
       fileSize: audioData.size
     };
   } catch (error) {

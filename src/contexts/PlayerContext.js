@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
-import { playMusic, forceGetCoverImage } from '../services/musicApiService';
+import { playMusic, forceGetCoverImage, getLyrics } from '../services/musicApiService';
 import { addToHistory, getCoverFromStorage, saveCoverToStorage } from '../services/storage';
 import { handleError, ErrorTypes, ErrorSeverity } from '../utils/errorHandler';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
@@ -32,6 +32,8 @@ export const PlayerProvider = ({ children }) => {
   const [currentLyricIndex, setCurrentLyricIndex] = useState(-1);
   const [lyricExpanded, setLyricExpanded] = useState(false);
   const [coverCache, setCoverCache] = useState({});
+  const retryCountRef = useRef(0); // 记录单曲播放重试次数
+  const MAX_RETRIES = 1; // 每个曲目最多自动刷新一次 URL
 
   const lyricsContainerRef = useRef(null);
 
@@ -75,10 +77,18 @@ export const PlayerProvider = ({ children }) => {
       if (state.track) setCurrentTrack(state.track);
       if (state.url) setPlayerUrl(state.url);
       if (state.error) {
-        handleError(state.error, ErrorTypes.PLAYBACK, ErrorSeverity.ERROR, '播放器引擎错误');
+        // 如果发生播放错误，尝试自动刷新 URL 并重试一次
+        if (retryCountRef.current < MAX_RETRIES && currentTrack) {
+          console.warn(`[PlayerContext] 播放出错，尝试刷新 URL 并重试 (${retryCountRef.current + 1}/${MAX_RETRIES})`);
+          retryCountRef.current += 1;
+          handlePlay(currentTrack, currentIndex, currentPlaylist, 999, true); // 强制刷新重试
+        } else {
+          handleError(state.error, ErrorTypes.PLAYBACK, ErrorSeverity.ERROR, '播放器引擎错误');
+          retryCountRef.current = 0; // 超过最大重试次数，重置
+        }
       }
     });
-  }, []);
+  }, [currentTrack, currentIndex, currentPlaylist]);
 
   // 歌词解析
   const parseLyric = useCallback((text) => {
@@ -112,13 +122,51 @@ export const PlayerProvider = ({ children }) => {
     }
   }, [isPlaying]);
 
-  const toggleLyric = useCallback(() => setLyricExpanded(prev => !prev), []);
+  const toggleLyric = useCallback(() => {
+    setLyricExpanded(prev => {
+      const nextState = !prev;
+      // 如果即将展开且当前没有歌词，则触发加载
+      if (nextState && currentTrack && !lyricData.rawLyric) {
+        fetchLyrics(currentTrack);
+      }
+      return nextState;
+    });
+  }, [currentTrack, lyricData.rawLyric]);
 
-  const handlePlay = useCallback(async (track, index = -1, playlist = null) => {
+  // 按需获取歌词的方法
+  const fetchLyrics = useCallback(async (track) => {
+    if (!track) return;
+    try {
+      const data = await getLyrics(track);
+      if (data && data.raw) {
+        setLyricData({
+          rawLyric: data.raw,
+          tLyric: data.translated || '',
+          parsedLyric: parseLyric(data.raw)
+        });
+      }
+    } catch (error) {
+      console.error('[PlayerContext] 按需获取歌词失败:', error);
+    }
+  }, [parseLyric]);
+
+  // 监听切歌：如果歌词面板已展开，自动获取新歌词
+  useEffect(() => {
+    if (lyricExpanded && currentTrack && !lyricData.rawLyric) {
+      fetchLyrics(currentTrack);
+    }
+  }, [currentTrack, lyricExpanded, lyricData.rawLyric, fetchLyrics]);
+
+  const handlePlay = useCallback(async (track, index = -1, playlist = null, quality = 999, forceRefresh = false) => {
     try {
       if (!isOnline) {
         toast.warn('离线状态无法播放在线音乐'); // 假设全局有toast或通过其他方式提示
         return;
+      }
+
+      // 如果不是重试，则重置重试计数
+      if (!forceRefresh) {
+        retryCountRef.current = 0;
       }
 
       // 更新列表逻辑
@@ -126,24 +174,30 @@ export const PlayerProvider = ({ children }) => {
       if (index >= 0) setCurrentIndex(index);
 
       // 重置 UI 进度项（防止旧歌进度闪烁）
-      setPlayProgress(0);
-      setPlayedSeconds(0);
-      setTotalSeconds(0);
-      setLyricData({ rawLyric: '', tLyric: '', parsedLyric: [] });
-      setCurrentLyricIndex(-1);
-
-      // 加载并播放
-      const musicData = await playMusic(track, 999, true);
-
-      if (musicData.lyrics && musicData.lyrics.raw) {
-        setLyricData({
-          rawLyric: musicData.lyrics.raw,
-          tLyric: musicData.lyrics.translated || '',
-          parsedLyric: parseLyric(musicData.lyrics.raw)
-        });
+      if (!forceRefresh) {
+        setPlayProgress(0);
+        setPlayedSeconds(0);
+        setTotalSeconds(0);
+        setLyricData({ rawLyric: '', tLyric: '', parsedLyric: [] });
+        setCurrentLyricIndex(-1);
       }
 
-      addToHistory(track);
+      // 加载并播放
+      let musicData;
+      try {
+        musicData = await playMusic(track, quality, forceRefresh);
+      } catch (error) {
+        console.warn(`[PlayerContext] 音质 ${quality} 请求失败，尝试降级到 320:`, error);
+        if (quality !== 320) {
+          musicData = await playMusic(track, 320, forceRefresh);
+        } else {
+          throw error; // 如果已经是 320 还失败，则抛出
+        }
+      }
+
+      if (!forceRefresh) {
+        addToHistory(track);
+      }
     } catch (error) {
       console.error('[PlayerContext] handlePlay error:', error);
     }
@@ -166,8 +220,10 @@ export const PlayerProvider = ({ children }) => {
 
   const handleEnded = useCallback(() => {
     if (playMode === 'repeat-one') {
+      // 单曲循环：优先直接重播
       audioEngine.seek(0);
       audioEngine.play();
+      // 如果播放失败，AudioEngine 会抛出 error，触发上面的监听器逻辑自动刷新 URL
     } else {
       handleNext();
     }

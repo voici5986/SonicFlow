@@ -18,7 +18,6 @@ export const validateTrack = (track) => {
     artist: String(track.artist || '未知艺术家'),
     album: String(track.album || '未知专辑'),
     pic_id: track.pic_id || null,
-    url_id: track.url_id || null,
     lyric_id: track.lyric_id || null,
     source: track.source || 'unknown',
   };
