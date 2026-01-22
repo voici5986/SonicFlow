@@ -124,8 +124,8 @@
 ## 项目部署
  生产环境需配置一个环境编辑，`REACT_APP_API_BASE` 后端API地址，由于跨域问题不可以直接使用，一般填写反代 `https://music-api.gdstudio.xyz/api.php` 后地址，可使用nginx、caddy 等web服务反代，也可是cloudflare worker反代，我这边提供了worker反向代理的代码，见 [worker.js](worker.js) 和 [cfworker.js](../cfworker.js)
     推荐部署到 **Cloudflare Pages**，利用其强大的边缘计算能力解决限流和跨域问题。
-    [![Deploy to Cloudflare Pages](https://img.shields.io/badge/Deploy%20to-Cloudflare%20Pages-orange?logo=cloudflare)](https://dash.cloudflare.com/?to=/:account/pages/new) 
-    *(一键部署：点击后选择此仓库，所有 API 转发逻辑将通过内置的 `functions` 自动生效。)*
+    [![Deploy to Cloudflare Pages](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/voici5986/SonicFlow)
+    *(一键部署：点击后 Cloudflare 会自动克隆此仓库并配置环境。)*
 
 ## 环境变量配置
 

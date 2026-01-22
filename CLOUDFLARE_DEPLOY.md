@@ -26,6 +26,8 @@
 -   **Framework preset** (框架预设): 选择 **"Create React App"** (或者手动配置下面的选项)。
 -   **Build command** (构建命令): `npm run build`
 -   **Build output directory** (构建输出目录): `build`
+-   **Deploy command** (部署命令): **留空 (不要填!)**
+-   **Non-production...** (非生产...): **留空 (不要填!)**
 
 ### 环境变量设置 (非常重要)
 
