@@ -24,6 +24,7 @@ const MusicCardActions = ({
       {/* 收藏按钮 - 统一使用 HeartButton */}
       <HeartButton 
         track={track} 
+        variant="link"
       />
 
         {/* 删除按钮 - 如果明确需要独立删除按钮则显示 */}

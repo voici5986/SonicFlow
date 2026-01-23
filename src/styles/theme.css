@@ -175,13 +175,54 @@
   text-overflow: ellipsis;
 }
 
+/* 音乐卡片底部操作栏 */
 .music-card-actions {
-  flex-shrink: 0 !important;
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  gap: 8px !important;
-  margin-left: auto !important; /* 强制推向右侧 */
+  margin-top: auto;
+  padding-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* 统一的操作按钮样式：无背景、无边框、大图标 */
+.music-card-actions .btn,
+.music-card-actions button {
+  background: transparent !important;
+  border: none !important;
+  padding: 4px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary) !important;
+  transition: all 0.2s ease !important;
+  box-shadow: none !important;
+}
+
+/* 悬停效果：轻微放大和颜色加深 */
+.music-card-actions .btn:hover:not(:disabled),
+.music-card-actions button:hover:not(:disabled) {
+  transform: scale(1.2);
+  color: var(--color-primary) !important;
+}
+
+/* 针对不同类型的按钮悬停色 */
+.music-card-actions .btn-outline-danger:hover:not(:disabled) {
+  color: #dc3545 !important;
+}
+
+.music-card-actions .btn-outline-success:hover:not(:disabled) {
+  color: #198754 !important;
+}
+
+/* 图标尺寸调整 */
+.music-card-actions svg {
+  font-size: 1.2rem;
+}
+
+/* 加载中状态不需要缩放 */
+.music-card-actions .spinner-border {
+  width: 1.2rem;
+  height: 1.2rem;
 }
 
 .music-card:hover {
