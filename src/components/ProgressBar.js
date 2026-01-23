@@ -107,33 +107,93 @@ const ProgressBar = () => {
       ref={progressBarRef}
       style={{
         padding: '0',
-        marginBottom: '2px',
+        margin: '0',
+        width: '100%',
         cursor: currentTrack ? 'pointer' : 'default',
-        position: 'relative'
+        position: 'relative',
+        zIndex: 10
       }}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
       onMouseDown={handleMouseDown}
       onTouchStart={handleMouseDown}
     >
-      <div className="time-display" style={{ display: 'flex', justifyContent: 'flex-end', fontSize: '0.8rem', color: '#555' }}>
-        <span>{formatTime(currentTimeInSeconds)}/{formatTime(totalSeconds)}</span>
-      </div>
+      {(isHovering || isDragging) && (
+        <div 
+          className="time-display-dynamic" 
+          style={{ 
+            position: 'absolute',
+            top: '-38px', // 稍微调高一点给小三角留空间
+            left: `${displayProgress}%`,
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            fontSize: '0.75rem', 
+            fontWeight: '600',
+            color: 'var(--color-text-primary)',
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap',
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            padding: '3px 8px',
+            borderRadius: '6px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+            zIndex: 100,
+            border: '1px solid rgba(0,0,0,0.05)'
+          }}
+        >
+          <span>{formatTime(currentTimeInSeconds)} / {formatTime(totalSeconds)}</span>
+          {/* 小三角形 */}
+          <div style={{
+            position: 'absolute',
+            bottom: '-6px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '0',
+            height: '0',
+            borderLeft: '6px solid transparent',
+            borderRight: '6px solid transparent',
+            borderTop: '6px solid rgba(255, 255, 255, 0.95)',
+          }} />
+        </div>
+      )}
 
-      <div className="progress" style={{ height: isHovering ? '6px' : '4px', position: 'relative', transition: 'height 0.1s' }}>
-        <div className="progress-bar bg-danger" style={{ width: `${displayProgress}%`, height: '100%', transition: 'none' }} />
+      <div 
+        className="progress" 
+        style={{ 
+          height: (isHovering || isDragging) ? '6px' : '3px', 
+          minHeight: '3px',
+          position: 'relative', 
+          transition: 'height 0.2s ease',
+          backgroundColor: 'transparent',
+          borderRadius: '0',
+          border: 'none',
+          boxShadow: 'none'
+        }}
+      >
+        <div 
+          className="progress-bar" 
+          style={{ 
+            width: `${displayProgress}%`, 
+            height: '100%', 
+            minHeight: '3px',
+            transition: 'none',
+            backgroundColor: 'var(--color-accent, #ff4d4f)',
+            border: 'none',
+            boxShadow: 'none'
+          }} 
+        />
         {(isDragging || isHovering) && (
           <div
             className="progress-handle"
             style={{
               position: 'absolute',
-              left: `calc(${displayProgress}% - 8px)`,
-              top: '-6px',
-              width: '16px',
-              height: '16px',
+              left: `calc(${displayProgress}% - 6px)`,
+              top: '-4px',
+              width: '12px',
+              height: '12px',
               borderRadius: '50%',
-              backgroundColor: '#dc3545',
-              boxShadow: '0 0 4px rgba(0,0,0,0.3)',
+              backgroundColor: 'var(--color-accent, #ff4d4f)',
+              boxShadow: '0 0 4px rgba(0,0,0,0.2)',
               zIndex: 10
             }}
           />

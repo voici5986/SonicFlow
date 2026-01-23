@@ -25,6 +25,7 @@ const MusicCardActions = ({
       <HeartButton 
         track={track} 
         variant="link"
+        className="accent-action"
       />
 
         {/* 删除按钮 - 如果明确需要独立删除按钮则显示 */}

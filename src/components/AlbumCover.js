@@ -141,8 +141,8 @@ const AlbumCover = ({
         cursor: (lazy && !isLoaded) || onClick ? 'pointer' : 'default',
         position: 'relative',
         overflow: 'hidden',
-        backgroundColor: '#f8f9fa',
-        borderRadius: size === 'small' ? '6px' : '10px',
+        backgroundColor: 'var(--color-background-alt)',
+        borderRadius: size === 'small' ? 'var(--border-radius-sm)' : 'var(--border-radius-md)',
         ...getStyles()
       }}
     >

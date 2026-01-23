@@ -136,8 +136,8 @@
   width: 70px;
   height: 70px;
   object-fit: cover;
-  border: 2px solid white;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  border: 2px solid var(--card-background);
+  box-shadow: var(--shadow-sm);
   transition: all 0.3s var(--ease-out-back);
 }
 
@@ -150,10 +150,10 @@
   height: 70px;
   font-size: 1.8rem;
   font-weight: 600;
-  background: var(--gradient-primary);
-  color: white;
-  border: 2px solid white;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  background: var(--color-text-primary);
+  color: var(--card-background);
+  border: 2px solid var(--card-background);
+  box-shadow: var(--shadow-sm);
   transition: all 0.3s var(--ease-out-back);
 }
 
@@ -171,10 +171,7 @@
   font-size: 1.2rem;
   font-weight: 700;
   margin-bottom: 0.25rem;
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--color-text-primary);
 }
 
 .user-email {
@@ -214,11 +211,11 @@
   border-radius: var(--border-radius-md);
   margin-bottom: 0.5rem;
   transition: all 0.3s ease;
-  background-color: rgba(0, 0, 0, 0.02);
+  background-color: var(--color-background-alt);
 }
 
 .stats-item:hover {
-  background-color: rgba(0, 0, 0, 0.04);
+  background-color: var(--card-hover-background);
 }
 
 .stats-item:last-child {
@@ -237,18 +234,18 @@
 }
 
 .stats-icon.favorites {
-  background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
-  color: white;
+  background: var(--color-background-alt);
+  color: var(--color-text-secondary);
 }
 
 .stats-icon.history {
-  background: linear-gradient(45deg, #4facfe, #00f2fe);
-  color: white;
+  background: var(--color-background-alt);
+  color: var(--color-text-secondary);
 }
 
 .stats-icon.cache {
-  background: linear-gradient(45deg, #6c757d, #868e96);
-  color: white;
+  background: var(--color-background-alt);
+  color: var(--color-text-secondary);
 }
 
 .stats-content {
@@ -276,7 +273,7 @@
 
 .stats-item.clickable:hover {
   transform: translateY(-3px);
-  background-color: rgba(0, 0, 0, 0.02);
+  background-color: var(--card-hover-background);
 }
 
 .stats-item.clickable:active {
@@ -457,7 +454,7 @@
 /* 登录表单容器 */
 .login-form-container,
 .register-form-container {
-  background-color: white;
+  background-color: var(--card-background);
   border-radius: var(--border-radius-lg);
   padding: 1.25rem;
   box-shadow: var(--shadow-md);
@@ -467,7 +464,7 @@
 
 .login-form-container h3,
 .register-form-container h3 {
-  color: var(--color-primary);
+  color: var(--color-text-primary);
   font-weight: 600;
   margin-bottom: 1.25rem;
 }

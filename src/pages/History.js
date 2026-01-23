@@ -144,8 +144,8 @@ const History = () => {
         <h1>播放历史</h1>
         {history.length > 0 && (
           <Button 
-            variant="outline-danger" 
             size="sm"
+            className="minimal-action-btn"
             onClick={handleClearHistory}
           >
             <FaTrash className="me-1" /> 清空历史

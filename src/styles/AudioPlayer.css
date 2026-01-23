@@ -12,6 +12,7 @@
   z-index: 1000;
   width: 100%;
   padding: 0; /* 移除可能导致内缩的内边距 */
+  overflow: visible !important; /* 允许进度条时间提示框向上溢出显示 */
 }
 
 /* 播放器内部容器，处理溢出 */
@@ -63,6 +64,92 @@
   flex-direction: column;
   width: 100%;
   position: relative; /* 为绝对定位元素建立上下文 */
+}
+
+/* 桌面端三段式布局 */
+@media (min-width: 769px) {
+  .player-inner {
+    padding: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    overflow: visible; /* 允许进度条溢出显示时间 */
+  }
+
+  .player-info-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0 30px;
+    position: relative;
+  }
+
+  /* 左侧：专辑信息 */
+  .player-left-section {
+    display: flex;
+    align-items: center;
+    width: 25%;
+    min-width: 200px;
+    z-index: 10;
+  }
+
+  /* 中间：播放控制 */
+  .player-center-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 50%;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+  }
+
+  /* 右侧：辅助功能 */
+  .player-right-section {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    width: 25%;
+    min-width: 200px;
+    z-index: 10;
+  }
+
+  /* 进度条绝对定位在顶部 */
+  .progress-control-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0;
+    padding: 0;
+    height: 3px !important; /* 调整容器高度为 3px */
+    z-index: 100;
+    line-height: 1 !important;
+  }
+  
+  /* 强制覆盖 Bootstrap 的 .progress 默认高度 */
+  .progress-control-container .progress {
+    height: 3px !important;
+    min-height: 3px !important;
+    background-color: rgba(0,0,0,0.05) !important;
+  }
+
+  .progress-control-container .progress:hover {
+    height: 7px !important;
+  }
+
+  .progress-control-container .progress-bar {
+    height: 100% !important;
+    background-color: var(--color-accent) !important;
+  }
 }
 
 /* 歌曲信息和歌词 */
@@ -144,6 +231,7 @@
   box-shadow: none !important;
   margin: 0 5px;
   padding: 4px !important;
+  color: var(--color-text-secondary) !important;
 }
 
 /* 控制按钮悬停效果 */
@@ -165,20 +253,24 @@
   align-items: center;
   justify-content: center;
   padding: 8px !important;
+  color: var(--color-text-secondary) !important;
+}
+
+.accent-control {
+  color: var(--color-accent) !important;
 }
 
 /* 进度条位置 - 同时应用于收缩和展开模式 */
 .progress-control-container {
   position: absolute;
-  bottom: -15px;
+  top: 0;
   left: 0;
   right: 0;
-  margin: 0 auto;
-  margin-bottom: 8px; /* 增加底部边距，使进度条下移 */
-  width: 92%;
-  max-width: 800px;
-  z-index: 5;
+  width: 100% !important;
+  max-width: none !important;
+  z-index: 100;
   padding: 0;
+  margin: 0;
 }
 
 /* 封面容器和专辑封面 */
@@ -206,7 +298,7 @@
   overflow-x: hidden !important; /* 强制隐藏横向滚动条 */
   padding: 15px 15px 15px 10px; /* 减少左内边距到10px */
   margin-top: 10px;
-  background-color: rgba(0, 0, 0, 0.02);
+  background-color: var(--color-background-alt);
   border-radius: 10px;
   position: relative;
   height: calc(100% - 100px);
@@ -234,14 +326,14 @@
 /* 当前歌词行样式 - 已移除，使用内联样式替代 */
 
 .lyric-line.next-active {
-  color: #666666;
+  color: var(--color-text-tertiary);
 }
 
 /* 翻译歌词样式 */
 .translated-lyric {
   font-size: 0.9em;
   margin-top: 4px;
-  color: #888;
+  color: var(--color-text-muted);
   max-width: 100% !important; /* 防止文本溢出 */
   width: 100% !important;
   word-break: break-word !important; /* 允许长单词换行 */
@@ -315,7 +407,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: radial-gradient(circle, transparent 95%, rgba(220, 53, 69, 0.1) 100%);
+    background: radial-gradient(circle, transparent 95%, rgba(0, 0, 0, 0.06) 100%);
     opacity: 0;
     animation: pulse 3s infinite;
     pointer-events: none; /* 确保不影响点击事件 */
@@ -330,7 +422,7 @@
 
 /* 歌词图标 */
 .lyric-icon {
-  filter: drop-shadow(0 0 1px rgba(255, 0, 0, 0.5));
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.25));
 }
 
 /* 播放控制区域样式 */
@@ -468,8 +560,8 @@
 }
 
 .close-lyrics-btn:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-  color: #333;
+  background-color: var(--color-background-alt);
+  color: var(--color-text-primary);
 }
 
 /* 响应式调整 - 移动设备和平板竖屏 */
@@ -597,13 +689,13 @@
   /* 进度条样式 */
   .audio-player .progress {
     height: 4px; /* 统一高度 */
-    background-color: #f1f1f1;
+    background-color: var(--color-background-alt);
     border-radius: 3px;
     margin-top: 0;
   }
   
   .audio-player .progress-bar {
-    background-color: var(--color-danger);
+    background-color: var(--color-text-primary);
   }
   
   /* 确保控制按钮在右侧 */
@@ -618,12 +710,12 @@
     text-align: left;
     padding: 3px 0;
     margin-bottom: 8px;
-    color: #333;
+    color: var(--color-text-secondary);
     position: absolute;
     bottom: 7px; /* 向上移动5px */
     left: 0;
     width: 100%;
-    background-color: rgba(255, 255, 255, 0.8);
+    background-color: rgba(255, 255, 255, 0.85);
     border-radius: 4px;
     z-index: 1; /* 保持z-index为1 */
   }
@@ -634,7 +726,7 @@
   }
   
   .current-lyric-line:hover {
-    color: #dc3545;
+    color: var(--color-text-primary);
   }
 
   /* 桌面端悬停效果 */

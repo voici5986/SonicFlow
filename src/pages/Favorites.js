@@ -722,13 +722,13 @@ const Favorites = () => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div className="d-flex align-items-center">
           <h1 className="mb-0">我的收藏</h1>
-          <span className="ms-3 badge bg-info">{favorites.length}/{MAX_FAVORITES_ITEMS}</span>
+          <span className="ms-3 badge" style={{ backgroundColor: 'var(--color-background-alt)', color: 'var(--color-text-tertiary)', fontWeight: '500' }}>{favorites.length}/{MAX_FAVORITES_ITEMS}</span>
         </div>
         <div className="d-flex justify-content-end">
           <Button
             variant="outline-primary"
             size="sm"
-            className="me-2 d-none d-md-inline-flex"
+            className="me-2 d-none d-md-inline-flex minimal-action-btn"
             onClick={() => setShowDownloadModal(true)}
             disabled={favorites.length === 0}
           >
@@ -737,7 +737,7 @@ const Favorites = () => {
           <Button
             variant="outline-success"
             size="sm"
-            className="me-2 d-none d-md-inline-flex"
+            className="me-2 d-none d-md-inline-flex minimal-action-btn"
             onClick={handleExport}
             disabled={favorites.length === 0}
           >
@@ -746,7 +746,7 @@ const Favorites = () => {
           <Button
             variant="outline-info"
             size="sm"
-            className="d-none d-md-inline-flex"
+            className="d-none d-md-inline-flex minimal-action-btn"
             onClick={() => fileInputRef.current.click()}
           >
             <FaFileImport className="me-1" /> 导入
@@ -755,9 +755,8 @@ const Favorites = () => {
           {/* 移动端显示的按钮组 */}
           <div className="d-flex d-md-none">
             <Button
-              variant="outline-primary"
               size="sm"
-              className="me-2"
+              className="me-2 minimal-action-btn"
               onClick={() => setShowDownloadModal(true)}
               disabled={favorites.length === 0}
             >
@@ -765,17 +764,18 @@ const Favorites = () => {
             </Button>
 
             <Dropdown>
-              <Dropdown.Toggle variant="outline-secondary" size="sm" id="dropdown-import-export">
+              <Dropdown.Toggle size="sm" id="dropdown-import-export" className="minimal-action-btn">
                 <FaExchangeAlt /> <span className="d-none d-sm-inline">导入导出</span>
               </Dropdown.Toggle>
               <Dropdown.Menu align="end">
                 <Dropdown.Item
+                  className="minimal-action-item"
                   onClick={handleExport}
                   disabled={favorites.length === 0}
                 >
                   <FaFileExport className="me-2" /> 导出收藏
                 </Dropdown.Item>
-                <Dropdown.Item onClick={() => fileInputRef.current.click()}>
+                <Dropdown.Item className="minimal-action-item" onClick={() => fileInputRef.current.click()}>
                   <FaFileImport className="me-2" /> 导入收藏
                 </Dropdown.Item>
               </Dropdown.Menu>
@@ -800,7 +800,7 @@ const Favorites = () => {
           />
           {searchQuery && (
             <Button
-              variant="outline-secondary"
+              className="minimal-action-btn"
               onClick={() => {
                 setSearchQuery('');
                 setFilteredFavorites(favorites);

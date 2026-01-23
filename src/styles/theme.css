@@ -3,30 +3,33 @@
 :root {
   /* ===== 颜色系统 ===== */
   /* 基础颜色 */
-  --color-primary: #6a11cb;
-  --color-primary-light: #8a3fdb;
-  --color-primary-dark: #5a0eab;
-  --color-secondary: #2575fc;
-  --color-secondary-light: #4591ff;
-  --color-secondary-dark: #1b5ed9;
+  --color-primary: #1F1F1F;
+  --color-primary-light: #2F3437;
+  --color-primary-dark: #1F1F1F;
+  --color-secondary: #2F3437;
+  --color-secondary-light: #6B6F76;
+  --color-secondary-dark: #1F1F1F;
   
   /* 功能性颜色 */
   --color-success: #28a745;
   --color-danger: #e74c3c;
   --color-warning: #ffc107;
   --color-info: #17a2b8;
+  --color-accent: #D15C5C;
   
   /* 中性颜色 */
   --color-text-primary: #1F1F1F;
-  --color-text-secondary: #6B6B6B;
-  --color-text-muted: #9A9A9A;
-  --color-background: #F5F5F2;
-  --color-background-alt: #f8f9fa;
-  --color-border: rgba(0, 0, 0, 0.1);
+  --color-text-secondary: #2F3437;
+  --color-text-tertiary: #6B6F76;
+  --color-text-muted: #9B9A97;
+  --color-background: #FAFAF9;
+  --color-background-alt: #F7F6F4;
+  --color-border: #E9E9E9;
+  --color-border-active: #2F3437;
   
   /* 渐变色 */
   --gradient-primary: linear-gradient(45deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-  --gradient-dark: linear-gradient(45deg, #333333 0%, #555555 100%);
+  --gradient-dark: linear-gradient(45deg, #1F1F1F 0%, #2F3437 100%);
   
   /* ===== 排版 ===== */
   --font-family-base: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -90,8 +93,8 @@
   --music-card-hover-transform: var(--card-hover-transform);
 
   /* 卡片 */
-  --card-background: #FAFAF8;
-  --card-hover-background: #EFEFEA;
+  --card-background: #FFFFFF;
+  --card-hover-background: #F7F6F4;
   --card-hover-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
   --card-hover-transform: translateY(-5px);
   --card-transition: all 0.3s var(--ease-out-circ);
@@ -101,14 +104,14 @@
   /* 导航栏 */
   --navbar-height: 60px;
   --navbar-shadow: 0 2px 15px rgba(0, 0, 0, 0.04);
-  --navbar-border: 1px solid rgba(0, 0, 0, 0.06);
+  --navbar-border: 1px solid var(--color-border);
   
   /* 进度条 */
   --progress-height: 6px;
   --progress-height-hover: 8px;
   --progress-border-radius: 10px;
-  --progress-background: #ddd;
-  --progress-fill: var(--color-danger);
+  --progress-background: #D3D1CB;
+  --progress-fill: var(--color-text-primary);
   
   /* 按钮 */
   --button-hover-transform: translateY(-2px);
@@ -117,7 +120,7 @@
   --button-hover-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
   
   /* 保留原有的主要变量名以保持兼容性 */
-  --primary-gradient: linear-gradient(45deg, #6a11cb 0%, #2575fc 100%);
+  --primary-gradient: linear-gradient(45deg, var(--color-primary) 0%, var(--color-secondary) 100%);
 }
 
 /* ===== 通用组件样式 ===== */
@@ -193,7 +196,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-secondary) !important;
+  color: var(--color-text-tertiary) !important;
   transition: all 0.2s ease !important;
   box-shadow: none !important;
 }
@@ -202,16 +205,52 @@
 .music-card-actions .btn:hover:not(:disabled),
 .music-card-actions button:hover:not(:disabled) {
   transform: scale(1.2);
-  color: var(--color-primary) !important;
+  color: var(--color-text-primary) !important;
 }
 
-/* 针对不同类型的按钮悬停色 */
 .music-card-actions .btn-outline-danger:hover:not(:disabled) {
-  color: #dc3545 !important;
+  color: var(--color-text-primary) !important;
 }
 
 .music-card-actions .btn-outline-success:hover:not(:disabled) {
-  color: #198754 !important;
+  color: var(--color-text-primary) !important;
+}
+
+.music-card-actions .accent-action {
+  color: var(--color-accent) !important;
+}
+
+.music-card-actions .accent-action:hover:not(:disabled) {
+  color: var(--color-accent) !important;
+}
+
+.minimal-action-btn {
+  background: transparent !important;
+  border: 1px solid var(--color-border) !important;
+  color: var(--color-text-secondary) !important;
+  border-radius: var(--border-radius-md) !important;
+  box-shadow: none !important;
+}
+
+.minimal-action-btn:hover:not(:disabled),
+.minimal-action-btn:focus-visible:not(:disabled) {
+  background: var(--color-background-alt) !important;
+  border-color: var(--color-border-active) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.minimal-action-btn:disabled {
+  opacity: 0.5;
+}
+
+.minimal-action-item {
+  color: var(--color-text-secondary) !important;
+}
+
+.minimal-action-item:hover,
+.minimal-action-item:focus {
+  background: var(--color-background-alt) !important;
+  color: var(--color-text-primary) !important;
 }
 
 /* 图标尺寸调整 */
@@ -234,7 +273,23 @@
 .music-card.is-active {
   border-color: var(--color-primary) !important;
   background-color: var(--card-hover-background) !important;
-  box-shadow: 0 0 0 2px rgba(106, 17, 203, 0.1);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
+}
+
+.text-primary {
+  color: var(--color-text-primary) !important;
+}
+
+.text-secondary {
+  color: var(--color-text-secondary) !important;
+}
+
+.text-tertiary {
+  color: var(--color-text-tertiary) !important;
+}
+
+.text-muted {
+  color: var(--color-text-muted) !important;
 }
 
 /* 媒体查询中的变量调整 */

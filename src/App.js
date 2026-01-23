@@ -48,14 +48,14 @@ const offlineBannerStyle = {
   left: 0,
   width: '100%',
   padding: '8px 0',
-  backgroundColor: '#fff3cd',
-  color: '#856404',
+  backgroundColor: 'var(--color-background-alt)',
+  color: 'var(--color-text-secondary)',
   textAlign: 'center',
   zIndex: 1040,
-  borderBottom: '1px solid #ffeeba',
+  borderBottom: '1px solid var(--color-border)',
   fontSize: '0.9rem',
   fontWeight: 500,
-  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
 };
 
 // 搜索状态管理

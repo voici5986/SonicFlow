@@ -51,10 +51,11 @@ const HeartButton = ({ track, className = '', size = 'sm', onToggle, variant = '
       disabled={isToggling}
       title={isFav ? '取消收藏' : '收藏'}
     >
-      {isFav ? 
-        <FaHeart color="red" size={iconSize} /> : 
+      {isFav ? (
+        <FaHeart size={iconSize} />
+      ) : (
         <FaRegHeart size={iconSize} />
-      }
+      )}
     </Button>
   );
 };

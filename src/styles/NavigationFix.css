@@ -1,7 +1,7 @@
 /* 导航栏样式修复 - 现代化设计 */
 .navbar {
   box-shadow: none !important;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+  border-bottom: 1px solid var(--color-border) !important;
   background-color: var(--card-background) !important;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -37,12 +37,12 @@
   left: 0;
   width: 0;
   height: 2px;
-  background: var(--gradient-primary);
+  background: var(--color-text-primary);
   transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .navbar .nav-link:hover {
-  background-color: rgba(0, 0, 0, 0.02);
+  background-color: var(--color-background-alt);
   transform: translateY(-2px);
 }
 
@@ -51,9 +51,9 @@
 }
 
 .navbar .nav-link.active {
-  color: var(--color-primary) !important;
+  color: var(--color-text-primary) !important;
   font-weight: 600;
-  background-color: rgba(106, 17, 203, 0.05);
+  background-color: var(--color-background-alt);
 }
 
 .navbar .nav-link.active::after {
@@ -75,7 +75,7 @@
 
 .nav-link.active .nav-icon {
   transform: scale(1.1);
-  color: var(--color-primary);
+  color: var(--color-text-primary);
 }
 
 /* Logo脉冲动画增强 */
@@ -92,7 +92,7 @@
 
 .logo-pulse:hover {
   animation-play-state: paused;
-  filter: drop-shadow(0 0 3px rgba(106, 17, 203, 0.5));
+  filter: drop-shadow(0 0 3px rgba(31, 31, 31, 0.25));
 }
 
 /* 导航栏整体动画 */
@@ -138,11 +138,11 @@
 }
 
 .navbar-toggler:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: var(--color-background-alt);
 }
 
 .navbar-toggler:focus {
-  box-shadow: 0 0 0 3px rgba(106, 17, 203, 0.2) !important;
+  box-shadow: 0 0 0 3px rgba(47, 52, 55, 0.2) !important;
 }
 
 .navbar-toggler-icon {
@@ -178,11 +178,11 @@
   }
   
   .navbar .nav-link:hover {
-    background-color: rgba(0, 0, 0, 0.03);
+    background-color: var(--color-background-alt);
   }
   
   .navbar .nav-link.active {
-    background-color: rgba(106, 17, 203, 0.08);
+    background-color: var(--color-background-alt);
   }
   
   @keyframes navDropDown {

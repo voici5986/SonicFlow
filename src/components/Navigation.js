@@ -51,11 +51,7 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
     fontFamily: "'Montserrat', sans-serif",
     fontWeight: 700,
     fontSize: '1.6rem',
-    background: 'linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    backgroundClip: 'text',
-    textFillColor: 'transparent',
+    color: 'var(--color-text-primary)',
     letterSpacing: '-0.5px', // 减小字间距，使文字更紧凑
     marginLeft: '-2px' // 微调文字位置
   };
@@ -81,7 +77,7 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
             height="38"
             className="logo-pulse me-1"
             style={{
-              filter: 'drop-shadow(0 0 3px rgba(106, 17, 203, 0.4))',
+              filter: 'drop-shadow(0 0 3px rgba(31, 31, 31, 0.25))',
               marginBottom: '2px' // 微调垂直对齐
             }}
           />
@@ -107,8 +103,8 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
                 />
               ) : userInitial ? (
                 <div
-                  className="rounded-circle bg-primary text-white d-flex justify-content-center align-items-center"
-                  style={{ width: '32px', height: '32px', fontSize: '1rem' }}
+                  className="rounded-circle d-flex justify-content-center align-items-center"
+                  style={{ width: '32px', height: '32px', fontSize: '1rem', backgroundColor: 'var(--color-text-primary)', color: 'var(--card-background)' }}
                 >
                   {userInitial}
                 </div>
@@ -118,9 +114,9 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
             </Nav.Link>
           ) : (
             <Button
-              variant="outline-primary"
+              variant="link"
               size="sm"
-              className="d-flex align-items-center justify-content-center"
+              className="d-flex align-items-center justify-content-center minimal-action-btn"
               onClick={() => handleNavItemClick('user')}
               style={{ width: '40px', height: '40px', borderRadius: '50%' }}
             >

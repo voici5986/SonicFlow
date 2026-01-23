@@ -8,9 +8,10 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.1);  /* 添加轻微背景，确保图标可见 */
-  border: 2px solid transparent; /* 默认透明边框 */
-  position: relative;  /* 添加相对定位 */
+  background-color: var(--card-background);  /* 使用主题变量背景 */
+  border: 1px solid var(--color-border); /* 统一边框样式 */
+  position: relative;
+  box-shadow: var(--shadow-sm);
 }
 
 /* 确保图标在圆形容器中居中 */
@@ -131,7 +132,7 @@
   margin-top: 10px;
   padding: 10px;
   border-radius: 4px;
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: var(--color-background-alt);
 }
 
 .refresh-button {
