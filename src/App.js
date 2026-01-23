@@ -158,6 +158,17 @@ const AppContent = () => {
   const [searchState, dispatch] = useReducer(searchReducer, searchInitialState);
   const { query, results, source, quality, loading } = searchState;
 
+  // 监听收藏状态变化，同步更新搜索结果中的心形图标
+  useEffect(() => {
+    const handleFavoritesChanged = () => {
+      // 强制触发一次重新渲染以刷新 SearchResultItem 内部的 HeartButton
+      dispatch({ type: 'SEARCH_SUCCESS', payload: [...results] });
+    };
+
+    window.addEventListener('favorites_changed', handleFavoritesChanged);
+    return () => window.removeEventListener('favorites_changed', handleFavoritesChanged);
+  }, [results]);
+
   // 下载相关状态
   const [downloading, setDownloading] = useState(false);
   const [currentDownloadingTrack, setCurrentDownloadingTrack] = useState(null);

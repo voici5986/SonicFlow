@@ -54,6 +54,16 @@ const History = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 监听收藏状态变化，同步更新历史记录中的心形图标
+  useEffect(() => {
+    const handleFavoritesChanged = () => {
+      setHistory(prev => [...prev]);
+    };
+
+    window.addEventListener('favorites_changed', handleFavoritesChanged);
+    return () => window.removeEventListener('favorites_changed', handleFavoritesChanged);
+  }, []);
+
   const handleClearHistory = async () => {
     if (window.confirm('确定要清空全部历史记录吗？此操作不可恢复。')) {
       try {

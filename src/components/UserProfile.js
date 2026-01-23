@@ -42,11 +42,18 @@ const UserProfile = ({ onTabChange }) => {
     const handleDataRefreshed = () => {
       loadCounts();
     };
+
+    // 监听收藏状态变化
+    const handleFavoritesChanged = () => {
+      loadCounts();
+    };
     
     window.addEventListener('sync:data_refreshed', handleDataRefreshed);
+    window.addEventListener('favorites_changed', handleFavoritesChanged);
     
     return () => {
       window.removeEventListener('sync:data_refreshed', handleDataRefreshed);
+      window.removeEventListener('favorites_changed', handleFavoritesChanged);
     };
   }, [loadCounts, updatePendingChanges]);
   

@@ -189,6 +189,19 @@ const AudioPlayer = () => {
     parseLyric
   } = usePlayer();
 
+  // 添加一个状态用于强制刷新红心图标
+  const [, forceUpdate] = React.useReducer(x => x + 1, 0);
+
+  // 监听收藏状态变化，同步更新播放器内的红心图标
+  useEffect(() => {
+    const handleFavoritesChanged = () => {
+      forceUpdate();
+    };
+
+    window.addEventListener('favorites_changed', handleFavoritesChanged);
+    return () => window.removeEventListener('favorites_changed', handleFavoritesChanged);
+  }, []);
+
   // MediaSession 同步模块
   useEffect(() => {
     if (!currentTrack || !('mediaSession' in navigator)) return;

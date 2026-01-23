@@ -35,7 +35,10 @@ export const FavoritesProvider = ({ children }) => {
 
   // 检查歌曲是否已收藏
   const isFavorite = useCallback((trackId) => {
-    return favorites.some(item => item.id === trackId);
+    if (!trackId) return false;
+    // 使用强制字符串比较，防止数字和字符串类型不匹配导致判断失效
+    const idToSearch = String(trackId);
+    return favorites.some(item => String(item.id) === idToSearch);
   }, [favorites]);
 
   // 切换收藏状态
@@ -57,6 +60,11 @@ export const FavoritesProvider = ({ children }) => {
         // 从收藏列表中移除
         setFavorites(prev => prev.filter(item => item.id !== track.id));
       }
+
+      // 触发全局事件，通知其他页面刷新状态（如搜索、历史记录）
+      window.dispatchEvent(new CustomEvent('favorites_changed', { 
+        detail: { track, added: result.added } 
+      }));
       
       // 如果已登录并添加了收藏，增加待同步计数，并触发延迟同步
       if (currentUser && !currentUser.isLocal && result.added) {
