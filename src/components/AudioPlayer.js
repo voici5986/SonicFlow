@@ -55,8 +55,8 @@ const LyricLine = ({ line, index, isActive, isNextActive }) => {
       data-time={line.time}
       data-index={index}
       style={{
-        padding: isActive ? '10px 15px 10px 20px' : '8px 8px 8px 10px',
-        textAlign: 'left',
+        padding: '10px 15px',
+        textAlign: 'center',
         width: '100%',
         maxWidth: '100%',
         wordBreak: 'break-word',
@@ -64,23 +64,22 @@ const LyricLine = ({ line, index, isActive, isNextActive }) => {
         overflow: 'hidden',
         boxSizing: 'border-box',
         backgroundColor: 'transparent',
-        borderLeft: isActive ? '3px solid var(--color-text-primary)' : 'none',
-        transition: 'none',
+        borderLeft: 'none',
+        transition: 'all 0.3s ease',
         fontWeight: isActive ? '600' : 'normal',
-        fontSize: isActive ? '1.15rem' : '1rem',
+        fontSize: isActive ? '1.25rem' : '1rem',
         color: isActive ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
         borderRadius: 0,
         boxShadow: 'none',
-        marginBottom: '5px',
-        position: 'relative',
-        left: isActive ? '10px' : '0'
+        marginBottom: '12px',
+        position: 'relative'
       }}
     >
       <div style={{
         width: '100%',
         maxWidth: '100%',
         wordBreak: 'break-word',
-        letterSpacing: isActive ? '0.01em' : 'normal'
+        letterSpacing: isActive ? '0.02em' : 'normal'
       }}>
         {line.text}
       </div>
@@ -90,8 +89,9 @@ const LyricLine = ({ line, index, isActive, isNextActive }) => {
           maxWidth: '100%',
           wordBreak: 'break-word',
           paddingLeft: 0,
+          marginTop: '6px',
           color: isActive ? 'var(--color-text-tertiary)' : 'var(--color-text-muted)',
-          fontSize: isActive ? '0.95rem' : '0.9rem',
+          fontSize: isActive ? '1rem' : '0.9rem',
           fontWeight: isActive ? '500' : 'normal'
         }} className="translated-lyric">
           {line.translatedText}
@@ -288,23 +288,66 @@ const AudioPlayer = () => {
           </div>
 
           <div className="player-content">
-            {/* 移动端布局保持原样 */}
-            <Row className="align-items-center player-info-controls d-md-none">
-              <Col xs={5} className="d-flex align-items-center">
-                <AlbumCover track={currentTrack} size="small" onClick={toggleLyric} forceFetch={true} />
-                <div className="track-info-container">
-                  <h6 className="mb-0 text-truncate track-name">{currentTrack.name}</h6>
-                  <small className="text-muted text-truncate track-artist">{currentTrack.artist}</small>
+            {/* 移动端布局 */}
+            <div className="d-md-none h-100 w-100">
+              {lyricExpanded ? (
+                /* 展开模式：5个控制按键居中 (循环, 上一首, 播放, 下一首, 收藏) */
+                <div className="d-flex align-items-center justify-content-around h-100 px-2">
+                  <Button 
+                    variant="link" 
+                    onClick={handleTogglePlayMode} 
+                    className="control-icon-btn p-0"
+                    title={getPlayModeTitle()}
+                  >
+                    {renderPlayModeIcon()}
+                  </Button>
+                  
+                  <Button variant="link" onClick={handlePrevious} className="control-icon-btn p-0">
+                    <MdSkipPrevious size={28} />
+                  </Button>
+                  
+                  <Button variant="link" onClick={togglePlay} className="control-icon-btn accent-control p-0">
+                    <div className="play-pause-button" style={{ 
+                      backgroundColor: 'var(--color-accent)', 
+                      borderRadius: '50%', 
+                      color: 'white',
+                      width: '48px',
+                      height: '48px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      {isPlaying ? <FaPause size={20} /> : <FaPlay size={20} className="ms-1" />}
+                    </div>
+                  </Button>
+                  
+                  <Button variant="link" onClick={handleNext} className="control-icon-btn p-0">
+                    <MdSkipNext size={28} />
+                  </Button>
+                  
+                  <HeartButton track={currentTrack} size={24} variant="link" className="p-0 control-button accent-control" />
                 </div>
-              </Col>
-              <Col xs={7} className="d-flex justify-content-end control-buttons-container">
-                <Button variant="link" onClick={handlePrevious} className="control-icon-btn"><MdSkipPrevious size={28} /></Button>
-                <Button variant="link" onClick={togglePlay} className="control-icon-btn accent-control">
-                  {isPlaying ? <FaPause size={20} /> : <FaPlay size={20} />}
-                </Button>
-                <Button variant="link" onClick={handleNext} className="control-icon-btn"><MdSkipNext size={28} /></Button>
-              </Col>
-            </Row>
+              ) : (
+                /* 收起模式：左侧大空间信息，右侧仅红心和播放 */
+                <Row className="align-items-center h-100 m-0">
+                  <Col xs={8} className="d-flex align-items-center p-0 overflow-hidden">
+                    <AlbumCover track={currentTrack} size="small" onClick={toggleLyric} forceFetch={true} />
+                    <div className="track-info-container flex-grow-1 ms-2" style={{ minWidth: 0, paddingRight: '10px' }}>
+                      <h6 className="mb-0 text-truncate track-name" style={{ width: '100%' }}>{currentTrack.name}</h6>
+                      <small className="text-muted text-truncate track-artist d-block" style={{ width: '100%' }}>{currentTrack.artist}</small>
+                    </div>
+                  </Col>
+                  <Col xs={3} className="d-flex justify-content-end align-items-center p-0" style={{ paddingRight: '12px !important' }}>
+                     <div className="d-flex align-items-center pe-1.8">
+                       <HeartButton track={currentTrack} size={24} variant="link" className="control-button accent-control me-4 p-0" />
+                       <Button variant="link" onClick={togglePlay} className="control-icon-btn accent-control p-0">
+                         {isPlaying ? <FaPause size={24} /> : <FaPlay size={24} />}
+                       </Button>
+                     </div>
+                   </Col>
+                </Row>
+              )}
+            </div>
 
             {/* 桌面端布局：左中右三段式 */}
             <div className="player-info-controls d-none d-md-flex">
