@@ -7,7 +7,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: #fff;
+  background-color: var(--card-background);
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.07);
   z-index: 1000;
   width: 100%;
@@ -89,7 +89,7 @@
 
 .track-artist-album {
   margin-bottom: 20px;
-  color: #666;
+  color: var(--color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -104,7 +104,7 @@
   left: 0;
   right: 0;
   bottom: var(--player-height-collapsed); /* 底部留出播放器高度 */
-  background-color: rgba(255, 255, 255, 0.98);
+  background-color: var(--card-background);
   z-index: 9500; /* 高于背景遮罩，低于播放器 */
   padding: 20px;
   overflow: hidden !important;
@@ -219,7 +219,7 @@
 /* 歌词行样式 */
 .lyric-line {
   padding: 8px 8px 8px 10px; /* 减少左内边距到10px */
-  color: #999999;
+  color: var(--color-text-muted);
   font-weight: normal;
   text-align: left;
   font-size: 1rem;
@@ -371,11 +371,19 @@
   padding-bottom: calc(var(--player-height-collapsed) + 30px);
 }
 
+.no-lyrics {
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin-top: 50px;
+  text-align: center;
+  width: 100%;
+}
+
 /* 收起状态下的单行歌词显示 */
 .current-lyric-line {
   width: 100%;
   text-align: left;
-  color: #555;
+  color: var(--color-text-secondary);
   font-size: 0.95rem;
   margin-bottom: 5px; /* 减少底部边距 */
   padding: 5px 0; /* 移除左右内边距 */
@@ -410,7 +418,7 @@
 
 .mobile-progress-container .time-display {
   font-size: 0.7rem;
-  color: #888;
+  color: var(--color-text-muted);
   margin: 0;
   width: 100%;
   display: flex;
@@ -420,7 +428,7 @@
 
 .time-display {
   font-size: 0.8rem;
-  color: #666;
+  color: var(--color-text-secondary);
   display: flex;
   justify-content: space-between;
   width: 100%;
@@ -448,7 +456,7 @@
   background: transparent;
   border: none;
   font-size: 1.5rem;
-  color: #666;
+  color: var(--color-text-secondary);
   cursor: pointer;
   z-index: 10;
   width: 40px;

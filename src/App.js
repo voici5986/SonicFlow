@@ -2,7 +2,9 @@ import React, { useState, useEffect, useCallback, Suspense, useReducer } from 'r
 import { Container, Row, Col, Form, Button, Card, Spinner } from 'react-bootstrap';
 import { FaPlay, FaPause, FaDownload } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import AlbumCover from './components/AlbumCover';
 import HeartButton from './components/HeartButton';
+import MusicCardActions from './components/MusicCardActions';
 import Navigation from './components/Navigation';
 import DeviceDebugger from './components/DeviceDebugger';
 import OrientationPrompt from './components/OrientationPrompt';
@@ -99,37 +101,21 @@ const useDownloadContext = () => React.useContext(DownloadContext);
     };
 
   return (
-    <Card className="h-100">
-      <Card.Body>
-        <div>
-          <h6 className="mb-1 text-truncate">{track.name}</h6>
-          <small className="text-muted d-block text-truncate">{track.artist}</small>
-          <small className="text-muted d-block text-truncate">{track.album}</small>
+    <Card 
+      className={`music-card ${currentTrack?.id === track.id ? 'is-active' : ''}`}
+      onClick={() => handleTrackPlay(track)}
+    >
+      <div className="music-card-row">
+        <div className="music-card-info">
+          <h6>{track.name}</h6>
+          <small>{track.artist}</small>
         </div>
-
-        <div className="mt-2 d-flex justify-content-end">
-          <Button
-            variant="outline-primary"
-            size="sm"
-            className="me-1"
-            onClick={() => handleTrackPlay(track)}
-          >
-            {currentTrack?.id === track.id && isPlaying ? <FaPause /> : <FaPlay />}
-          </Button>
-          <HeartButton
-            track={track}
-            className="me-1"
-          />
-          <Button
-            variant="outline-success"
-            size="sm"
-            onClick={() => handleDownload(track)}
-            disabled={downloading}
-          >
-            <FaDownload />
-          </Button>
-        </div>
-      </Card.Body>
+        <MusicCardActions 
+          track={track}
+          isDownloading={downloading}
+          onDownload={handleDownload}
+        />
+      </div>
     </Card>
   );
 };
@@ -342,9 +328,9 @@ const AppContent = () => {
         </Form>
 
         {results.length > 0 && (
-          <Row className="g-4">
+          <Row className="g-3">
             {results.map((track) => (
-              <Col key={track.id} xs={12} sm={6} md={4} lg={3}>
+              <Col key={track.id} xs={12} md={6}>
                 <SearchResultItem track={track} searchResults={results} quality={quality} />
               </Col>
             ))}

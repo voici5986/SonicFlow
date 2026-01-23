@@ -17,10 +17,10 @@
   --color-info: #17a2b8;
   
   /* 中性颜色 */
-  --color-text-primary: #333333;
-  --color-text-secondary: #666666;
-  --color-text-muted: #999999;
-  --color-background: #ffffff;
+  --color-text-primary: #1F1F1F;
+  --color-text-secondary: #6B6B6B;
+  --color-text-muted: #9A9A9A;
+  --color-background: #F5F5F2;
   --color-background-alt: #f8f9fa;
   --color-border: rgba(0, 0, 0, 0.1);
   
@@ -80,7 +80,18 @@
   --player-transition: var(--transition-bounce);
   --player-shadow: 0 -4px 20px rgba(0, 0, 0, 0.07);
   
+  /* 通用卡片样式 (Music Card) */
+  --music-card-bg: var(--card-background);
+  --music-card-hover-bg: var(--card-hover-background);
+  --music-card-radius: var(--card-border-radius);
+  --music-card-transition: var(--card-transition);
+  --music-card-shadow: var(--shadow-md);
+  --music-card-hover-shadow: var(--card-hover-shadow);
+  --music-card-hover-transform: var(--card-hover-transform);
+
   /* 卡片 */
+  --card-background: #FAFAF8;
+  --card-hover-background: #EFEFEA;
   --card-hover-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
   --card-hover-transform: translateY(-5px);
   --card-transition: all 0.3s var(--ease-out-circ);
@@ -107,6 +118,82 @@
   
   /* 保留原有的主要变量名以保持兼容性 */
   --primary-gradient: linear-gradient(45deg, #6a11cb 0%, #2575fc 100%);
+}
+
+/* ===== 通用组件样式 ===== */
+
+/* 统一音乐卡片类 - 彻底重构布局 */
+.music-card {
+  background-color: var(--card-background) !important;
+  border-radius: var(--border-radius-lg) !important;
+  transition: all 0.2s ease !important;
+  border: 1px solid var(--color-border) !important;
+  overflow: hidden;
+  cursor: pointer;
+  margin-bottom: 0;
+  display: block !important;
+  position: relative;
+}
+
+/* 弃用 .card-body，改用自定义容器以避开 Bootstrap 干扰 */
+.music-card-row {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 12px 16px !important;
+  width: 100% !important;
+  min-height: 64px;
+}
+
+.music-card-info {
+  flex: 1 !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  text-align: left !important;
+  padding-right: 12px !important;
+}
+
+.music-card-info h6 {
+  color: var(--color-text-primary) !important;
+  font-weight: 600 !important;
+  margin: 0 0 2px 0 !important;
+  font-size: 0.95rem !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.music-card-info small {
+  color: var(--color-text-secondary) !important;
+  font-size: 0.8rem !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.music-card-actions {
+  flex-shrink: 0 !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-left: auto !important; /* 强制推向右侧 */
+}
+
+.music-card:hover {
+  background-color: var(--card-hover-background) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.music-card.is-active {
+  border-color: var(--color-primary) !important;
+  background-color: var(--card-hover-background) !important;
+  box-shadow: 0 0 0 2px rgba(106, 17, 203, 0.1);
 }
 
 /* 媒体查询中的变量调整 */

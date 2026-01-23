@@ -14,7 +14,7 @@
 .profile-card {
   border: none !important;
   border-radius: var(--border-radius-lg) !important;
-  background: rgba(255, 255, 255, 0.95) !important;
+  background: var(--card-background) !important;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   box-shadow: var(--shadow-md) !important;
@@ -26,13 +26,14 @@
 .profile-card:hover {
   box-shadow: var(--card-hover-shadow) !important;
   transform: translateY(-5px);
+  background: var(--card-hover-background) !important;
 }
 
 /* 应用模式卡片 */
 .app-mode-card {
   border: none !important;
   border-radius: var(--border-radius-lg) !important;
-  background: rgba(255, 255, 255, 0.95) !important;
+  background: var(--card-background) !important;
   box-shadow: var(--shadow-md) !important;
   transition: var(--card-transition) !important;
   overflow: hidden;
@@ -42,6 +43,7 @@
 .app-mode-card:hover {
   box-shadow: var(--card-hover-shadow) !important;
   transform: translateY(-5px);
+  background: var(--card-hover-background) !important;
 }
 
 .app-mode-card .card-body {
@@ -187,12 +189,13 @@
   border-radius: var(--border-radius-lg) !important;
   box-shadow: var(--shadow-md) !important;
   transition: var(--card-transition) !important;
-  background-color: white;
+  background-color: var(--card-background) !important;
 }
 
 .stats-card:hover {
   box-shadow: var(--card-hover-shadow) !important;
   transform: translateY(-5px);
+  background-color: var(--card-hover-background) !important;
 }
 
 .stats-card .card-body {
@@ -286,13 +289,14 @@
   border-radius: var(--border-radius-lg) !important;
   box-shadow: var(--shadow-md) !important;
   transition: var(--card-transition) !important;
-  background-color: white;
+  background-color: var(--card-background) !important;
   height: 100%;
 }
 
 .sync-card:hover {
   box-shadow: var(--card-hover-shadow) !important;
   transform: translateY(-5px);
+  background-color: var(--card-hover-background) !important;
 }
 
 .sync-card .card-body {
@@ -470,7 +474,7 @@
 
 /* 应用模式区域样式 */
 .region-status-wrapper {
-  background-color: white;
+  background-color: var(--card-background);
   border-radius: var(--border-radius-lg);
   padding: 0.5rem;
   box-shadow: var(--shadow-md);
@@ -480,6 +484,7 @@
 .region-status-wrapper:hover {
   box-shadow: var(--card-hover-shadow);
   transform: translateY(-5px);
+  background-color: var(--card-hover-background);
 }
 
 .region-note {

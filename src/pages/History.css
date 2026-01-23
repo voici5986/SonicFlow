@@ -1,18 +1,2 @@
-/* 历史记录卡片时间戳样式 */
-.history-card-timestamp {
-  position: relative;
-}
-
-.history-card-timestamp::after {
-  content: attr(data-timestamp);
-  position: absolute;
-  bottom: 28px; /* 调高垂直位置 */
-  left: 20px; /* 对齐专辑封面左边框 */
-  font-size: 80%; /* 与艺术家名称等一致的字体大小 */
-  color: #6c757d;
-  z-index: 1;
-  line-height: 1;
-  opacity: 0.8; /* 与text-muted类一致的透明度 */
-  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-} 
+/* 历史记录页面样式 */
+/* 时间戳显示已移除，布局统一使用 theme.css 中的 .music-card 相关样式 */

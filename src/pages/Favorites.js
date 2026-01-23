@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Container, Row, Col, Card, Button, Spinner, Modal, Form, Alert, ProgressBar, Dropdown, InputGroup } from 'react-bootstrap';
 import { FaPlay, FaPause, FaDownload, FaTrash, FaFileExport, FaFileImport, FaCloudDownloadAlt, FaExchangeAlt, FaSearch } from 'react-icons/fa';
+import AlbumCover from '../components/AlbumCover';
+import HeartButton from '../components/HeartButton';
+import MusicCardActions from '../components/MusicCardActions';
 import { getFavorites, toggleFavorite, saveFavorites, MAX_FAVORITES_ITEMS } from '../services/storage';
 import { toast } from 'react-toastify';
 import { downloadTrack, downloadTracks } from '../services/downloadService';
@@ -844,48 +847,25 @@ const Favorites = () => {
           </small>
         </Alert>
       ) : (
-        <Row className="g-4">
+        <Row className="g-3">
           {filteredFavorites.map((track) => (
-            <Col key={track.id} xs={12} sm={6} md={4} lg={3}>
-              <Card className="h-100">
-                <Card.Body>
-                  <div>
-                    <h6 className="mb-1 text-truncate">{track.name}</h6>
-                    <small className="text-muted d-block text-truncate">{track.artist}</small>
-                    <small className="text-muted d-block text-truncate">{track.album}</small>
+            <Col key={track.id} xs={12} md={6}>
+              <Card 
+                className={`music-card ${currentTrack?.id === track.id ? 'is-active' : ''}`}
+                onClick={() => handleTrackPlay(track)}
+              >
+                <div className="music-card-row">
+                  <div className="music-card-info">
+                    <h6>{track.name}</h6>
+                    <small>{track.artist}</small>
                   </div>
 
-                  <div className="mt-2 d-flex justify-content-end">
-                    <Button
-                      variant="outline-primary"
-                      size="sm"
-                      className="me-1"
-                      onClick={() => handleTrackPlay(track)}
-                      disabled={currentTrack?.id === track.id && !currentTrack?.url}
-                    >
-                      {currentTrack?.id === track.id && isPlaying ? <FaPause /> : <FaPlay />}
-                    </Button>
-                    <Button
-                      variant="outline-danger"
-                      size="sm"
-                      className="me-1"
-                      onClick={() => handleRemoveFromFavorites(track)}
-                    >
-                      <FaTrash />
-                    </Button>
-                    <Button
-                      variant="outline-success"
-                      size="sm"
-                      onClick={() => handleDownload(track)}
-                      disabled={downloading && currentDownloadingTrack?.id === track.id}
-                    >
-                      {downloading && currentDownloadingTrack?.id === track.id ?
-                        <Spinner animation="border" size="sm" /> :
-                        <FaDownload />
-                      }
-                    </Button>
-                  </div>
-                </Card.Body>
+                  <MusicCardActions 
+                    track={track}
+                    isDownloading={downloading && currentDownloadingTrack?.id === track.id}
+                    onDownload={handleDownload}
+                  />
+                </div>
               </Card>
             </Col>
           ))}

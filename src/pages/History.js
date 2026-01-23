@@ -5,7 +5,9 @@ import { getHistory, clearHistory } from '../services/storage';
 import { toast } from 'react-toastify';
 import moment from 'moment';
 import 'moment/locale/zh-cn';
+import AlbumCover from '../components/AlbumCover';
 import HeartButton from '../components/HeartButton';
+import MusicCardActions from '../components/MusicCardActions';
 import './History.css';
 import { downloadTrack } from '../services/downloadService';
 import { usePlayer } from '../contexts/PlayerContext';
@@ -163,50 +165,25 @@ const History = () => {
           <p className="mb-0">暂无播放历史记录</p>
         </Alert>
       ) : (
-        <Row className="g-4">
+        <Row className="g-3">
           {history.map((item) => (
-            <Col key={item.timestamp} xs={12} sm={6} md={4} lg={3}>
+            <Col key={item.timestamp} xs={12} md={6}>
               <Card 
-                className="h-100 history-card-timestamp" 
-                data-id={item.song.id} 
-                data-timestamp={formatCompactTimestamp(item.timestamp)}
+                className={`music-card ${currentTrack?.id === item.song.id ? 'is-active' : ''}`}
+                onClick={() => handleTrackPlay(item.song)}
               >
-                <Card.Body>
-                  <div>
-                    <h6 className="mb-1 text-truncate">{item.song.name}</h6>
-                    <small className="text-muted d-block text-truncate">{item.song.artist}</small>
-                    <small className="text-muted d-block text-truncate">{item.song.album}</small>
+                <div className="music-card-row">
+                  <div className="music-card-info">
+                    <h6>{item.song.name}</h6>
+                    <small>{item.song.artist}</small>
                   </div>
                   
-                  <div className="mt-2 d-flex justify-content-end">
-                      <Button 
-                        variant="outline-primary" 
-                        size="sm"
-                        className="me-1"
-                        onClick={() => handleTrackPlay(item.song)}
-                        disabled={currentTrack?.id === item.song.id && !currentTrack?.url}
-                      >
-                        {currentTrack?.id === item.song.id && isPlaying ? <FaPause /> : <FaPlay />}
-                      </Button>
-                    <HeartButton 
-                      track={item.song} 
-                      size={16}
-                      variant="outline-danger"
-                      className="me-1" 
-                    />
-                    <Button 
-                      variant="outline-success" 
-                      size="sm"
-                      onClick={() => handleDownload(item.song)}
-                      disabled={downloading && currentDownloadingTrack?.id === item.song.id}
-                    >
-                      {downloading && currentDownloadingTrack?.id === item.song.id ? 
-                        <Spinner animation="border" size="sm" /> : 
-                        <FaDownload />
-                      }
-                    </Button>
-                  </div>
-                </Card.Body>
+                  <MusicCardActions 
+                    track={item.song}
+                    isDownloading={downloading && currentDownloadingTrack?.id === item.song.id}
+                    onDownload={handleDownload}
+                  />
+                </div>
               </Card>
             </Col>
           ))}

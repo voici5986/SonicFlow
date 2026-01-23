@@ -119,17 +119,18 @@ const RegisterForm = ({ onToggleForm, onRegisterSuccess }) => {
   };
   
   return (
-    <div className="register-form p-4 border rounded shadow-sm bg-white">
+    <div className="register-form p-4 music-card" style={{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text-primary)' }}>
       <h4 className="mb-4">创建账号</h4>
       
       {error && <Alert variant="danger">{error}</Alert>}
       
       <Form onSubmit={handleSubmit}>
         <Form.Group className="mb-3">
-          <Form.Label>昵称</Form.Label>
+          <Form.Label style={{ color: 'var(--color-text-secondary)' }}>昵称</Form.Label>
           <Form.Control
             type="text"
             value={displayName}
+            className="search-input"
             onChange={(e) => {
               setDisplayName(e.target.value);
               handleDisplayNameChange(e.target.value);
@@ -140,10 +141,11 @@ const RegisterForm = ({ onToggleForm, onRegisterSuccess }) => {
         </Form.Group>
         
         <Form.Group className="mb-3">
-          <Form.Label>电子邮箱</Form.Label>
+          <Form.Label style={{ color: 'var(--color-text-secondary)' }}>电子邮箱</Form.Label>
           <Form.Control
             type="email"
             value={email}
+            className="search-input"
             onChange={(e) => {
               setEmail(e.target.value);
               handleEmailChange(e.target.value);
@@ -154,10 +156,11 @@ const RegisterForm = ({ onToggleForm, onRegisterSuccess }) => {
         </Form.Group>
         
         <Form.Group className="mb-3">
-          <Form.Label>密码</Form.Label>
+          <Form.Label style={{ color: 'var(--color-text-secondary)' }}>密码</Form.Label>
           <Form.Control
             type="password"
             value={password}
+            className="search-input"
             onChange={(e) => {
               setPassword(e.target.value);
               handlePasswordChange(e.target.value);
@@ -165,16 +168,17 @@ const RegisterForm = ({ onToggleForm, onRegisterSuccess }) => {
             placeholder="请设置密码"
             disabled={loading || !accountFeatureAvailable}
           />
-          <Form.Text className="text-muted">
+          <Form.Text style={{ color: 'var(--color-text-tertiary)' }}>
             密码长度至少为6个字符
           </Form.Text>
         </Form.Group>
         
         <Form.Group className="mb-3">
-          <Form.Label>确认密码</Form.Label>
+          <Form.Label style={{ color: 'var(--color-text-secondary)' }}>确认密码</Form.Label>
           <Form.Control
             type="password"
             value={confirmPassword}
+            className="search-input"
             onChange={(e) => {
               setConfirmPassword(e.target.value);
               handleConfirmPasswordChange(e.target.value);
@@ -189,6 +193,7 @@ const RegisterForm = ({ onToggleForm, onRegisterSuccess }) => {
           type="submit" 
           className="w-100 mb-3"
           disabled={loading || !accountFeatureAvailable}
+          style={{ backgroundColor: 'var(--accent)', borderColor: 'var(--accent)' }}
         >
           {loading ? (
             <>
@@ -200,18 +205,18 @@ const RegisterForm = ({ onToggleForm, onRegisterSuccess }) => {
                 aria-hidden="true"
                 className="me-2"
               />
-              注册中...
+              正在注册...
             </>
-          ) : '注册'}
+          ) : "注册"}
         </Button>
         
-        <div className="text-center">
-          <span className="text-muted small">已有账号? </span>
-          <button 
+        <div className="text-center mt-3">
+          <span style={{ color: 'var(--color-text-secondary)' }}>已有账号？</span>{' '}
+          <button
             type="button"
-            className="text-primary small"
+            className="text-accent"
             onClick={onToggleForm}
-            style={{ cursor: 'pointer', textDecoration: 'none', background: 'none', border: 'none', padding: '0' }}
+            style={{ cursor: 'pointer', textDecoration: 'none', background: 'none', border: 'none', padding: '0', color: 'var(--accent)', fontWeight: 'bold' }}
           >
             立即登录
           </button>

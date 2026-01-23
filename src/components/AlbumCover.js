@@ -111,7 +111,7 @@ const AlbumCover = ({
       width: typeof size === 'number' ? `${size}px` : size,
       height: typeof size === 'number' ? `${size}px` : size,
       objectFit: 'cover',
-      backgroundColor: '#f8f9fa' // 添加浅灰色背景
+      backgroundColor: 'var(--card-hover-background)' // 使用变量背景
     };
   };
   
