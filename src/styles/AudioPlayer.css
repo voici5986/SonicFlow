@@ -611,12 +611,12 @@
 /* 移动端展开模式 UI 重构 */
 @media (max-width: 768px) {
   .audio-player.expanded {
-    height: 180px !important;
+    height: 120px !important; /* 减小底部控制条高度，因为信息移走了 */
     background-color: var(--card-background) !important;
   }
 
   .player-expanded-view {
-    bottom: 180px; /* 为底部的歌曲信息和控制条留出空间 */
+    bottom: 120px;
     background-color: var(--card-background);
   }
 
@@ -625,6 +625,7 @@
     padding: 0;
     position: relative;
     overflow: hidden;
+    display: flex;
   }
 
   .expanded-main-wrapper .album-info-section,
@@ -633,14 +634,59 @@
     top: 0;
     left: 0;
     width: 100% !important;
-    height: 100% !important;
-    padding: 30px 20px !important;
+    height: calc(100% - 30px) !important; /* 为下方的歌曲信息留出 50px (从 80px 缩减) */
+    padding: 30px 20px 0px 20px !important;
     border: none !important;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+
+  /* 移动端展开模式下的歌曲信息样式 - 改为单行 */
+  .mobile-track-info-expanded {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 50px; /* 压缩容器高度 */
+    display: flex;
+    flex-direction: row; /* 横向排列 */
+    justify-content: center;
+    align-items: center;
+    padding: 0 20px;
+    text-align: center;
+    z-index: 10;
+    background: transparent;
+    gap: 10px; /* 歌曲名和艺术家之间的间距 */
+  }
+
+  .mobile-track-info-expanded .track-name {
+    color: var(--color-text-primary);
+    font-weight: 600;
+    font-size: 1.1rem; /* 稍微调小一点以适应单行 */
+    margin-bottom: 0;
+    max-width: 60%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mobile-track-info-expanded .track-artist {
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    max-width: 35%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* 艺术家名字前面加一个分隔符，增加层次感 */
+  .mobile-track-info-expanded .track-artist::before {
+    content: "-";
+    margin-right: 8px;
+    opacity: 0.6;
   }
 
   /* 默认显示封面 */

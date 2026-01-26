@@ -300,12 +300,8 @@ const AudioPlayer = () => {
             {/* 移动端布局 */}
             <div className="d-md-none h-100 w-100">
               {lyricExpanded ? (
-                /* 展开模式：歌曲信息 + 5个控制按键 */
-                <div className="mobile-expanded-player-content d-flex flex-column h-100 justify-content-end pb-4">
-                  <div className="mobile-track-info text-center mb-4 px-4">
-                    <h5 className="mb-1 text-truncate" style={{ color: 'var(--color-text-primary)', fontWeight: '600', fontSize: '1.2rem' }}>{currentTrack.name}</h5>
-                    <div className="text-muted text-truncate" style={{ fontSize: '0.95rem' }}>{currentTrack.artist}</div>
-                  </div>
+                /* 展开模式：仅 5 个控制按键 */
+                <div className="mobile-expanded-player-content d-flex flex-column h-100 justify-content-center pb-2">
                   <div className="d-flex align-items-center justify-content-around px-2">
                     <Button 
                       variant="link" 
@@ -450,6 +446,12 @@ const AudioPlayer = () => {
                 <LyricLine key={idx} line={line} isActive={idx === currentLyricIndex} />
               ))}
             </div>
+          </div>
+
+          {/* 移动端专用的歌曲信息：位于封面/歌词下方，进度条上方 */}
+          <div className="mobile-track-info-expanded d-md-none">
+            <h5 className="track-name">{currentTrack.name}</h5>
+            <div className="track-artist">{currentTrack.artist}</div>
           </div>
         </div>
       </div>
