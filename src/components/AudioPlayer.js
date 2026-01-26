@@ -1,4 +1,4 @@
-import React, { useEffect, memo, useMemo } from 'react';
+import React, { useEffect, memo, useMemo, useState } from 'react';
 import { Row, Col, Button } from 'react-bootstrap';
 import {
   FaPlay, FaPause,
@@ -194,6 +194,15 @@ const AudioPlayer = () => {
     parseLyric
   } = usePlayer();
 
+  const [showMobileLyrics, setShowMobileLyrics] = useState(false);
+
+  // 当关闭展开模式时，重置移动端歌词显示状态
+  useEffect(() => {
+    if (!lyricExpanded) {
+      setShowMobileLyrics(false);
+    }
+  }, [lyricExpanded]);
+
   // 添加一个状态用于强制刷新红心图标
   const [, forceUpdate] = React.useReducer(x => x + 1, 0);
 
@@ -291,41 +300,48 @@ const AudioPlayer = () => {
             {/* 移动端布局 */}
             <div className="d-md-none h-100 w-100">
               {lyricExpanded ? (
-                /* 展开模式：5个控制按键居中 (循环, 上一首, 播放, 下一首, 收藏) */
-                <div className="d-flex align-items-center justify-content-around h-100 px-2">
-                  <Button 
-                    variant="link" 
-                    onClick={handleTogglePlayMode} 
-                    className="control-icon-btn p-0"
-                    title={getPlayModeTitle()}
-                  >
-                    {renderPlayModeIcon()}
-                  </Button>
-                  
-                  <Button variant="link" onClick={handlePrevious} className="control-icon-btn p-0">
-                    <MdSkipPrevious size={28} />
-                  </Button>
-                  
-                  <Button variant="link" onClick={togglePlay} className="control-icon-btn accent-control p-0">
-                    <div className="play-pause-button" style={{ 
-                      backgroundColor: 'var(--color-accent)', 
-                      borderRadius: '50%', 
-                      color: 'white',
-                      width: '48px',
-                      height: '48px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      {isPlaying ? <FaPause size={20} /> : <FaPlay size={20} className="ms-1" />}
-                    </div>
-                  </Button>
-                  
-                  <Button variant="link" onClick={handleNext} className="control-icon-btn p-0">
-                    <MdSkipNext size={28} />
-                  </Button>
-                  
-                  <HeartButton track={currentTrack} size={24} variant="link" className="p-0 control-button accent-control" />
+                /* 展开模式：歌曲信息 + 5个控制按键 */
+                <div className="mobile-expanded-player-content d-flex flex-column h-100 justify-content-end pb-4">
+                  <div className="mobile-track-info text-center mb-4 px-4">
+                    <h5 className="mb-1 text-truncate" style={{ color: 'var(--color-text-primary)', fontWeight: '600', fontSize: '1.2rem' }}>{currentTrack.name}</h5>
+                    <div className="text-muted text-truncate" style={{ fontSize: '0.95rem' }}>{currentTrack.artist}</div>
+                  </div>
+                  <div className="d-flex align-items-center justify-content-around px-2">
+                    <Button 
+                      variant="link" 
+                      onClick={handleTogglePlayMode} 
+                      className="control-icon-btn p-0"
+                      title={getPlayModeTitle()}
+                    >
+                      {renderPlayModeIcon()}
+                    </Button>
+                    
+                    <Button variant="link" onClick={handlePrevious} className="control-icon-btn p-0">
+                      <MdSkipPrevious size={32} />
+                    </Button>
+                    
+                    <Button variant="link" onClick={togglePlay} className="control-icon-btn accent-control p-0">
+                      <div className="play-pause-button" style={{ 
+                        backgroundColor: 'var(--color-accent)', 
+                        borderRadius: '50%', 
+                        color: 'white',
+                        width: '56px',
+                        height: '56px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 4px 12px rgba(255, 77, 79, 0.3)'
+                      }}>
+                        {isPlaying ? <FaPause size={24} /> : <FaPlay size={24} className="ms-1" />}
+                      </div>
+                    </Button>
+                    
+                    <Button variant="link" onClick={handleNext} className="control-icon-btn p-0">
+                      <MdSkipNext size={32} />
+                    </Button>
+                    
+                    <HeartButton track={currentTrack} size={28} variant="link" className="p-0 control-button accent-control" />
+                  </div>
                 </div>
               ) : (
                 /* 收起模式：左侧大空间信息，右侧仅红心和播放 */
@@ -413,18 +429,27 @@ const AudioPlayer = () => {
         </div>
       </div>
 
-      <div className="player-expanded-view" style={{ display: lyricExpanded ? 'flex' : 'none' }}>
+      <div className={`player-expanded-view ${showMobileLyrics ? 'mobile-lyrics-active' : ''}`} style={{ display: lyricExpanded ? 'flex' : 'none' }}>
         <Button variant="link" onClick={toggleLyric} className="close-lyrics-btn"><FaTimes /></Button>
-        <div className="album-cover-container">
-          <AlbumCover track={currentTrack} size="large" forceFetch={true} />
-        </div>
-        <div className="track-info-expanded">
-          <h2 className="track-title">{currentTrack.name}</h2>
-          <h4 className="track-artist-album">{currentTrack.artist} - {currentTrack.album}</h4>
-          <div className="lyrics-scroll-container" ref={lyricsContainerRef}>
-            {processedLyrics.map((line, idx) => (
-              <LyricLine key={idx} line={line} isActive={idx === currentLyricIndex} />
-            ))}
+        
+        <div className="expanded-main-wrapper" onClick={() => {
+          if (window.innerWidth <= 768) setShowMobileLyrics(!showMobileLyrics);
+        }}>
+          <div className="album-info-section">
+            <div className="album-cover-container">
+              <AlbumCover track={currentTrack} size="large" forceFetch={true} />
+            </div>
+            <div className="track-details d-none d-md-block">
+              <h2 className="track-title">{currentTrack.name}</h2>
+              <h4 className="track-artist-album">{currentTrack.artist} - {currentTrack.album}</h4>
+            </div>
+          </div>
+          <div className="lyrics-section">
+            <div className="lyrics-scroll-container" ref={lyricsContainerRef}>
+              {processedLyrics.map((line, idx) => (
+                <LyricLine key={idx} line={line} isActive={idx === currentLyricIndex} />
+              ))}
+            </div>
           </div>
         </div>
       </div>

@@ -17,6 +17,7 @@ const ProgressBar = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragProgress, setDragProgress] = useState(0);
   const [isHovering, setIsHovering] = useState(false);
+  const [isTouched, setIsTouched] = useState(false);
   const [lastReleasedProgress, setLastReleasedProgress] = useState(null);
 
   const justReleasedRef = useRef(false);
@@ -55,6 +56,7 @@ const ProgressBar = () => {
       }, 1000);
 
       setIsDragging(false);
+      setIsTouched(false);
 
       // 如果之前在播放，则恢复
       if (wasPlayingRef.current) {
@@ -84,6 +86,7 @@ const ProgressBar = () => {
 
     wasPlayingRef.current = isPlaying;
     setIsDragging(true);
+    if (e.touches) setIsTouched(true);
 
     const rect = e.currentTarget.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -118,7 +121,7 @@ const ProgressBar = () => {
       onMouseDown={handleMouseDown}
       onTouchStart={handleMouseDown}
     >
-      {(isHovering || isDragging) && (
+      {(isHovering || isDragging || isTouched) && (
         <div 
           className="time-display-dynamic" 
           style={{ 
@@ -160,7 +163,7 @@ const ProgressBar = () => {
       <div 
         className="progress" 
         style={{ 
-          height: (isHovering || isDragging) ? '6px' : '3px', 
+          height: (isHovering || isDragging || isTouched) ? '6px' : '3px', 
           minHeight: '3px',
           position: 'relative', 
           transition: 'height 0.2s ease',
@@ -182,7 +185,7 @@ const ProgressBar = () => {
             boxShadow: 'none'
           }} 
         />
-        {(isDragging || isHovering) && (
+        {(isDragging || isHovering || isTouched) && (
           <div
             className="progress-handle"
             style={{
