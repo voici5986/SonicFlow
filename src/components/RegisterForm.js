@@ -189,11 +189,24 @@ const RegisterForm = ({ onToggleForm, onRegisterSuccess }) => {
         </Form.Group>
         
         <Button 
-          variant="primary" 
+          variant="link" 
           type="submit" 
           className="w-100 mb-3"
           disabled={loading || !accountFeatureAvailable}
-          style={{ backgroundColor: 'var(--accent)', borderColor: 'var(--accent)' }}
+          style={{
+            backgroundColor: 'var(--color-background)',
+            color: 'var(--color-text-primary)',
+            borderRadius: 'var(--border-radius)',
+            padding: '0.6rem 1rem',
+            fontWeight: '600',
+            textDecoration: 'none',
+            border: '1px solid var(--color-border)',
+            boxShadow: 'var(--shadow-sm)',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
         >
           {loading ? (
             <>

@@ -212,9 +212,23 @@ const UserProfile = ({ onTabChange }) => {
                 <h3 className="user-name">{currentUser.displayName || '用户'}</h3>
                 <p className="user-email">{currentUser.email}</p>
                 <Button 
-                  variant="outline-danger" 
+                  variant="link" 
                   className="logout-button w-100 mt-2"
                   onClick={handleLogout}
+                  style={{
+                    backgroundColor: 'var(--color-background)',
+                    color: 'var(--color-danger)',
+                    borderRadius: 'var(--border-radius)',
+                    padding: '0.6rem 1rem',
+                    fontWeight: '600',
+                    textDecoration: 'none',
+                    border: '1px solid var(--color-border)',
+                    boxShadow: 'var(--shadow-sm)',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
                 >
                   <FaSignOutAlt className="me-2" /> 退出登录
                 </Button>
@@ -277,10 +291,24 @@ const UserProfile = ({ onTabChange }) => {
               
               {/* 同步按钮 */}
               <Button 
-                variant="primary" 
+                variant="link" 
                 onClick={handleManualSync}
                 disabled={syncStatus.loading}
                 className="sync-button w-100"
+                style={{
+                  backgroundColor: 'var(--color-background)',
+                  color: 'var(--color-text-primary)',
+                  borderRadius: 'var(--border-radius)',
+                  padding: '0.6rem 1rem',
+                  fontWeight: '600',
+                  textDecoration: 'none',
+                  border: '1px solid var(--color-border)',
+                  boxShadow: 'var(--shadow-sm)',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
               >
                 {syncStatus.loading ? (
                   <Spinner animation="border" size="sm" className="me-2" />

@@ -273,12 +273,15 @@ const AppContent = () => {
             <Col xs={12} md={6}>
               <Form.Group>
                 <Form.Control
-                  type="text"
+                  type="search"
+                  enterKeyHint="search"
                   placeholder="输入歌曲、歌手或专辑名称"
                   value={query}
                   onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'query', value: e.target.value })}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
+                      // 确保失去焦点，收起键盘
+                      e.target.blur();
                       e.preventDefault();
                       handleSearch();
                     }
@@ -315,14 +318,31 @@ const AppContent = () => {
               </Form.Group>
             </Col>
             <Col xs={12} md={2}>
-              <Button
-                type="submit"
-                variant="primary"
-                className="w-100"
-                disabled={loading}
-              >
-                {loading ? <Spinner animation="border" size="sm" /> : '搜索'}
-              </Button>
+              <Form.Group className="mb-3">
+                <Button
+                  type="submit"
+                  variant="link"
+                  className="w-100 search-submit-btn"
+                  disabled={loading}
+                  style={{
+                    backgroundColor: 'var(--color-background)',
+                    color: 'var(--color-text-primary)',
+                    borderRadius: 'var(--border-radius)',
+                    padding: '0.6rem 1rem',
+                    fontWeight: '600',
+                    textDecoration: 'none',
+                    border: '1px solid var(--color-border)',
+                    boxShadow: 'var(--shadow-sm)',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '45.6px' /* 匹配 Bootstrap 默认 form-control 的高度 (1.5rem line-height + 1.2rem padding + 2px border) */
+                  }}
+                >
+                  {loading ? <Spinner animation="border" size="sm" /> : '开始搜索'}
+                </Button>
+              </Form.Group>
             </Col>
           </Row>
         </Form>

@@ -109,12 +109,13 @@ const ProgressBar = () => {
       className="progress-wrapper"
       ref={progressBarRef}
       style={{
-        padding: '0',
-        margin: '0',
+        padding: '10px 0', // 增加上下内边距，扩大移动端点击区域
+        margin: '-10px 0', //抵消 padding，保持视觉位置不变
         width: '100%',
         cursor: currentTrack ? 'pointer' : 'default',
         position: 'relative',
-        zIndex: 10
+        zIndex: 10,
+        touchAction: 'none' // 禁用默认触摸行为，优化滑动体验
       }}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
@@ -126,7 +127,7 @@ const ProgressBar = () => {
           className="time-display-dynamic" 
           style={{ 
             position: 'absolute',
-            top: '-38px', // 稍微调高一点给小三角留空间
+            top: '-45px', // 稍微再调高一点
             left: `${displayProgress}%`,
             transform: 'translateX(-50%)',
             display: 'flex',
@@ -136,12 +137,12 @@ const ProgressBar = () => {
             color: 'var(--color-text-primary)',
             pointerEvents: 'none',
             whiteSpace: 'nowrap',
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            padding: '3px 8px',
-            borderRadius: '6px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
-            zIndex: 100,
-            border: '1px solid rgba(0,0,0,0.05)'
+            backgroundColor: 'var(--card-background, #fff)', // 使用主题背景色
+            padding: '4px 10px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+            zIndex: 1000,
+            border: '1px solid var(--color-border, rgba(0,0,0,0.1))'
           }}
         >
           <span>{formatTime(currentTimeInSeconds)} / {formatTime(totalSeconds)}</span>
@@ -155,7 +156,7 @@ const ProgressBar = () => {
             height: '0',
             borderLeft: '6px solid transparent',
             borderRight: '6px solid transparent',
-            borderTop: '6px solid rgba(255, 255, 255, 0.95)',
+            borderTop: '6px solid var(--card-background, #fff)',
           }} />
         </div>
       )}

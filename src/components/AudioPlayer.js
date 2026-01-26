@@ -2,7 +2,7 @@ import React, { useEffect, memo, useMemo, useState } from 'react';
 import { Row, Col, Button } from 'react-bootstrap';
 import {
   FaPlay, FaPause,
-  FaTimes,
+  FaTimes, FaChevronDown,
   FaSyncAlt, FaRandom, FaRedoAlt, FaListUl,
   FaDownload
 } from 'react-icons/fa';
@@ -306,49 +306,82 @@ const AudioPlayer = () => {
             <div className="d-md-none h-100 w-100">
               {lyricExpanded ? (
                 /* 展开模式：仅 5 个控制按键 */
-                <div className="mobile-expanded-player-content d-flex flex-column h-100 justify-content-center pb-2">
-                  <div className="d-flex align-items-center justify-content-around px-2">
-                    <Button 
-                      variant="link" 
-                      onClick={handleTogglePlayMode} 
-                      className="control-icon-btn p-0"
-                      title={getPlayModeTitle()}
-                    >
-                      {renderPlayModeIcon()}
-                    </Button>
+                <div className="mobile-expanded-player-content d-flex flex-column h-100 justify-content-center pb-2" style={{ position: 'relative' }}>
+                  <div className="d-flex align-items-center justify-content-between px-4">
+                    <div style={{ width: '40px', display: 'flex', justifyContent: 'center' }}>
+                      <Button 
+                        variant="link" 
+                        onClick={handleTogglePlayMode} 
+                        className="control-icon-btn p-0"
+                        title={getPlayModeTitle()}
+                      >
+                        {renderPlayModeIcon()}
+                      </Button>
+                    </div>
                     
-                    <Button variant="link" onClick={handlePrevious} className="control-icon-btn p-0">
-                      <MdSkipPrevious size={32} />
-                    </Button>
+                    <div style={{ width: '40px', display: 'flex', justifyContent: 'center' }}>
+                      <Button variant="link" onClick={handlePrevious} className="control-icon-btn p-0">
+                        <MdSkipPrevious size={32} />
+                      </Button>
+                    </div>
                     
-                    <Button variant="link" onClick={togglePlay} className="control-icon-btn accent-control p-0">
-                      <div className="play-pause-button" style={{ 
-                        backgroundColor: 'transparent', 
-                        borderRadius: '0', 
-                        color: 'var(--color-accent)',
-                        width: '56px',
-                        height: '56px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: 'none'
-                      }}>
-                        {isPlaying ? <FaPause size={48} /> : <FaPlay size={48} className="ms-1" />}
-                      </div>
-                    </Button>
+                    <div style={{ width: '64px', display: 'flex', justifyContent: 'center' }}>
+                      <Button variant="link" onClick={togglePlay} className="control-icon-btn accent-control p-0">
+                        <div className="play-pause-button" style={{ 
+                          backgroundColor: 'transparent', 
+                          borderRadius: '0', 
+                          color: 'var(--color-accent)',
+                          width: '56px',
+                          height: '56px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: 'none'
+                        }}>
+                          {isPlaying ? <FaPause size={48} /> : <FaPlay size={48} className="ms-1" />}
+                        </div>
+                      </Button>
+                    </div>
                     
-                    <Button variant="link" onClick={handleNext} className="control-icon-btn p-0">
-                      <MdSkipNext size={32} />
-                    </Button>
+                    <div style={{ width: '40px', display: 'flex', justifyContent: 'center' }}>
+                      <Button variant="link" onClick={handleNext} className="control-icon-btn p-0">
+                        <MdSkipNext size={32} />
+                      </Button>
+                    </div>
                     
-                    <HeartButton track={currentTrack} size={28} variant="link" className="p-0 control-button accent-control" />
+                    <div style={{ width: '40px', display: 'flex', justifyContent: 'center' }}>
+                      <HeartButton track={currentTrack} size={28} variant="link" className="p-0 control-button accent-control" />
+                    </div>
                   </div>
+                  
+                  {/* 改为绝对定位：向下收起的箭头按钮，固定在播放按钮下方 3vh */}
+                  <Button 
+                    variant="link" 
+                    onClick={toggleLyric} 
+                    className="p-0 text-muted opacity-75 no-focus-outline"
+                    aria-label="收起播放器"
+                    style={{
+                      position: 'absolute',
+                      top: 'calc(50% + 28px + 3vh)', /* 50% 是容器中心，28px 是播放按钮半径，3vh 是间距 */
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      zIndex: 20005,
+                      height: 'auto',
+                      padding: '10px', /* 增加点击区域 */
+                      border: 'none',
+                      boxShadow: 'none',
+                      outline: 'none',
+                      background: 'none'
+                    }}
+                  >
+                    <FaChevronDown size={20} />
+                  </Button>
                 </div>
               ) : (
                 /* 收起模式：左侧大空间信息，右侧仅红心和播放 */
                 <Row className="align-items-center h-100 m-0">
-                  <Col xs={8} className="d-flex align-items-center p-0 overflow-hidden">
-                    <AlbumCover track={currentTrack} size="small" onClick={toggleLyric} forceFetch={true} />
+                  <Col xs={8} className="d-flex align-items-center p-0 overflow-hidden" onClick={toggleLyric} style={{ cursor: 'pointer' }}>
+                    <AlbumCover track={currentTrack} size="small" forceFetch={true} />
                     <div className="track-info-container flex-grow-1 ms-2" style={{ minWidth: 0, paddingRight: '10px' }}>
                       <h6 className="mb-0 text-truncate track-name" style={{ width: '100%' }}>{currentTrack.name}</h6>
                       <small className="text-muted text-truncate track-artist d-block" style={{ width: '100%' }}>{currentTrack.artist}</small>

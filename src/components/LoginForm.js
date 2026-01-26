@@ -181,10 +181,24 @@ const LoginForm = ({ onToggleForm, onLoginSuccess }) => {
         </div>
 
         <Button
-          variant="primary"
+          variant="link"
           type="submit"
           disabled={loading || !accountFeatureAvailable}
           className="w-100 mb-3"
+          style={{
+            backgroundColor: 'var(--color-background)',
+            color: 'var(--color-text-primary)',
+            borderRadius: 'var(--border-radius)',
+            padding: '0.6rem 1rem',
+            fontWeight: '600',
+            textDecoration: 'none',
+            border: '1px solid var(--color-border)',
+            boxShadow: 'var(--shadow-sm)',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
         >
           {loading ? (
             <>
@@ -204,10 +218,24 @@ const LoginForm = ({ onToggleForm, onLoginSuccess }) => {
         <div className="text-center mb-3">或</div>
 
         <Button
-          variant="outline-danger"
+          variant="link"
           onClick={handleGoogleLogin}
           disabled={loading || !accountFeatureAvailable}
           className="w-100 mb-3"
+          style={{
+            backgroundColor: 'var(--color-background)',
+            color: 'var(--color-text-primary)',
+            borderRadius: 'var(--border-radius)',
+            padding: '0.6rem 1rem',
+            fontWeight: '600',
+            textDecoration: 'none',
+            border: '1px solid var(--color-border)',
+            boxShadow: 'var(--shadow-sm)',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
         >
           <FaGoogle className="me-2" /> Google登录
         </Button>

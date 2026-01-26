@@ -66,6 +66,15 @@
   position: relative; /* 为绝对定位元素建立上下文 */
 }
 
+.no-focus-outline:focus,
+.no-focus-outline:active,
+.no-focus-outline:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  background: none !important;
+}
+
 /* 桌面端三段式布局 */
 @media (min-width: 769px) {
   .player-inner {
@@ -605,10 +614,12 @@
     border-top: none !important; /* 移除边框，解决展开时的白色方块感 */
     box-shadow: none !important; /* 移除阴影 */
     z-index: 1040;
+    overflow: visible !important; /* 确保进度条提示小窗不被裁剪 */
   }
 
   .player-inner {
     padding: 8px 12px !important; /* 压缩内边距，尤其是底部 */
+    overflow: visible !important; /* 确保进度条提示小窗不被裁剪 */
   }
 
   .audio-player.expanded {
