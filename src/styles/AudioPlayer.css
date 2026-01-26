@@ -8,7 +8,7 @@
   left: 0;
   right: 0;
   background-color: var(--card-background);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.07);
+  /* 移除了 box-shadow，因为在移动端紧贴 Tab 栏，在桌面端则使用更简洁的样式 */
   z-index: 1000;
   width: 100%;
   padding: 0; /* 移除可能导致内缩的内边距 */
@@ -506,20 +506,7 @@
   width: 100%;
 }
 
-/* 收起状态下的单行歌词显示 */
-.current-lyric-line {
-  width: 100%;
-  text-align: left;
-  color: var(--color-text-secondary);
-  font-size: 0.95rem;
-  margin-bottom: 5px; /* 减少底部边距 */
-  padding: 5px 0; /* 移除左右内边距 */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  cursor: pointer;
-  transition: color 0.3s ease;
-}
+
 
 /* 移动端进度条容器 */
 .mobile-progress-container {
@@ -610,14 +597,78 @@
 
 /* 移动端展开模式 UI 重构 */
 @media (max-width: 768px) {
+  .audio-player {
+    bottom: calc(8vh + env(safe-area-inset-bottom)) !important; /* 同步 Tab 栏的 8vh */
+    height: 10vh !important; /* 收起高度设为 10% */
+    min-height: 64px !important;
+    max-height: 80px !important;
+    border-top: none !important; /* 移除边框，解决展开时的白色方块感 */
+    box-shadow: none !important; /* 移除阴影 */
+    z-index: 1040;
+  }
+
+  .player-inner {
+    padding: 8px 12px !important; /* 压缩内边距，尤其是底部 */
+  }
+
   .audio-player.expanded {
-    height: 120px !important; /* 减小底部控制条高度，因为信息移走了 */
-    background-color: var(--card-background) !important;
+    bottom: 0 !important;
+    height: 100vh !important;
+    z-index: 10000 !important; /* 必须高于所有组件 */
+    border-top: none !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    background-color: transparent !important; /* 确保背景彻底透明 */
+    box-shadow: none !important;
+    pointer-events: none; /* 穿透背景点击封面/歌词 */
+  }
+
+  .audio-player.expanded .player-inner {
+    pointer-events: auto;
+    height: calc(100vh - 65vh) !important; /* 剩余空间给进度条和控制按键 (100 - 65 - 8) */
+    width: 100% !important;
+    padding: 0 0 calc(8vh + env(safe-area-inset-bottom)) 0 !important;
+    background: transparent !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; /* 居中分布剩余空间 */
+    overflow: visible !important;
+    z-index: 20000 !important;
+  }
+
+  /* 展开模式下的控制栏样式优化 */
+  .mobile-expanded-player-content {
+    background: transparent !important;
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* 稍微拉开一点点间距，防止太挤 */
+    position: relative !important;
+    z-index: 20001 !important;
+    margin-top: 0vh; /* 使用负 margin 进一步向上顶 */
+  }
+
+  .audio-player.expanded .progress-control-container {
+    position: relative !important;
+    top: 0 !important;
+    padding: 0 !important; /* 移除内边距，确保进度条能顶到屏幕边缘 */
+    width: 100% !important;
+    z-index: 20002 !important;
+    height: auto !important;
+    margin-bottom: 15px !important; /* 增加一点底部间距，让它离按钮远一点 */
   }
 
   .player-expanded-view {
-    bottom: 120px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0 !important; /* 确保占满全屏 */
     background-color: var(--card-background);
+    z-index: 9500; /* 低于 .audio-player.expanded 的 10000 */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden !important; /* 防止视图溢出 */
   }
 
   .expanded-main-wrapper {
@@ -634,8 +685,8 @@
     top: 0;
     left: 0;
     width: 100% !important;
-    height: calc(100% - 30px) !important; /* 为下方的歌曲信息留出 50px (从 80px 缩减) */
-    padding: 30px 20px 0px 20px !important;
+    height: 65vh !important; /* 减小高度，为歌曲信息留出空间 */
+    padding: 3vh 20px 0px 20px !important;
     border: none !important;
     display: flex;
     flex-direction: column;
@@ -644,49 +695,60 @@
     transition: opacity 0.3s ease, visibility 0.3s ease;
   }
 
-  /* 移动端展开模式下的歌曲信息样式 - 改为单行 */
+  /* 统一的移动端歌曲信息样式 - 紧贴歌词/封面区域下方，两行布局 */
   .mobile-track-info-expanded {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 50px; /* 压缩容器高度 */
-    display: flex;
-    flex-direction: row; /* 横向排列 */
-    justify-content: center;
-    align-items: center;
-    padding: 0 20px;
-    text-align: center;
-    z-index: 10;
-    background: transparent;
-    gap: 10px; /* 歌曲名和艺术家之间的间距 */
+    position: absolute !important;
+    top: 65vh !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: auto !important; /* 高度改为自动以适应两行 */
+    min-height: 6vh; /* 保证至少有 8vh 高度 */
+    display: flex !important;
+    flex-direction: column !important; /* 改为纵向排列 */
+    justify-content: center !important; /* 垂直居中 */
+    align-items: flex-start !important; /* 左对齐 */
+    padding: 6px 20px !important; /* 增加上下内边距 */
+    text-align: left !important;
+    background: transparent !important;
+    gap: 2px !important; /* 歌曲名和艺术家的间距设为极小 */
+    margin: 0 !important;
+    z-index: 20003 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  /* 覆盖原有的位置逻辑，确保无论在哪个模式下都保持固定 */
+  .album-info-section .mobile-track-info-expanded,
+  .lyrics-section .mobile-track-info-expanded {
+    position: absolute !important;
+    margin: 0 !important;
   }
 
   .mobile-track-info-expanded .track-name {
     color: var(--color-text-primary);
-    font-weight: 600;
-    font-size: 1.1rem; /* 稍微调小一点以适应单行 */
+    font-weight: 700; /* 加粗 */
+    font-size: 1.4rem !important; /* 稍微加大字号 */
     margin-bottom: 0;
-    max-width: 60%;
+    max-width: 95% !important; /* 几乎占满整行 */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    line-height: 1.2;
   }
 
   .mobile-track-info-expanded .track-artist {
     color: var(--color-text-secondary);
-    font-size: 0.9rem;
-    max-width: 35%;
+    font-size: 1rem !important;
+    max-width: 95% !important; /* 几乎占满整行 */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    line-height: 1.2;
   }
 
-  /* 艺术家名字前面加一个分隔符，增加层次感 */
   .mobile-track-info-expanded .track-artist::before {
-    content: "-";
-    margin-right: 8px;
-    opacity: 0.6;
+    display: none !important; /* 移除两行布局下的横杠 */
   }
 
   /* 默认显示封面 */
@@ -800,28 +862,6 @@
 }
 
   /* 桌面端进度条和歌词 */
-  .current-lyric-line {
-    text-align: left;
-    padding: 3px 0;
-    margin-bottom: 8px;
-    color: var(--color-text-secondary);
-    position: absolute;
-    bottom: 7px; /* 向上移动5px */
-    left: 0;
-    width: 100%;
-    background-color: rgba(255, 255, 255, 0.85);
-    border-radius: 4px;
-    z-index: 1; /* 保持z-index为1 */
-  }
-  
-  /* 桌面端歌词行悬停效果 */
-  .current-lyric-line {
-    transition: color 0.2s ease;
-  }
-  
-  .current-lyric-line:hover {
-    color: var(--color-text-primary);
-  }
 
   /* 桌面端悬停效果 */
   .player-thumbnail {

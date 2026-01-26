@@ -121,11 +121,146 @@
   
   /* 保留原有的主要变量名以保持兼容性 */
   --primary-gradient: linear-gradient(45deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  --search-input-border: var(--color-border);
 }
 
 /* ===== 通用组件样式 ===== */
 
-/* 统一音乐卡片类 - 彻底重构布局 */
+/* 登录提示卡片 */
+.login-prompt-container {
+  background-color: var(--color-background-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+  transition: var(--transition-normal);
+}
+
+.login-prompt-container:hover {
+  border-color: var(--color-text-muted);
+}
+
+.login-prompt-title {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-bold);
+  font-size: 1.1rem;
+  margin-bottom: var(--spacing-xs);
+}
+
+.login-prompt-desc {
+  color: var(--color-text-tertiary);
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+
+.login-prompt-action {
+  display: flex;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .login-prompt-container {
+    padding: var(--spacing-md);
+  }
+  
+  .login-prompt-content {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .login-prompt-action {
+    margin-top: var(--spacing-md);
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .login-prompt-action .btn {
+    width: 100%;
+  }
+}
+
+/* 移动端导航栏 */
+.mobile-tab-bar {
+    display: none; /* 桌面端默认隐藏 */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 8vh; /* 使用屏幕高度的 8% */
+    min-height: 56px;
+    max-height: 72px;
+    background-color: var(--card-background);
+    border-top: 1px solid var(--color-border);
+    z-index: 1050;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+.mobile-tab-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  text-decoration: none !important;
+  transition: var(--transition-fast);
+  position: relative;
+}
+
+/* 选中态的胶囊背景框 */
+.mobile-tab-item::after {
+  content: '';
+  position: absolute;
+  width: 64px;
+  height: 32px;
+  background-color: var(--color-background-alt); /* 稍微深一点的背景色作为胶囊 */
+  border-radius: 16px;
+  z-index: -1;
+  opacity: 0;
+  transition: all 0.3s ease;
+  transform: scale(0.8);
+}
+
+.mobile-tab-item.active {
+  color: var(--color-text-primary);
+}
+
+.mobile-tab-item.active::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.mobile-tab-item svg {
+  font-size: 1.4rem;
+  z-index: 1;
+}
+
+@media (max-width: 768px) {
+  .mobile-tab-bar {
+    display: flex;
+  }
+  
+  /* 当播放器展开时，彻底隐藏 Tab 栏 */
+  body.player-expanded .mobile-tab-bar {
+    display: none !important;
+  }
+  
+  /* 移动端彻底隐藏顶栏 Navbar */
+  .navbar {
+    display: none !important;
+  }
+
+  /* 调整页面底部内边距：Tab栏(8vh) + 播放器收起高度(10vh) */
+  body {
+    padding-bottom: calc(18vh + env(safe-area-inset-bottom)) !important;
+    padding-top: 0 !important; /* 顶栏没了，不需要顶部内边距 */
+  }
+
+  /* 播放器全屏模式下，重置 padding-bottom */
+  body.player-expanded {
+    padding-bottom: 0 !important;
+    overflow: hidden !important; /* 全屏模式下禁止 body 滚动 */
+  }
+}
 .music-card {
   background-color: var(--card-background) !important;
   border-radius: var(--border-radius-lg) !important;

@@ -116,23 +116,23 @@ const History = () => {
   const renderLoginReminder = () => {
     if (!currentUser) {
       return (
-        <Alert variant="info" className="mb-4 login-reminder">
-          <div className="d-flex align-items-center">
+        <div className="login-prompt-container">
+          <div className="d-flex align-items-center login-prompt-content">
             <div className="flex-grow-1">
-              <h5 className="mb-1">登录您的账号</h5>
-              <p className="mb-0">登录后可以将您的播放历史同步到云端，在任何设备上继续您的音乐旅程。</p>
+              <h5 className="login-prompt-title">登录您的账号</h5>
+              <p className="login-prompt-desc">登录后可以将您的播放历史同步到云端，在任何设备上继续您的音乐旅程。</p>
             </div>
-            <div>
-            <Button 
-              variant="primary" 
-              href="#/auth"
-              className="ms-3"
-            >
-              立即登录
-            </Button>
+            <div className="login-prompt-action">
+              <Button 
+                href="#/auth"
+                className="ms-md-3 minimal-action-btn"
+                style={{ minWidth: '100px' }}
+              >
+                立即登录
+              </Button>
             </div>
           </div>
-        </Alert>
+        </div>
       );
     }
     return null;

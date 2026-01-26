@@ -687,23 +687,23 @@ const Favorites = () => {
   const renderLoginReminder = () => {
     if (!currentUser) {
       return (
-        <Alert variant="info" className="mb-4 login-reminder">
-          <div className="d-flex align-items-center">
+        <div className="login-prompt-container">
+          <div className="d-flex align-items-center login-prompt-content">
             <div className="flex-grow-1">
-              <h5 className="mb-1">登录您的账号</h5>
-              <p className="mb-0">登录后可以将您的收藏同步到云端，在任何设备上访问您喜爱的音乐。</p>
+              <h5 className="login-prompt-title">登录您的账号</h5>
+              <p className="login-prompt-desc">登录后可以将您的收藏同步到云端，在任何设备上访问您喜爱的音乐。</p>
             </div>
-            <div>
+            <div className="login-prompt-action">
               <Button
-                variant="primary"
                 href="#/auth"
-                className="ms-3"
+                className="ms-md-3 minimal-action-btn"
+                style={{ minWidth: '100px' }}
               >
                 立即登录
               </Button>
             </div>
           </div>
-        </Alert>
+        </div>
       );
     }
     return null;

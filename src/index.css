@@ -9,87 +9,6 @@ body {
   background-color: var(--color-background);
 }
 
-/* 美化卡片 - 增强版 */
-.card {
-  border-radius: var(--border-radius);
-  border: none;
-  box-shadow: var(--card-shadow);
-  transition: var(--card-transition);
-  overflow: hidden;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  background: var(--card-background);
-  will-change: transform, box-shadow;
-}
-
-.card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(45deg, rgba(31, 31, 31, 0.04), rgba(47, 52, 55, 0.04));
-  opacity: 0;
-  transition: opacity 0.3s var(--ease-out-circ);
-  z-index: 0;
-  pointer-events: none;
-  border-radius: var(--border-radius);
-}
-
-.card:hover {
-  transform: var(--card-hover-transform);
-  box-shadow: var(--card-hover-shadow);
-  background: var(--card-hover-background);
-}
-
-.card:hover::before {
-  opacity: 1;
-}
-
-.card:active {
-  transform: scale(var(--card-active-scale));
-  box-shadow: var(--shadow-md);
-}
-
-.card .card-body {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  z-index: 1;
-}
-
-.card .d-flex {
-  flex-grow: 1;
-}
-
-/* 统一布局结构 */
-.card .d-flex.align-items-center {
-  width: 100%;
-  min-height: 80px;
-}
-
-.card .d-flex.align-items-center img {
-  flex-shrink: 0;
-  transition: transform 0.3s var(--ease-out-back);
-}
-
-.card:hover .d-flex.align-items-center img {
-  transform: scale(1.05);
-}
-
-.card .d-flex.align-items-center > div {
-  width: calc(100% - 75px); /* 60px图片宽度 + 15px右边距 */
-  transition: transform 0.2s var(--ease-out-circ);
-}
-
-.card:hover .d-flex.align-items-center > div {
-  transform: translateX(3px);
-}
-
 /* 美化按钮 */
 .btn {
   border-radius: var(--border-radius-md);
@@ -234,198 +153,36 @@ img.rounded:hover {
   transform: translateY(-1px);
 }
 
-/* 播放控件美化 */
+/* 
+ * 播放控件美化
+ * 主要样式已迁移至 AudioPlayer.css，此处仅保留基础占位逻辑
+ */
 .fixed-bottom {
   border-top: none !important;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.07) !important;
-}
-
-/* 动画效果 */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.row .col {
-  animation: fadeIn 0.4s var(--ease-out-circ) forwards;
-}
-
-/* 添加卡片交错出现动画 */
-.row .col:nth-child(1) { animation-delay: 0.05s; }
-.row .col:nth-child(2) { animation-delay: 0.1s; }
-.row .col:nth-child(3) { animation-delay: 0.15s; }
-.row .col:nth-child(4) { animation-delay: 0.2s; }
-.row .col:nth-child(5) { animation-delay: 0.25s; }
-.row .col:nth-child(6) { animation-delay: 0.3s; }
-.row .col:nth-child(7) { animation-delay: 0.35s; }
-.row .col:nth-child(8) { animation-delay: 0.4s; }
-
-/* 页面切换动画 */
-.tab-content {
-  animation: fadeIn 0.3s var(--ease-out-circ);
-}
-
-/* 微调间距 */
-h6 {
-  font-weight: var(--font-weight-bold);
-  margin-bottom: 0.3rem;
-}
-
-small.text-muted {
-  font-size: 80%;
-  opacity: 0.8;
-}
-
-.fixed-bottom .progress {
-  cursor: pointer;
-}
-
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
-}
-
-/* 歌词高亮效果 */
-.lyric-line.active {
-  transform: scale(1.05);
-  transition: all 0.3s var(--ease-out-back);
-}
-
-.react-player audio {
-  width: 100%;
-}
-
-.lyric-container {
-  overflow: hidden;
-  position: relative;
-  background: var(--card-background);
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  
-  &.collapsed {
-    .full-lyrics {
-      display: none;
-    }
-    .current-lyric {
-      padding: 10px;
-      text-align: center;
-    }
-  }
-  
-  &.expanded {
-    .current-lyric {
-      display: none;
-    }
-  }
-}
-
-.lyric-wrapper {
-  padding: 10px;
-}
-
-.current-lyric {
-  font-weight: 500;
-  color: var(--color-text-primary);
-  font-size: 1.1em;
-  line-height: 1.4;
-  
-  .translated-lyric {
-    font-size: 0.9em;
-    color: var(--color-text-tertiary);
-    margin-top: 4px;
-  }
-}
-
-.full-lyrics {
-  max-height: 340px;
-  overflow-y: auto;
-  
-  .lyric-line {
-    padding: 8px 0;
-    transition: all 0.2s ease;
-    
-    &.active {
-      color: var(--color-text-primary);
-      font-weight: bold;
-    }
-  }
-}
-
-.full-lyrics {
-  max-height: 340px;
-  overflow-y: auto;
-  padding: 10px;
-  
-
-  opacity: 1;
-  visibility: visible;
-  transition: opacity 0.3s ease;
-}
-
-.lyric-container.collapsed .full-lyrics {
-  opacity: 0;
-  visibility: hidden;
-  max-height: 0;
-  padding: 0;
+  box-shadow: none !important; /* 移除冗余阴影，由 AudioPlayer.css 统一管理 */
+  z-index: 1030;
 }
 
 @media (max-width: 768px) {
-  .lyric-container {
-    margin-top: 10px;
-    
-    &.collapsed {
-      max-height: 50px !important;
-    }
-    
-    &.expanded {
-      max-height: 60vh !important;
-    }
-  }
-  
-  .current-lyric {
-    font-size: 1em;
-  }
-}
-
-.github-corner:hover svg {
-  transform: rotate(-45deg) scale(1.1);
-  color: var(--color-text-secondary) !important; 
-}
-
-
-@media (max-width: 768px) {
-  .github-corner svg {
-    top: 10px;
-    right: 10px;
-    size: 28px;
-  }
-}
-
-
-.main-content {
-  min-height: calc(100vh - 120px); 
-  padding-bottom: calc(var(--player-height-collapsed) + 30px); /* 确保内容不被播放器遮挡 */
-}
-
-
-@media (max-width: 768px) {
-  .main-content {
-    min-height: calc(100vh - 80px);
-    padding-bottom: calc(var(--player-height-collapsed) + 40px) !important; /* 增加更多底部内边距 */
-  }
-  
   .fixed-bottom {
     height: auto !important;
     padding: 10px;
   }
 }
 
-.search-result-card {
-  margin-bottom: 20px;
+/* 
+ * 歌词样式优化 (旧版兼容)
+ * 已废弃：核心逻辑已移至 AudioPlayer.css 的全屏模式
+ */
+.lyric-container {
+  display: none; /* 强制隐藏旧版容器 */
 }
 
-/* 文本溢出处理 */
-.card h6, .card small.d-block {
+/* 
+ * 文本溢出处理 
+ * 用于歌曲列表等场景
+ */
+.track-name, .track-artist {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

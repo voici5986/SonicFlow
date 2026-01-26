@@ -196,10 +196,15 @@ const AudioPlayer = () => {
 
   const [showMobileLyrics, setShowMobileLyrics] = useState(false);
 
-  // 当关闭展开模式时，重置移动端歌词显示状态
+  // 当歌词界面展开状态变化时，同步 body 类名并处理副作用
   useEffect(() => {
-    if (!lyricExpanded) {
+    if (lyricExpanded) {
+      // 当展开时，给 body 添加类以隐藏移动端 Tab 栏
+      document.body.classList.add('player-expanded');
+    } else {
+      // 当关闭展开模式时，重置移动端歌词显示状态并移除类
       setShowMobileLyrics(false);
+      document.body.classList.remove('player-expanded');
     }
   }, [lyricExpanded]);
 
@@ -318,17 +323,17 @@ const AudioPlayer = () => {
                     
                     <Button variant="link" onClick={togglePlay} className="control-icon-btn accent-control p-0">
                       <div className="play-pause-button" style={{ 
-                        backgroundColor: 'var(--color-accent)', 
-                        borderRadius: '50%', 
-                        color: 'white',
+                        backgroundColor: 'transparent', 
+                        borderRadius: '0', 
+                        color: 'var(--color-accent)',
                         width: '56px',
                         height: '56px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        boxShadow: '0 4px 12px rgba(255, 77, 79, 0.3)'
+                        boxShadow: 'none'
                       }}>
-                        {isPlaying ? <FaPause size={24} /> : <FaPlay size={24} className="ms-1" />}
+                        {isPlaying ? <FaPause size={48} /> : <FaPlay size={48} className="ms-1" />}
                       </div>
                     </Button>
                     
@@ -439,19 +444,23 @@ const AudioPlayer = () => {
               <h2 className="track-title">{currentTrack.name}</h2>
               <h4 className="track-artist-album">{currentTrack.artist} - {currentTrack.album}</h4>
             </div>
+            {/* 移动端专用的歌曲信息：放在封面区域内，但在 CSS 中会根据 showMobileLyrics 调整 */}
+            <div className="mobile-track-info-expanded d-md-none">
+              <h5 className="track-name">{currentTrack.name}</h5>
+              <div className="track-artist">{currentTrack.artist}</div>
+            </div>
           </div>
           <div className="lyrics-section">
+            {/* 歌词模式下的歌曲信息，逻辑上属于歌词区 */}
+            <div className="mobile-track-info-expanded d-md-none">
+              <h5 className="track-name">{currentTrack.name}</h5>
+              <div className="track-artist">{currentTrack.artist}</div>
+            </div>
             <div className="lyrics-scroll-container" ref={lyricsContainerRef}>
               {processedLyrics.map((line, idx) => (
                 <LyricLine key={idx} line={line} isActive={idx === currentLyricIndex} />
               ))}
             </div>
-          </div>
-
-          {/* 移动端专用的歌曲信息：位于封面/歌词下方，进度条上方 */}
-          <div className="mobile-track-info-expanded d-md-none">
-            <h5 className="track-name">{currentTrack.name}</h5>
-            <div className="track-artist">{currentTrack.artist}</div>
           </div>
         </div>
       </div>

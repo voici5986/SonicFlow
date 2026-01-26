@@ -1,27 +1,53 @@
-/* 添加强制竖屏的CSS */
-@media screen and (min-width: 320px) and (max-width: 767px) and (orientation: landscape) {
-  html {
-    transform: rotate(-90deg);
-    transform-origin: left top;
-    width: 100vh;
-    height: 100vw;
-    overflow-x: hidden;
-    position: absolute;
-    top: 100%;
-    left: 0;
-  }
+/* 
+ * 设备旋转提示层样式
+ * Orientation Lock Overlay Styles
+ * 替代旧的强制旋转 Hack，提供更好的用户体验
+ */
+.orientation-lock-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--color-background); /* 适配深色模式 */
+  color: var(--color-text-primary);
+  z-index: 11000; /* 确保在最顶层 */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 20px;
 }
 
-/* 平板设备横屏时也强制竖屏 */
-@media screen and (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
-  html {
-    transform: rotate(-90deg);
-    transform-origin: left top;
-    width: 100vh;
-    height: 100vw;
-    overflow-x: hidden;
-    position: absolute;
-    top: 100%;
-    left: 0;
-  }
+.orientation-icon {
+  font-size: 48px;
+  margin-bottom: 20px;
+  animation: rotateIcon 2s infinite ease-in-out;
+  color: var(--color-primary);
+}
+
+.orientation-text {
+  font-size: 18px;
+  font-weight: 500;
+  max-width: 80%;
+  line-height: 1.5;
+}
+
+@keyframes rotateIcon {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(-90deg); }
+  50% { transform: rotate(-90deg); }
+  75% { transform: rotate(0deg); }
+  100% { transform: rotate(0deg); }
+}
+
+/* 
+ * 移除旧的暴力旋转代码
+ * Removed legacy force-landscape hack
+ */
+/* 
+@media screen and (orientation: portrait) and (max-width: 768px) {
+  ...
 } 
+*/

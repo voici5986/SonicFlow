@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Nav, Navbar, Container, Button } from 'react-bootstrap';
-import { FaHome, FaHeart, FaHistory, FaUser } from 'react-icons/fa';
+import { FaSearch, FaHeart, FaHistory, FaUser } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/NavigationFix.css';
 
@@ -41,7 +41,7 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
 
   // 导航项 - 移除账号选项
   const navItems = [
-    { id: 'home', title: '搜索', icon: <FaHome /> },
+    { id: 'home', title: '搜索', icon: <FaSearch /> },
     { id: 'favorites', title: '收藏', icon: <FaHeart /> },
     { id: 'history', title: '历史记录', icon: <FaHistory /> },
   ];
@@ -62,86 +62,110 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
     (currentUser && currentUser.email ? currentUser.email[0].toUpperCase() : null);
 
   return (
-    <Navbar
-      expand="lg"
-      expanded={expanded}
-      onToggle={setExpanded}
-      className={`nav-animated ${scrolled ? 'scrolled' : ''}`}
-    >
-      <Container fluid>
-        <Navbar.Brand className="d-flex align-items-center">
-          <img
-            src="/logo.svg"
-            alt="SonicFlow Logo"
-            width="38"
-            height="38"
-            className="logo-pulse me-1"
-            style={{
-              filter: 'drop-shadow(0 0 3px rgba(31, 31, 31, 0.25))',
-              marginBottom: '2px' // 微调垂直对齐
-            }}
-          />
-          <span style={logoStyle}>SonicFlow</span>
-        </Navbar.Brand>
+    <>
+      <Navbar
+        expand="lg"
+        expanded={expanded}
+        onToggle={setExpanded}
+        className={`nav-animated ${scrolled ? 'scrolled' : ''}`}
+      >
+        <Container fluid>
+          <Navbar.Brand className="d-flex align-items-center">
+            <img
+              src="/logo.svg"
+              alt="SonicFlow Logo"
+              width="38"
+              height="38"
+              className="logo-image logo-pulse me-1"
+              style={{
+                filter: 'drop-shadow(0 0 3px rgba(31, 31, 31, 0.25))',
+                marginBottom: '2px' // 微调垂直对齐
+              }}
+            />
+            <span className="brand-text" style={logoStyle}>SonicFlow</span>
+          </Navbar.Brand>
 
-        {/* 用户头像/登录按钮 */}
-        <div className="order-lg-last ms-auto me-2 d-flex align-items-center">
-          {/* 用户头像按钮 */}
-          {currentUser ? (
-            <Nav.Link
-              active={activeTab === 'user'}
-              onClick={() => handleNavItemClick('user')}
-              className={`d-flex align-items-center justify-content-center nav-item ${activeTab === 'user' ? 'active' : ''}`}
-              style={{ width: '40px', height: '40px' }}
-            >
-              {currentUser.photoURL ? (
-                <img
-                  src={currentUser.photoURL}
-                  alt="Profile"
-                  className="rounded-circle"
-                  style={{ width: '32px', height: '32px' }}
-                />
-              ) : userInitial ? (
-                <div
-                  className="rounded-circle d-flex justify-content-center align-items-center"
-                  style={{ width: '32px', height: '32px', fontSize: '1rem', backgroundColor: 'var(--color-text-primary)', color: 'var(--card-background)' }}
-                >
-                  {userInitial}
-                </div>
-              ) : (
-                <FaUser />
-              )}
-            </Nav.Link>
-          ) : (
-            <Button
-              variant="link"
-              size="sm"
-              className="d-flex align-items-center justify-content-center minimal-action-btn"
-              onClick={() => handleNavItemClick('user')}
-              style={{ width: '40px', height: '40px', borderRadius: '50%' }}
-            >
-              <FaUser />
-            </Button>
-          )}
-        </div>
-
-        <Navbar.Toggle aria-controls="basic-navbar-nav" />
-        <Navbar.Collapse id="basic-navbar-nav">
-          <Nav className="mx-auto">
-            {navItems.map(item => (
+          {/* 用户头像/登录按钮 */}
+          <div className="order-lg-last ms-auto me-2 d-flex align-items-center">
+            {/* 用户头像按钮 */}
+            {currentUser ? (
               <Nav.Link
-                key={item.id}
-                active={activeTab === item.id}
-                onClick={() => handleNavItemClick(item.id)}
-                className={`d-flex align-items-center mx-2 mx-md-4 nav-item ${activeTab === item.id ? 'active' : ''}`}
+                active={activeTab === 'user'}
+                onClick={() => handleNavItemClick('user')}
+                className={`d-flex align-items-center justify-content-center nav-item ${activeTab === 'user' ? 'active' : ''}`}
+                style={{ width: '40px', height: '40px' }}
               >
-                <span className="me-1 nav-icon">{item.icon}</span> {item.title}
+                {currentUser.photoURL ? (
+                  <img
+                    src={currentUser.photoURL}
+                    alt="Profile"
+                    className="rounded-circle shadow-sm"
+                    style={{ width: '32px', height: '32px', objectFit: 'cover' }}
+                  />
+                ) : userInitial ? (
+                  <div
+                    className="rounded-circle d-flex justify-content-center align-items-center shadow-sm"
+                    style={{ width: '32px', height: '32px', fontSize: '1rem', backgroundColor: 'var(--color-text-primary)', color: 'var(--card-background)' }}
+                  >
+                    {userInitial}
+                  </div>
+                ) : (
+                  <FaUser />
+                )}
               </Nav.Link>
-            ))}
-          </Nav>
-        </Navbar.Collapse>
-      </Container>
-    </Navbar>
+            ) : (
+              <Button
+                variant="link"
+                size="sm"
+                className="d-flex align-items-center justify-content-center minimal-action-btn"
+                onClick={() => handleNavItemClick('user')}
+                style={{ width: '40px', height: '40px', borderRadius: '50%' }}
+              >
+                <FaUser />
+              </Button>
+            )}
+          </div>
+
+          <Navbar.Toggle aria-controls="basic-navbar-nav" />
+          <Navbar.Collapse id="basic-navbar-nav">
+            <Nav className="mx-auto">
+              {navItems.map(item => (
+                <Nav.Link
+                  key={item.id}
+                  active={activeTab === item.id}
+                  onClick={() => handleNavItemClick(item.id)}
+                  className={`d-flex align-items-center mx-2 mx-md-4 nav-item ${activeTab === item.id ? 'active' : ''}`}
+                >
+                  <span className="me-1 nav-icon">{item.icon}</span> {item.title}
+                </Nav.Link>
+              ))}
+            </Nav>
+          </Navbar.Collapse>
+        </Container>
+      </Navbar>
+
+      {/* 移动端底部 Tab Bar */}
+       <div className="mobile-tab-bar">
+         {navItems.map(item => (
+           <div 
+             key={item.id}
+             className={`mobile-tab-item ${activeTab === item.id ? 'active' : ''}`}
+             onClick={() => handleNavItemClick(item.id)}
+             title={item.title}
+           >
+             {item.icon}
+           </div>
+         ))}
+         {/* 移动端个人中心 Tab */}
+         <div 
+           className={`mobile-tab-item ${activeTab === 'user' ? 'active' : ''}`}
+           onClick={() => handleNavItemClick('user')}
+           title="我的"
+         >
+           <FaUser />
+         </div>
+       </div>
+    </>
   );
 };
 
