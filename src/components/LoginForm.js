@@ -197,28 +197,24 @@ const LoginForm = ({ onToggleForm, onLoginSuccess }) => {
             transition: 'all 0.2s ease',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            height: '48px'
           }}
         >
           {loading ? (
-            <>
-              <Spinner
-                as="span"
-                animation="border"
-                size="sm"
-                role="status"
-                aria-hidden="true"
-                className="me-2"
-              />
-              登录中...
-            </>
+            <Spinner
+              as="span"
+              animation="border"
+              size="sm"
+              role="status"
+              aria-hidden="true"
+            />
           ) : "登录"}
         </Button>
 
-        <div className="text-center mb-3">或</div>
-
         <Button
           variant="link"
+          type="button"
           onClick={handleGoogleLogin}
           disabled={loading || !accountFeatureAvailable}
           className="w-100 mb-3"
@@ -234,24 +230,23 @@ const LoginForm = ({ onToggleForm, onLoginSuccess }) => {
             transition: 'all 0.2s ease',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            height: '48px'
           }}
         >
-          <FaGoogle className="me-2" /> Google登录
+          <FaGoogle className="me-2" /> Google 登录
         </Button>
 
         <div className="text-center mt-3">
-          <p className="mb-0">
-            还没有账号？{" "}
-            <button
-              type="button"
-              className="text-primary"
-              onClick={onToggleForm}
-              style={{ cursor: 'pointer', textDecoration: 'none', background: 'none', border: 'none', padding: '0' }}
-            >
-              立即注册
-            </button>
-          </p>
+          <span style={{ color: 'var(--color-text-secondary)' }}>还没有账号？</span>{' '}
+          <button
+            type="button"
+            className="text-accent"
+            onClick={onToggleForm}
+            style={{ cursor: 'pointer', textDecoration: 'none', background: 'none', border: 'none', padding: '0', color: 'var(--color-accent)', fontWeight: 'bold' }}
+          >
+            立即注册
+          </button>
         </div>
       </Form>
     </div>

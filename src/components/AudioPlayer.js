@@ -303,99 +303,101 @@ const AudioPlayer = () => {
 
           <div className="player-content">
             {/* 移动端布局 */}
-            <div className="d-md-none h-100 w-100">
-              {lyricExpanded ? (
-                /* 展开模式：仅 5 个控制按键 */
-                <div className="mobile-expanded-player-content d-flex flex-column h-100 justify-content-center pb-2" style={{ position: 'relative' }}>
-                  <div className="d-flex align-items-center justify-content-between px-4">
-                    <div style={{ width: '40px', display: 'flex', justifyContent: 'center' }}>
-                      <Button 
-                        variant="link" 
-                        onClick={handleTogglePlayMode} 
-                        className="control-icon-btn p-0"
-                        title={getPlayModeTitle()}
-                      >
-                        {renderPlayModeIcon()}
-                      </Button>
-                    </div>
-                    
-                    <div style={{ width: '40px', display: 'flex', justifyContent: 'center' }}>
-                      <Button variant="link" onClick={handlePrevious} className="control-icon-btn p-0">
-                        <MdSkipPrevious size={32} />
-                      </Button>
-                    </div>
-                    
-                    <div style={{ width: '64px', display: 'flex', justifyContent: 'center' }}>
-                      <Button variant="link" onClick={togglePlay} className="control-icon-btn accent-control p-0">
-                        <div className="play-pause-button" style={{ 
-                          backgroundColor: 'transparent', 
-                          borderRadius: '0', 
-                          color: 'var(--color-accent)',
-                          width: '56px',
-                          height: '56px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          boxShadow: 'none'
-                        }}>
-                          {isPlaying ? <FaPause size={48} /> : <FaPlay size={48} className="ms-1" />}
-                        </div>
-                      </Button>
-                    </div>
-                    
-                    <div style={{ width: '40px', display: 'flex', justifyContent: 'center' }}>
-                      <Button variant="link" onClick={handleNext} className="control-icon-btn p-0">
-                        <MdSkipNext size={32} />
-                      </Button>
-                    </div>
-                    
-                    <div style={{ width: '40px', display: 'flex', justifyContent: 'center' }}>
-                      <HeartButton track={currentTrack} size={28} variant="link" className="p-0 control-button accent-control" />
-                    </div>
+            <div className="d-md-none h-100 w-100" style={{ position: 'relative' }}>
+              {/* 收起模式：左侧大空间信息，右侧仅红心和播放 */}
+              <Row className="align-items-center h-100 m-0">
+                <Col xs={8} className="d-flex align-items-center p-0 overflow-hidden" onClick={toggleLyric} style={{ cursor: 'pointer' }}>
+                  <AlbumCover track={currentTrack} size="small" forceFetch={true} />
+                  <div className="track-info-container flex-grow-1 ms-2" style={{ minWidth: 0, paddingRight: '10px' }}>
+                    <h6 className="mb-0 text-truncate track-name" style={{ width: '100%' }}>{currentTrack.name}</h6>
+                    <small className="text-muted text-truncate track-artist d-block" style={{ width: '100%' }}>{currentTrack.artist}</small>
                   </div>
-                  
-                  {/* 改为绝对定位：向下收起的箭头按钮，固定在播放按钮下方 3vh */}
-                  <Button 
-                    variant="link" 
-                    onClick={toggleLyric} 
-                    className="p-0 text-muted opacity-75 no-focus-outline"
-                    aria-label="收起播放器"
-                    style={{
-                      position: 'absolute',
-                      top: 'calc(50% + 28px + 3vh)', /* 50% 是容器中心，28px 是播放按钮半径，3vh 是间距 */
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      zIndex: 20005,
-                      height: 'auto',
-                      padding: '10px', /* 增加点击区域 */
-                      border: 'none',
-                      boxShadow: 'none',
-                      outline: 'none',
-                      background: 'none'
-                    }}
-                  >
-                    <FaChevronDown size={20} />
-                  </Button>
-                </div>
-              ) : (
-                /* 收起模式：左侧大空间信息，右侧仅红心和播放 */
-                <Row className="align-items-center h-100 m-0">
-                  <Col xs={8} className="d-flex align-items-center p-0 overflow-hidden" onClick={toggleLyric} style={{ cursor: 'pointer' }}>
-                    <AlbumCover track={currentTrack} size="small" forceFetch={true} />
-                    <div className="track-info-container flex-grow-1 ms-2" style={{ minWidth: 0, paddingRight: '10px' }}>
-                      <h6 className="mb-0 text-truncate track-name" style={{ width: '100%' }}>{currentTrack.name}</h6>
-                      <small className="text-muted text-truncate track-artist d-block" style={{ width: '100%' }}>{currentTrack.artist}</small>
+                </Col>
+                <Col xs={3} className="d-flex justify-content-end align-items-center p-0" style={{ paddingRight: '12px !important' }}>
+                  <div className="d-flex align-items-center pe-1.8">
+                    <HeartButton track={currentTrack} size={24} variant="link" className="control-button accent-control me-4 p-0" />
+                    <Button variant="link" onClick={togglePlay} className="control-icon-btn accent-control p-0">
+                      {isPlaying ? <FaPause size={24} /> : <FaPlay size={24} />}
+                    </Button>
+                  </div>
+                </Col>
+              </Row>
+
+              {/* 展开模式下的内容：通过 mobile-expanded-content CSS 控制显示隐藏 */}
+              {lyricExpanded && (
+                <div className="mobile-expanded-content" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 10 }}>
+                  <div className="mobile-expanded-player-content d-flex flex-column h-100 justify-content-center pb-2" style={{ position: 'relative' }}>
+                    <div className="d-flex align-items-center justify-content-between px-4">
+                      <div style={{ width: '40px', display: 'flex', justifyContent: 'center' }}>
+                        <Button 
+                          variant="link" 
+                          onClick={handleTogglePlayMode} 
+                          className="control-icon-btn p-0"
+                          title={getPlayModeTitle()}
+                        >
+                          {renderPlayModeIcon()}
+                        </Button>
+                      </div>
+                      
+                      <div style={{ width: '40px', display: 'flex', justifyContent: 'center' }}>
+                        <Button variant="link" onClick={handlePrevious} className="control-icon-btn p-0">
+                          <MdSkipPrevious size={32} />
+                        </Button>
+                      </div>
+                      
+                      <div style={{ width: '64px', display: 'flex', justifyContent: 'center' }}>
+                        <Button variant="link" onClick={togglePlay} className="control-icon-btn accent-control p-0">
+                          <div className="play-pause-button" style={{ 
+                            backgroundColor: 'transparent', 
+                            borderRadius: '0', 
+                            color: 'var(--color-accent)',
+                            width: '56px',
+                            height: '56px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: 'none'
+                          }}>
+                            {isPlaying ? <FaPause size={48} /> : <FaPlay size={48} className="ms-1" />}
+                          </div>
+                        </Button>
+                      </div>
+                      
+                      <div style={{ width: '40px', display: 'flex', justifyContent: 'center' }}>
+                        <Button variant="link" onClick={handleNext} className="control-icon-btn p-0">
+                          <MdSkipNext size={32} />
+                        </Button>
+                      </div>
+                      
+                      <div style={{ width: '40px', display: 'flex', justifyContent: 'center' }}>
+                        <HeartButton track={currentTrack} size={28} variant="link" className="p-0 control-button accent-control" />
+                      </div>
                     </div>
-                  </Col>
-                  <Col xs={3} className="d-flex justify-content-end align-items-center p-0" style={{ paddingRight: '12px !important' }}>
-                     <div className="d-flex align-items-center pe-1.8">
-                       <HeartButton track={currentTrack} size={24} variant="link" className="control-button accent-control me-4 p-0" />
-                       <Button variant="link" onClick={togglePlay} className="control-icon-btn accent-control p-0">
-                         {isPlaying ? <FaPause size={24} /> : <FaPlay size={24} />}
-                       </Button>
-                     </div>
-                   </Col>
-                </Row>
+                    
+                    {/* 改为绝对定位：向下收起的箭头按钮，固定在播放按钮下方 3vh */}
+                    <Button 
+                      variant="link" 
+                      onClick={toggleLyric} 
+                      className="p-0 text-muted opacity-75 no-focus-outline"
+                      aria-label="收起播放器"
+                      style={{
+                        position: 'absolute',
+                        top: 'calc(50% + 28px + 3vh)', /* 50% 是容器中心，28px 是播放按钮半径，3vh 是间距 */
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        zIndex: 20005,
+                        height: 'auto',
+                        padding: '10px', /* 增加点击区域 */
+                        border: 'none',
+                        boxShadow: 'none',
+                        outline: 'none',
+                        background: 'none'
+                      }}
+                    >
+                      <FaChevronDown size={20} />
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
 
@@ -463,7 +465,7 @@ const AudioPlayer = () => {
         </div>
       </div>
 
-      <div className={`player-expanded-view ${showMobileLyrics ? 'mobile-lyrics-active' : ''}`} style={{ display: lyricExpanded ? 'flex' : 'none' }}>
+      <div className={`player-expanded-view ${showMobileLyrics ? 'mobile-lyrics-active' : ''}`}>
         <Button variant="link" onClick={toggleLyric} className="close-lyrics-btn"><FaTimes /></Button>
         
         <div className="expanded-main-wrapper" onClick={() => {

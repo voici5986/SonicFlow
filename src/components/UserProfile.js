@@ -227,7 +227,8 @@ const UserProfile = ({ onTabChange }) => {
                     transition: 'all 0.2s ease',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    height: '48px'
                   }}
                 >
                   <FaSignOutAlt className="me-2" /> 退出登录
@@ -307,20 +308,15 @@ const UserProfile = ({ onTabChange }) => {
                   transition: 'all 0.2s ease',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  height: '48px'
                 }}
               >
                 {syncStatus.loading ? (
-                  <Spinner animation="border" size="sm" className="me-2" />
+                  <Spinner animation="border" size="sm" />
                 ) : (
                   <>
-                    <FaSync className="me-2" /> 
-                    同步数据
-                    {pendingChanges.count > 0 && !pendingChanges.loading && !syncStatus.loading && (
-                      <Badge className="ms-1" bg="light" text="dark" pill>
-                        {pendingChanges.count}
-                      </Badge>
-                    )}
+                    <FaSync className={`me-2 ${syncStatus.loading ? 'fa-spin' : ''}`} /> 立即同步
                   </>
                 )}
               </Button>

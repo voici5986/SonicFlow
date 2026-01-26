@@ -606,6 +606,27 @@
 
 /* 移动端展开模式 UI 重构 */
 @media (max-width: 768px) {
+  /* 收起模式下的歌曲信息，切换到展开模式时淡出 */
+  .audio-player:not(.expanded) .player-inner .row {
+    transition: opacity 0.3s ease;
+    opacity: 1;
+  }
+  
+  .audio-player.expanded .player-inner .row {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* 展开模式下的内容容器 */
+  .mobile-expanded-content {
+    transition: opacity 0.4s ease 0.2s; /* 延迟显示控制键 */
+    opacity: 0;
+  }
+
+  .audio-player.expanded .mobile-expanded-content {
+    opacity: 1;
+  }
+
   .audio-player {
     bottom: calc(8vh + env(safe-area-inset-bottom)) !important; /* 同步 Tab 栏的 8vh */
     height: 10vh !important; /* 收起高度设为 10% */
@@ -615,6 +636,7 @@
     box-shadow: none !important; /* 移除阴影 */
     z-index: 1040;
     overflow: visible !important; /* 确保进度条提示小窗不被裁剪 */
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important; /* 添加平滑切换动画 */
   }
 
   .player-inner {
@@ -669,17 +691,44 @@
     margin-bottom: 15px !important; /* 增加一点底部间距，让它离按钮远一点 */
   }
 
+  /* 展开视图的基础过渡动画 - 仅针对进入全屏时 */
   .player-expanded-view {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    bottom: 0 !important; /* 确保占满全屏 */
+    bottom: 0 !important;
     background-color: var(--card-background);
-    z-index: 9500; /* 低于 .audio-player.expanded 的 10000 */
+    z-index: 9500;
     display: flex;
     flex-direction: column;
-    overflow: hidden !important; /* 防止视图溢出 */
+    overflow: hidden !important;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+    transform: translateY(100%); /* 默认在底部 */
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .audio-player.expanded + .player-expanded-view {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* 内部组件进入全屏时的动画 */
+  .audio-player:not(.expanded) + .player-expanded-view .album-info-section,
+  .audio-player:not(.expanded) + .player-expanded-view .lyrics-section,
+  .audio-player:not(.expanded) + .player-expanded-view .mobile-track-info-expanded {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  .audio-player.expanded + .player-expanded-view .album-info-section,
+  .audio-player.expanded + .player-expanded-view .lyrics-section,
+  .audio-player.expanded + .player-expanded-view .mobile-track-info-expanded {
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.1s, opacity 0.5s ease 0.1s;
+    transform: translateY(0);
+    opacity: 1;
   }
 
   .expanded-main-wrapper {
@@ -690,20 +739,47 @@
     display: flex;
   }
 
+  /* 封面和歌词之间的切换逻辑 - 必须是秒切 (移除 transition) */
   .expanded-main-wrapper .album-info-section,
   .expanded-main-wrapper .lyrics-section {
     position: absolute;
     top: 0;
     left: 0;
     width: 100% !important;
-    height: 65vh !important; /* 减小高度，为歌曲信息留出空间 */
+    height: 65vh !important;
     padding: 3vh 20px 0px 20px !important;
     border: none !important;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    /* 移除这里的 opacity/visibility transition 以实现秒切 */
+    transition: none !important; 
+  }
+
+  /* 歌词激活时的切换逻辑 - 秒切 */
+  .player-expanded-view.mobile-lyrics-active .album-info-section {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none;
+  }
+
+  .player-expanded-view.mobile-lyrics-active .lyrics-section {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto;
+  }
+
+  .player-expanded-view:not(.mobile-lyrics-active) .lyrics-section {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none;
+  }
+
+  .player-expanded-view:not(.mobile-lyrics-active) .album-info-section {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto;
   }
 
   /* 统一的移动端歌曲信息样式 - 紧贴歌词/封面区域下方，两行布局 */

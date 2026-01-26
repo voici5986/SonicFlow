@@ -205,21 +205,18 @@ const RegisterForm = ({ onToggleForm, onRegisterSuccess }) => {
             transition: 'all 0.2s ease',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            height: '48px'
           }}
         >
           {loading ? (
-            <>
-              <Spinner
-                as="span"
-                animation="border"
-                size="sm"
-                role="status"
-                aria-hidden="true"
-                className="me-2"
-              />
-              正在注册...
-            </>
+            <Spinner
+              as="span"
+              animation="border"
+              size="sm"
+              role="status"
+              aria-hidden="true"
+            />
           ) : "注册"}
         </Button>
         
@@ -229,7 +226,7 @@ const RegisterForm = ({ onToggleForm, onRegisterSuccess }) => {
             type="button"
             className="text-accent"
             onClick={onToggleForm}
-            style={{ cursor: 'pointer', textDecoration: 'none', background: 'none', border: 'none', padding: '0', color: 'var(--accent)', fontWeight: 'bold' }}
+            style={{ cursor: 'pointer', textDecoration: 'none', background: 'none', border: 'none', padding: '0', color: 'var(--color-accent)', fontWeight: 'bold' }}
           >
             立即登录
           </button>
