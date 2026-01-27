@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useReducer, useState } from 'react';
+import React, { useEffect, useMemo, useReducer, useState } from 'react';
 import { usePlayer } from '../contexts/PlayerContext';
+import { FaRandom, FaRedo } from 'react-icons/fa';
+import { MdRepeatOne } from 'react-icons/md';
 
 export const useAudioPlayerViewState = () => {
   const {
@@ -123,6 +125,24 @@ export const useAudioPlayerViewState = () => {
     setDragOffsetY(0);
   };
 
+  const getPlayModeTitle = () => {
+    switch (playMode) {
+      case 'random': return '随机播放';
+      case 'repeat-one': return '单曲循环';
+      case 'sequence': return '列表循环';
+      default: return '列表循环';
+    }
+  };
+
+  const renderPlayModeIcon = () => {
+    switch (playMode) {
+      case 'random': return <FaRandom size={20} />;
+      case 'repeat-one': return <MdRepeatOne size={22} />;
+      case 'sequence': return <FaRedo size={18} />;
+      default: return <FaRedo size={18} />;
+    }
+  };
+
   return {
     currentTrack,
     isPlaying,
@@ -142,7 +162,9 @@ export const useAudioPlayerViewState = () => {
     dragOffsetY,
     handleTouchStart,
     handleTouchMove,
-    handleTouchEnd
+    handleTouchEnd,
+    getPlayModeTitle,
+    renderPlayModeIcon
   };
 };
 
