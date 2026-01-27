@@ -98,9 +98,8 @@
   --card-hover-background: #F7F6F4;
   --card-hover-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
   --card-hover-transform: translateY(-5px);
-  --card-transition: all 0.3s var(--ease-out-circ);
-  --card-active-scale: 0.98;
-  --card-border-radius: var(--border-radius-lg);
+  --card-border-radius: 12px;
+  --card-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   
   /* 导航栏 */
   --navbar-height: 60px;
@@ -123,6 +122,29 @@
   /* 保留原有的主要变量名以保持兼容性 */
   --primary-gradient: linear-gradient(45deg, var(--color-primary) 0%, var(--color-secondary) 100%);
   --search-input-border: var(--color-border);
+
+  /* ===== Z-Index 层级系统 ===== */
+  --z-index-negative: -1;
+  --z-index-base: 1;
+  --z-index-above: 10;
+  --z-index-interaction: 100;
+  --z-index-player-base: 1000;
+  --z-index-navbar: 1020;
+  --z-index-bootstrap-fixed: 1030;
+  --z-index-backdrop: 1040;
+  --z-index-mobile-nav: 1050;
+  --z-index-toast: 1070;
+  --z-index-player-backdrop: 9000;
+  --z-index-player-expanded: 9500;
+  --z-index-overlay: 9999;
+  --z-index-player-force: 10000;
+  --z-index-notification: 11000;
+  
+  /* 移动端全屏模式专有层级 (20000系列) */
+  --z-index-mobile-expanded-base: 20000;
+  --z-index-mobile-expanded-content: 20001;
+  --z-index-mobile-expanded-info: 20003;
+  --z-index-mobile-expanded-top: 20005;
 }
 
 /* ===== 通用组件样式 ===== */

@@ -9,7 +9,7 @@
   padding: 0.2rem 1rem !important;
   position: sticky;
   top: 0;
-  z-index: 1020;
+  z-index: var(--z-index-navbar);
   display: flex; /* 确保显示 */
 }
 

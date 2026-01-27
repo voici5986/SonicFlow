@@ -51,7 +51,7 @@ const OrientationPrompt = () => {
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        zIndex: 9999,
+        zIndex: 'var(--z-index-overlay)',
         color: 'white',
         padding: '20px',
         textAlign: 'center'

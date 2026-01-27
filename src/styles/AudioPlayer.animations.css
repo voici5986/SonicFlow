@@ -9,7 +9,7 @@
     max-height: 80px !important;
     border-top: none !important;
     box-shadow: none !important;
-    z-index: 1040;
+    z-index: var(--z-index-player-base);
     overflow: visible !important;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
@@ -17,7 +17,7 @@
   .audio-player.expanded {
     bottom: 0 !important;
     height: 100vh !important;
-    z-index: 10000 !important;
+    z-index: var(--z-index-player-force) !important;
     background-color: transparent !important;
     pointer-events: none;
     display: flex;
@@ -55,7 +55,7 @@
     background-color: var(--card-background) !important;
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
-    z-index: 9500;
+    z-index: var(--z-index-player-expanded);
     display: flex;
     flex-direction: column;
     overflow: hidden !important;

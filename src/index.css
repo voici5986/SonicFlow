@@ -160,7 +160,7 @@ img.rounded:hover {
 .fixed-bottom {
   border-top: none !important;
   box-shadow: none !important; /* 移除冗余阴影，由 AudioPlayer.css 统一管理 */
-  z-index: 1030;
+  z-index: var(--z-index-bootstrap-fixed);
 }
 
 @media (max-width: 768px) {

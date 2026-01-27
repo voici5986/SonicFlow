@@ -50,7 +50,7 @@ const MobileMiniPlayer = ({
 
       {/* 展开模式下的内容：通过 mobile-expanded-content CSS 控制显示隐藏 */}
       {lyricExpanded && (
-        <div className="mobile-expanded-content" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 10, pointerEvents: 'none' }}>
+        <div className="mobile-expanded-content" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 'var(--z-index-above)', pointerEvents: 'none' }}>
           <div className="mobile-expanded-player-content d-flex flex-column h-100 justify-content-end pb-2" style={{ position: 'relative', pointerEvents: 'auto' }}>
             {/* 歌曲信息：移至播放控制上方，作为模块的一部分 */}
             <div className="mobile-track-info-expanded d-md-none">
@@ -118,7 +118,7 @@ const MobileMiniPlayer = ({
                 className="p-0 text-muted opacity-75 no-focus-outline"
                 aria-label="收起播放器"
                 style={{
-                  zIndex: 20005,
+                  zIndex: 'var(--z-index-mobile-expanded-top)',
                   height: 'auto',
                   padding: '12px',
                   border: 'none',

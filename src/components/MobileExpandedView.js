@@ -48,10 +48,6 @@ const MobileExpandedView = ({
               imgSize={500}
             />
           </div>
-          <div className="track-details d-none d-md-block">
-            <h2 className="track-title">{currentTrack.name}</h2>
-            <h4 className="track-artist-album">{currentTrack.artist} - {currentTrack.album}</h4>
-          </div>
         </div>
         <div className="lyrics-section">
           <div className="lyrics-scroll-container" ref={lyricsContainerRef}>

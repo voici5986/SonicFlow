@@ -24,7 +24,7 @@
     align-items: center;
     width: 25%;
     min-width: 200px;
-    z-index: 10;
+    z-index: var(--z-index-above);
   }
 
   .player-center-section {
@@ -37,7 +37,7 @@
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    z-index: 5;
+    z-index: var(--z-index-base);
   }
 
   .player-right-section {
@@ -46,7 +46,7 @@
     justify-content: flex-end;
     width: 25%;
     min-width: 200px;
-    z-index: 10;
+    z-index: var(--z-index-above);
   }
 
   .progress-control-container {
@@ -59,7 +59,7 @@
     margin: 0;
     padding: 0;
     height: 3px !important;
-    z-index: 100;
+    z-index: var(--z-index-interaction);
     line-height: 1 !important;
   }
   

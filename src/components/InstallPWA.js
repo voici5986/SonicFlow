@@ -98,7 +98,7 @@ const InstallPWA = () => {
   }
   
   return (
-    <ToastContainer position="bottom-center" className="p-3" style={{ zIndex: 1070 }}>
+    <ToastContainer position="bottom-center" className="p-3" style={{ zIndex: 'var(--z-index-toast)' }}>
       <Toast 
         show={showInstallToast} 
         onClose={handleDismiss}

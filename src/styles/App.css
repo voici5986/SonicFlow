@@ -11,7 +11,7 @@
   height: 100vh;
   background-color: var(--color-background); /* 适配深色模式 */
   color: var(--color-text-primary);
-  z-index: 11000; /* 确保在最顶层 */
+  z-index: var(--z-index-notification); /* 确保在最顶层 */
   display: flex;
   flex-direction: column;
   justify-content: center;

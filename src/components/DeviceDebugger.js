@@ -21,7 +21,7 @@ const DeviceDebugger = ({ show = false }) => {
         padding: '10px',
         borderRadius: '5px',
         fontSize: '12px',
-        zIndex: 9999,
+        zIndex: 'var(--z-index-overlay)',
         maxWidth: '300px',
         overflowX: 'auto'
       }}

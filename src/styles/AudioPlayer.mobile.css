@@ -18,7 +18,7 @@
     flex-direction: column;
     justify-content: flex-end; /* 内容靠底部排列 */
     overflow: visible;
-    z-index: 20000;
+    z-index: var(--z-index-mobile-expanded-base);
   }
 
   body .audio-player.expanded .progress-control-container {
@@ -68,13 +68,8 @@
     /* 增加间距，让歌曲信息、进度条和控制按钮有呼吸感 */
     gap: 15px;
     position: relative;
-    z-index: 20001;
+    z-index: var(--z-index-mobile-expanded-content);
     padding-top: 10px;
-  }
-
-  /* 手势拖动状态：禁用过渡动画，实现跟手感 */
-  .mobile-expanded-player-content.is-dragging {
-    transition: none !important;
   }
 
   /* 手势拖动状态：禁用过渡动画，实现跟手感 */
@@ -104,7 +99,7 @@
     background: transparent;
     gap: 4px;
     margin: 0;
-    z-index: 20003;
+    z-index: var(--z-index-mobile-expanded-info);
   }
 
   .mobile-track-info-expanded .track-name {

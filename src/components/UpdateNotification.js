@@ -63,9 +63,11 @@ const UpdateNotification = ({ registration }) => {
     <div 
       style={{ 
         position: 'fixed', 
-        bottom: '20px', 
+        bottom: '100px', 
         right: '20px', 
-        zIndex: 1050 
+        zIndex: 'var(--z-index-modal)',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        border: 'none'
       }}
     >
       <Toast 

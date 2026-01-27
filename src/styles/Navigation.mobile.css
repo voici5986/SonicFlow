@@ -10,7 +10,7 @@
   max-height: 72px;
   background-color: var(--card-background);
   border-top: 1px solid var(--color-border);
-  z-index: 1050;
+  z-index: var(--z-index-mobile-nav);
   padding-bottom: var(--safe-area-bottom);
 }
 
@@ -33,7 +33,7 @@
   height: 32px;
   background-color: var(--color-background-alt); /* 稍微深一点的背景色作为胶囊 */
   border-radius: 16px;
-  z-index: -1;
+  z-index: var(--z-index-negative);
   opacity: 0;
   transition: all 0.3s ease;
   transform: scale(0.8);
@@ -50,7 +50,7 @@
 
 .mobile-tab-item svg {
   font-size: 1.4rem;
-  z-index: 1;
+  z-index: var(--z-index-base);
 }
 
 /* 桌面端隐藏移动端导航 */

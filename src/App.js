@@ -50,7 +50,7 @@ const offlineBannerStyle = {
   backgroundColor: 'var(--color-background-alt)',
   color: 'var(--color-text-secondary)',
   textAlign: 'center',
-  zIndex: 1040,
+  zIndex: 'var(--z-index-backdrop)',
   borderBottom: '1px solid var(--color-border)',
   fontSize: '0.9rem',
   fontWeight: 500,

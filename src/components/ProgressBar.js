@@ -114,7 +114,7 @@ const ProgressBar = () => {
         width: '100%',
         cursor: currentTrack ? 'pointer' : 'default',
         position: 'relative',
-        zIndex: 10,
+        zIndex: 'var(--z-index-above)',
         touchAction: 'none' // 禁用默认触摸行为，优化滑动体验
       }}
       onMouseEnter={() => setIsHovering(true)}
@@ -141,7 +141,7 @@ const ProgressBar = () => {
             padding: '4px 10px',
             borderRadius: '8px',
             boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
-            zIndex: 1000,
+            zIndex: 'var(--z-index-player-base)',
             border: '1px solid var(--color-border, rgba(0,0,0,0.1))'
           }}
         >
@@ -198,7 +198,7 @@ const ProgressBar = () => {
               borderRadius: '50%',
               backgroundColor: 'var(--color-accent, #ff4d4f)',
               boxShadow: '0 0 4px rgba(0,0,0,0.2)',
-              zIndex: 10
+              zIndex: 'var(--z-index-above)'
             }}
           />
         )}

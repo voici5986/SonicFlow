@@ -5,7 +5,7 @@
   left: 0;
   right: 0;
   background-color: var(--card-background);
-  z-index: 1000;
+  z-index: var(--z-index-player-base);
   width: 100%;
   padding: 0;
   overflow: visible;
@@ -28,7 +28,7 @@
 
 .audio-player.expanded {
   height: var(--player-height-collapsed); /* 桌面端展开时保持基础高度，主要依靠全屏视图显示 */
-  z-index: 9999;
+  z-index: var(--z-index-overlay);
 }
 
 .player-backdrop {
@@ -38,7 +38,7 @@
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.7);
-  z-index: 9000;
+  z-index: var(--z-index-player-backdrop);
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.4s ease;
@@ -77,7 +77,7 @@
   right: 0;
   bottom: var(--player-height-collapsed);
   background-color: var(--card-background);
-  z-index: 9500;
+  z-index: var(--z-index-player-expanded);
   padding: 0;
   overflow: hidden !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
@@ -271,7 +271,7 @@
   font-size: 1.5rem;
   color: var(--color-text-secondary);
   cursor: pointer;
-  z-index: 10;
+  z-index: var(--z-index-above);
   width: 40px;
   height: 40px;
   display: flex;
