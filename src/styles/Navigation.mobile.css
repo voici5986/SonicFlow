@@ -1,0 +1,66 @@
+/* 移动端底部导航栏样式 */
+.mobile-tab-bar {
+  display: flex;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 8vh; /* 使用屏幕高度的 8% */
+  min-height: 56px;
+  max-height: 72px;
+  background-color: var(--card-background);
+  border-top: 1px solid var(--color-border);
+  z-index: 1050;
+  padding-bottom: var(--safe-area-bottom);
+}
+
+.mobile-tab-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  text-decoration: none !important;
+  transition: var(--transition-fast);
+  position: relative;
+}
+
+/* 选中态的胶囊背景框 */
+.mobile-tab-item::after {
+  content: '';
+  position: absolute;
+  width: 64px;
+  height: 32px;
+  background-color: var(--color-background-alt); /* 稍微深一点的背景色作为胶囊 */
+  border-radius: 16px;
+  z-index: -1;
+  opacity: 0;
+  transition: all 0.3s ease;
+  transform: scale(0.8);
+}
+
+.mobile-tab-item.active {
+  color: var(--color-text-primary);
+}
+
+.mobile-tab-item.active::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.mobile-tab-item svg {
+  font-size: 1.4rem;
+  z-index: 1;
+}
+
+/* 桌面端隐藏移动端导航 */
+@media (min-width: 769px) {
+  .mobile-tab-bar {
+    display: none !important;
+  }
+}
+
+/* 播放器展开时隐藏导航栏 */
+body.player-expanded .mobile-tab-bar {
+  display: none !important;
+}

@@ -54,8 +54,8 @@
 - [ ] 移除所有 `isMobile` 的条件分支，简化 DOM 结构。
 
 ### 第四阶段：样式规范化 (Refinement)
-- [ ] 统一 [theme.css] 中的变量。
-- [ ] 移除各组件中冗余的 `@media` 查询，归入各自的 `.mobile.css` 或 `.desktop.css`。
+- [x] 统一 [theme.css] 中的变量。
+- [x] 移除各组件中冗余的 `@media` 查询，归入各自的 `.mobile.css` 或 `.desktop.css`。
 
 ---
 

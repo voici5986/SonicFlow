@@ -1,0 +1,80 @@
+/* 桌面端播放器控制样式 */
+@media (min-width: 769px) {
+  .player-inner {
+    padding: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    overflow: visible;
+  }
+
+  .player-info-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0 30px;
+    position: relative;
+  }
+
+  .player-left-section {
+    display: flex;
+    align-items: center;
+    width: 25%;
+    min-width: 200px;
+    z-index: 10;
+  }
+
+  .player-center-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 50%;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+  }
+
+  .player-right-section {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    width: 25%;
+    min-width: 200px;
+    z-index: 10;
+  }
+
+  .progress-control-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0;
+    padding: 0;
+    height: 3px !important;
+    z-index: 100;
+    line-height: 1 !important;
+  }
+  
+  .progress-control-container .progress {
+    height: 3px !important;
+    min-height: 3px !important;
+    background-color: rgba(0,0,0,0.05) !important;
+  }
+
+  .progress-control-container .progress:hover {
+    height: 7px !important;
+  }
+
+  .progress-control-container .progress-bar {
+    height: 100% !important;
+    background-color: var(--color-accent) !important;
+  }
+}

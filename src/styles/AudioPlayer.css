@@ -1,5 +1,6 @@
 @import './AudioPlayer.base.css';
 @import './AudioPlayer.mobile.css';
+@import './AudioPlayer.desktop.css';
 @import './AudioPlayer.animations.css';
 
 /* 这里保留一些非常通用的、不属于以上分类的微调样式（如果有的话） */

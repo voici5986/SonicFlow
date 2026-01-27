@@ -32,7 +32,6 @@ import SyncProvider from './contexts/SyncContext';
 import FavoritesProvider from './contexts/FavoritesContext';
 import { clearExpiredCovers } from './services/storage';
 // 导入样式文件
-import './styles/NavigationFix.css';
 import './styles/AudioPlayer.css';
 import './styles/Orientation.css';
 

@@ -110,7 +110,7 @@ body {
   100% { transform: translateX(100%); }
 }
 
-/* 美化导航 - 基础样式已移至NavigationFix.css */
+/* 美化导航 - 基础样式已移至 Navigation.mobile.css 和 Navigation.desktop.css */
 
 /* 美化专辑封面 */
 img.rounded {

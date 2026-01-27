@@ -6,7 +6,8 @@ import './index.css';
 // 其他样式文件
 import './styles/App.css';
 import './styles/AudioPlayer.css';
-import './styles/NavigationFix.css';
+import './styles/Navigation.mobile.css';
+import './styles/Navigation.desktop.css';
 import './styles/Orientation.css';
 import './styles/UserProfile.css';
 import App from './App';
