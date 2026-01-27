@@ -162,7 +162,7 @@ const ProgressBar = () => {
       )}
 
       <div 
-        className="progress" 
+        className={`progress ${(isHovering || isDragging || isTouched) ? 'is-active' : ''}`}
         style={{ 
           height: (isHovering || isDragging || isTouched) ? '6px' : '3px', 
           minHeight: '3px',

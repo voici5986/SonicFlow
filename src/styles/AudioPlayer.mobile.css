@@ -25,6 +25,18 @@
     display: none; /* 隐藏原有的绝对定位进度条，使用内部的新进度条 */
   }
 
+  /* 修复移动端收起模式下进度条过粗的问题 */
+  /* 必须使用 !important 覆盖 index.css 中的全局设置 (.progress { height: var(--progress-height) !important; }) */
+  body .audio-player .progress-control-container .progress {
+    height: 3px !important;
+    min-height: 3px !important;
+  }
+
+  /* 当交互时（触摸、拖拽）变粗，配合 ProgressBar.js 中的 is-active 类 */
+  body .audio-player .progress-control-container .progress.is-active {
+    height: 6px !important;
+  }
+
   .mobile-progress-container {
      margin: 10px 0;
      padding: 0px; /* 这里调整进度条的左右间距 */
@@ -98,46 +110,24 @@
   .mobile-track-info-expanded .track-name {
     color: var(--color-text-primary);
     font-weight: 700;
-    font-size: 1.3rem;
-    margin-bottom: 0;
-    max-width: 95%;
-    white-space: nowrap;
+    font-size: 1.5rem; /* 增大字体 */
+    margin-bottom: 4px;
+    line-height: 1.2;
     overflow: hidden;
     text-overflow: ellipsis;
-    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* 最多显示两行 */
+    -webkit-box-orient: vertical;
+    width: 100%;
   }
 
   .mobile-track-info-expanded .track-artist {
     color: var(--color-text-secondary);
     font-size: 1rem;
-    max-width: 95%;
-    white-space: nowrap;
+    opacity: 0.8;
     overflow: hidden;
     text-overflow: ellipsis;
-    line-height: 1.2;
-  }
-
-  .mobile-track-info-expanded .track-artist::before {
-    display: none;
-  }
-
-  /* 呼吸效果提示 */
-  .player-inner::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(circle, transparent 95%, rgba(0, 0, 0, 0.06) 100%);
-    opacity: 0;
-    animation: pulse 3s infinite;
-    pointer-events: none;
-  }
-  
-  @keyframes pulse {
-    0% { opacity: 0; }
-    50% { opacity: 1; }
-    100% { opacity: 0; }
+    white-space: nowrap;
+    width: 100%;
   }
 }
