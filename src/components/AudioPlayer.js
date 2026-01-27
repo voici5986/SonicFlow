@@ -1,4 +1,4 @@
-import React, { useEffect, memo, useMemo, useState } from 'react';
+import React, { memo } from 'react';
 import { Row, Col, Button } from 'react-bootstrap';
 import {
   FaPlay, FaPause,
@@ -10,7 +10,7 @@ import { MdSkipPrevious, MdSkipNext } from 'react-icons/md';
 import HeartButton from './HeartButton';
 import ProgressBar from './ProgressBar';
 import '../styles/AudioPlayer.css';
-import { usePlayer } from '../contexts/PlayerContext';
+import useAudioPlayerViewState from '../hooks/useAudioPlayerViewState';
 import AlbumCover from './AlbumCover';
 
 /**
@@ -180,10 +180,7 @@ const AudioPlayer = () => {
     currentTrack,
     isPlaying,
     lyricExpanded,
-    lyricData,
     currentLyricIndex,
-    coverCache,
-    currentPlaylist,
     playMode,
     togglePlay,
     toggleLyric,
@@ -191,30 +188,15 @@ const AudioPlayer = () => {
     handleNext,
     handleTogglePlayMode,
     lyricsContainerRef,
-    parseLyric
-  } = usePlayer();
-
-  const [showMobileLyrics, setShowMobileLyrics] = useState(false);
-  
-  // 手势相关状态
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffsetY, setDragOffsetY] = useState(0);
-  const [startY, setStartY] = useState(0);
-
-  // 当歌词界面展开状态变化时，同步 body 类名并处理副作用
-  useEffect(() => {
-    if (lyricExpanded) {
-      // 当展开时，给 body 添加类以隐藏移动端 Tab 栏
-      document.body.classList.add('player-expanded');
-    } else {
-      // 当关闭展开模式时，重置移动端歌词显示状态并移除类
-      setShowMobileLyrics(false);
-      document.body.classList.remove('player-expanded');
-    }
-  }, [lyricExpanded]);
-
-  // 添加一个状态用于强制刷新红心图标
-  const [, forceUpdate] = React.useReducer(x => x + 1, 0);
+    processedLyrics,
+    showMobileLyrics,
+    setShowMobileLyrics,
+    isDragging,
+    dragOffsetY,
+    handleTouchStart,
+    handleTouchMove,
+    handleTouchEnd
+  } = useAudioPlayerViewState();
 
   // 渲染播放模式图标
   const renderPlayModeIcon = () => {
@@ -232,112 +214,6 @@ const AudioPlayer = () => {
       case 'random': return '随机播放';
       default: return '列表循环';
     }
-  };
-
-  // 监听收藏状态变化，同步更新播放器内的红心图标
-  useEffect(() => {
-    const handleFavoritesChanged = () => {
-      forceUpdate();
-    };
-
-    window.addEventListener('favorites_changed', handleFavoritesChanged);
-    return () => window.removeEventListener('favorites_changed', handleFavoritesChanged);
-  }, []);
-
-  // MediaSession 同步模块
-  useEffect(() => {
-    if (!currentTrack || !('mediaSession' in navigator)) return;
-
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: currentTrack.name,
-      artist: currentTrack.artist,
-      album: currentTrack.album || '',
-      artwork: [{
-        src: coverCache[`${currentTrack.source}_${currentTrack.pic_id}_300`] || '/default_cover.svg',
-        sizes: '300x300',
-        type: 'image/png'
-      }]
-    });
-
-    navigator.mediaSession.setActionHandler('play', togglePlay);
-    navigator.mediaSession.setActionHandler('pause', togglePlay);
-
-    if (currentPlaylist.length > 1) {
-      navigator.mediaSession.setActionHandler('previoustrack', handlePrevious);
-      navigator.mediaSession.setActionHandler('nexttrack', handleNext);
-    }
-  }, [currentTrack, coverCache, currentPlaylist, togglePlay, handlePrevious, handleNext]);
-
-  // 更新媒体会话播放状态
-  useEffect(() => {
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
-    }
-  }, [isPlaying]);
-
-  const processedLyrics = useMemo(() => {
-    if (!lyricData.parsedLyric) return [];
-    const translatedLines = lyricData.tLyric ? parseLyric(lyricData.tLyric) : [];
-    return lyricData.parsedLyric.map((line, index) => ({
-      ...line,
-      translatedText: translatedLines[index]?.text || ''
-    }));
-  }, [lyricData, parseLyric]);
-
-  // 歌词滚动逻辑
-  useEffect(() => {
-    if (lyricExpanded && currentLyricIndex >= 0 && lyricsContainerRef.current) {
-      const activeLine = lyricsContainerRef.current.querySelector('.active');
-      if (activeLine) {
-        activeLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }
-  }, [currentLyricIndex, lyricExpanded, lyricsContainerRef]);
-
-  /**
-   * 移动端手势处理：垂直下拉收起播放器
-   * 仅在封面模式（!showMobileLyrics）下启用
-   */
-  const handleTouchStart = (e) => {
-    if (!lyricExpanded || showMobileLyrics) return;
-    setStartY(e.touches[0].clientY);
-    setIsDragging(false);
-    setDragOffsetY(0);
-  };
-
-  const handleTouchMove = (e) => {
-    if (!lyricExpanded || showMobileLyrics) return;
-    
-    const currentY = e.touches[0].clientY;
-    const deltaY = currentY - startY;
-
-    // 只有向下滑动才触发
-    if (deltaY > 0) {
-      // 增加一点阻尼感：滑动位移越大，实际偏移增加越慢
-      // const damping = 1 - Math.min(deltaY / 1000, 0.5);
-      // setDragOffsetY(deltaY * damping);
-      
-      // 直接跟随手指，确保跟手感
-      setDragOffsetY(deltaY);
-      
-      // 只要滑动超过 10px 就认为进入拖动状态
-      if (deltaY > 10 && !isDragging) {
-        setIsDragging(true);
-      }
-    }
-  };
-
-  const handleTouchEnd = () => {
-    if (!lyricExpanded || showMobileLyrics) return;
-
-    // 如果下拉超过 120px，则收起播放器
-    if (isDragging && dragOffsetY > 120) {
-      toggleLyric();
-    }
-
-    // 重置状态
-    setIsDragging(false);
-    setDragOffsetY(0);
   };
 
   if (!currentTrack) return null;
