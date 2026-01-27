@@ -428,18 +428,10 @@
   color: var(--color-text-muted) !important;
 }
 
-/* 媒体查询中的变量调整 */
-@media (max-width: 1024px) {
-  :root {
-    /* 其他响应式变量调整... */
-  }
-}
-
 @media (max-width: 768px) {
   :root {
     --spacing-lg: 1.25rem;
     --spacing-xl: 1.75rem;
     --card-hover-transform: translateY(-3px);
-    /* 其他移动端变量调整... */
   }
 } 
