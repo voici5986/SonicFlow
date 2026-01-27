@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from 'react-bootstrap';
 import { FaPlay, FaPause, FaDownload } from 'react-icons/fa';
 import { MdSkipPrevious, MdSkipNext } from 'react-icons/md';
-import AlbumCover from './AlbumCover';
+import DesktopAlbumCover from './DesktopAlbumCover';
 import HeartButton from './HeartButton';
 import { LyricToggleButton } from './PlayerSubComponents';
 
@@ -28,7 +28,7 @@ const DesktopPlayerControl = ({
     <div className="player-info-controls d-none d-md-flex">
       {/* 左侧：歌曲信息 */}
       <div className="player-left-section">
-        <AlbumCover track={currentTrack} size="small" onClick={toggleLyric} forceFetch={true} />
+        <DesktopAlbumCover track={currentTrack} size="small" onClick={toggleLyric} />
         <div className="track-info-container ms-3">
           <h6 className="mb-0 text-truncate track-name">{currentTrack.name}</h6>
           <small className="text-muted text-truncate track-artist">{currentTrack.artist}</small>

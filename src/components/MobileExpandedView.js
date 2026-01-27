@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from 'react-bootstrap';
 import { FaTimes } from 'react-icons/fa';
-import AlbumCover from './AlbumCover';
+import MobileAlbumCover from './MobileAlbumCover';
 import { LyricLine } from './PlayerSubComponents';
 
 /**
@@ -10,6 +10,7 @@ import { LyricLine } from './PlayerSubComponents';
  */
 const MobileExpandedView = ({
   currentTrack,
+  isPlaying,
   toggleLyric,
   showMobileLyrics,
   setShowMobileLyrics,
@@ -40,7 +41,12 @@ const MobileExpandedView = ({
       }}>
         <div className="album-info-section">
           <div className="album-cover-container">
-            <AlbumCover track={currentTrack} size="large" forceFetch={true} />
+            <MobileAlbumCover 
+              track={currentTrack} 
+              size="large" 
+              isPlaying={isPlaying}
+              imgSize={500}
+            />
           </div>
           <div className="track-details d-none d-md-block">
             <h2 className="track-title">{currentTrack.name}</h2>

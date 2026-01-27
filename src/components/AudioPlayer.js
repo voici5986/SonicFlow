@@ -96,6 +96,7 @@ const AudioPlayer = () => {
       {/* 移动端全屏展开视图 */}
       <MobileExpandedView 
         currentTrack={currentTrack}
+        isPlaying={isPlaying}
         toggleLyric={toggleLyric}
         showMobileLyrics={showMobileLyrics}
         setShowMobileLyrics={setShowMobileLyrics}

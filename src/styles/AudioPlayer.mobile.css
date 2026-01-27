@@ -132,3 +132,15 @@
     width: 100%;
   }
 }
+
+/* 呼吸动画：仅在移动端大图模式且播放时启用 */
+@keyframes breathe {
+  0% { transform: scale(1); box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
+  50% { transform: scale(1.02); box-shadow: 0 12px 28px rgba(0,0,0,0.25); }
+  100% { transform: scale(1); box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
+}
+
+.breathing-animation {
+  animation: breathe 4s ease-in-out infinite;
+  will-change: transform, box-shadow;
+}
