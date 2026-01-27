@@ -325,8 +325,19 @@ const AudioPlayer = () => {
 
               {/* 展开模式下的内容：通过 mobile-expanded-content CSS 控制显示隐藏 */}
               {lyricExpanded && (
-                <div className="mobile-expanded-content" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 10 }}>
-                  <div className="mobile-expanded-player-content d-flex flex-column h-100 justify-content-center pb-2" style={{ position: 'relative' }}>
+                <div className="mobile-expanded-content" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 10, pointerEvents: 'none' }}>
+                  <div className="mobile-expanded-player-content d-flex flex-column h-100 justify-content-end pb-2" style={{ position: 'relative', pointerEvents: 'auto' }}>
+                    {/* 歌曲信息：移至播放控制上方，作为模块的一部分 */}
+                    <div className="mobile-track-info-expanded d-md-none">
+                      <h5 className="track-name">{currentTrack.name}</h5>
+                      <div className="track-artist">{currentTrack.artist}</div>
+                    </div>
+
+                    {/* 移动端专用的进度条容器：放在歌曲信息和控制按钮之间 */}
+                    <div className="mobile-progress-container d-md-none px-4 w-100">
+                      <ProgressBar />
+                    </div>
+
                     <div className="d-flex align-items-center justify-content-between px-4">
                       <div style={{ width: '40px', display: 'flex', justifyContent: 'center' }}>
                         <Button 
@@ -374,28 +385,26 @@ const AudioPlayer = () => {
                       </div>
                     </div>
                     
-                    {/* 改为绝对定位：向下收起的箭头按钮，固定在播放按钮下方 3vh */}
-                    <Button 
-                      variant="link" 
-                      onClick={toggleLyric} 
-                      className="p-0 text-muted opacity-75 no-focus-outline"
-                      aria-label="收起播放器"
-                      style={{
-                        position: 'absolute',
-                        top: 'calc(50% + 28px + 3vh)', /* 50% 是容器中心，28px 是播放按钮半径，3vh 是间距 */
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        zIndex: 20005,
-                        height: 'auto',
-                        padding: '10px', /* 增加点击区域 */
-                        border: 'none',
-                        boxShadow: 'none',
-                        outline: 'none',
-                        background: 'none'
-                      }}
-                    >
-                      <FaChevronDown size={20} />
-                    </Button>
+                    {/* 收起按钮：作为 Flex 序列的最后一项，保持统一间距 */}
+                    <div className="d-flex justify-content-center mt-2">
+                      <Button 
+                        variant="link" 
+                        onClick={toggleLyric} 
+                        className="p-0 text-muted opacity-75 no-focus-outline"
+                        aria-label="收起播放器"
+                        style={{
+                          zIndex: 20005,
+                          height: 'auto',
+                          padding: '10px',
+                          border: 'none',
+                          boxShadow: 'none',
+                          outline: 'none',
+                          background: 'none'
+                        }}
+                      >
+                        <FaChevronDown size={20} />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -479,18 +488,8 @@ const AudioPlayer = () => {
               <h2 className="track-title">{currentTrack.name}</h2>
               <h4 className="track-artist-album">{currentTrack.artist} - {currentTrack.album}</h4>
             </div>
-            {/* 移动端专用的歌曲信息：放在封面区域内，但在 CSS 中会根据 showMobileLyrics 调整 */}
-            <div className="mobile-track-info-expanded d-md-none">
-              <h5 className="track-name">{currentTrack.name}</h5>
-              <div className="track-artist">{currentTrack.artist}</div>
-            </div>
           </div>
           <div className="lyrics-section">
-            {/* 歌词模式下的歌曲信息，逻辑上属于歌词区 */}
-            <div className="mobile-track-info-expanded d-md-none">
-              <h5 className="track-name">{currentTrack.name}</h5>
-              <div className="track-artist">{currentTrack.artist}</div>
-            </div>
             <div className="lyrics-scroll-container" ref={lyricsContainerRef}>
               {processedLyrics.map((line, idx) => (
                 <LyricLine key={idx} line={line} isActive={idx === currentLyricIndex} />

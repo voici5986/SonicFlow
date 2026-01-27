@@ -1,0 +1,127 @@
+/* 移动端展开模式 UI 重构及动画样式 */
+
+@media (max-width: 768px) {
+  /* 基础容器动画 */
+  .audio-player {
+    bottom: calc(8vh + env(safe-area-inset-bottom)) !important;
+    height: 10vh !important;
+    min-height: 64px !important;
+    max-height: 80px !important;
+    border-top: none !important;
+    box-shadow: none !important;
+    z-index: 1040;
+    overflow: visible !important;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  .audio-player.expanded {
+    bottom: 0 !important;
+    height: 100vh !important;
+    z-index: 10000 !important;
+    background-color: transparent !important;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+
+  /* 状态切换时的内容淡入淡出 */
+  .audio-player:not(.expanded) .player-inner .row {
+    transition: opacity 0.3s ease;
+    opacity: 1;
+  }
+  
+  .audio-player.expanded .player-inner .row {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .mobile-expanded-content {
+    transition: opacity 0.4s ease 0.2s;
+    opacity: 0;
+  }
+
+  .audio-player.expanded .mobile-expanded-content {
+    opacity: 1;
+  }
+
+  /* 全屏视图基础动画 (Sheet-up) */
+  .player-expanded-view {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0 !important;
+    background-color: var(--card-background);
+    z-index: 9500;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden !important;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+    transform: translateY(100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .audio-player.expanded + .player-expanded-view {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* 内部组件进入动画 */
+  .audio-player:not(.expanded) + .player-expanded-view .album-info-section,
+  .audio-player:not(.expanded) + .player-expanded-view .lyrics-section,
+  .audio-player:not(.expanded) + .player-expanded-view .mobile-track-info-expanded {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  .audio-player.expanded + .player-expanded-view .album-info-section,
+  .audio-player.expanded + .player-expanded-view .lyrics-section,
+  .audio-player.expanded + .player-expanded-view .mobile-track-info-expanded {
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.1s, opacity 0.5s ease 0.1s;
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  /* 封面与歌词切换 - 秒切逻辑 */
+  .expanded-main-wrapper .album-info-section,
+  .expanded-main-wrapper .lyrics-section {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 65vh !important;
+    padding: 3vh 20px 0px 20px !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: none !important; 
+  }
+
+  .player-expanded-view.mobile-lyrics-active .album-info-section {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none;
+  }
+
+  .player-expanded-view.mobile-lyrics-active .lyrics-section {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto;
+  }
+
+  .player-expanded-view:not(.mobile-lyrics-active) .lyrics-section {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none;
+  }
+
+  .player-expanded-view:not(.mobile-lyrics-active) .album-info-section {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto;
+  }
+}
