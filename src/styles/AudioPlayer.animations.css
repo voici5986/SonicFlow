@@ -3,7 +3,7 @@
 @media (max-width: 768px) {
   /* 基础容器动画 */
   .audio-player {
-    bottom: calc(8vh + env(safe-area-inset-bottom)) !important;
+    bottom: calc(8vh + var(--safe-area-bottom)) !important;
     height: 10vh !important;
     min-height: 64px !important;
     max-height: 80px !important;
@@ -52,7 +52,9 @@
     left: 0;
     right: 0;
     bottom: 0 !important;
-    background-color: var(--card-background);
+    background-color: rgba(255, 255, 255, 0.75) !important;
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
     z-index: 9500;
     display: flex;
     flex-direction: column;

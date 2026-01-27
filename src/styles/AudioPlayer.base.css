@@ -8,7 +8,7 @@
   z-index: 1000;
   width: 100%;
   padding: 0;
-  overflow: visible !important;
+  overflow: visible;
 }
 
 .player-inner {
@@ -16,7 +16,7 @@
   overflow-x: hidden;
   overflow-y: auto;
   height: 100%;
-  padding: 10px 10px 12px 10px;
+  padding: 10px;
   position: relative;
 }
 
@@ -27,8 +27,7 @@
 }
 
 .audio-player.expanded {
-  height: var(--player-height-collapsed);
-  transition: none;
+  height: var(--player-height-collapsed); /* 桌面端展开时保持基础高度，主要依靠全屏视图显示 */
   z-index: 9999;
 }
 

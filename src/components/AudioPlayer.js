@@ -195,6 +195,11 @@ const AudioPlayer = () => {
   } = usePlayer();
 
   const [showMobileLyrics, setShowMobileLyrics] = useState(false);
+  
+  // 手势相关状态
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffsetY, setDragOffsetY] = useState(0);
+  const [startY, setStartY] = useState(0);
 
   // 当歌词界面展开状态变化时，同步 body 类名并处理副作用
   useEffect(() => {
@@ -288,6 +293,52 @@ const AudioPlayer = () => {
       }
     }
   }, [currentLyricIndex, lyricExpanded, lyricsContainerRef]);
+
+  /**
+   * 移动端手势处理：垂直下拉收起播放器
+   * 仅在封面模式（!showMobileLyrics）下启用
+   */
+  const handleTouchStart = (e) => {
+    if (!lyricExpanded || showMobileLyrics) return;
+    setStartY(e.touches[0].clientY);
+    setIsDragging(false);
+    setDragOffsetY(0);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!lyricExpanded || showMobileLyrics) return;
+    
+    const currentY = e.touches[0].clientY;
+    const deltaY = currentY - startY;
+
+    // 只有向下滑动才触发
+    if (deltaY > 0) {
+      // 增加一点阻尼感：滑动位移越大，实际偏移增加越慢
+      // const damping = 1 - Math.min(deltaY / 1000, 0.5);
+      // setDragOffsetY(deltaY * damping);
+      
+      // 直接跟随手指，确保跟手感
+      setDragOffsetY(deltaY);
+      
+      // 只要滑动超过 10px 就认为进入拖动状态
+      if (deltaY > 10 && !isDragging) {
+        setIsDragging(true);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!lyricExpanded || showMobileLyrics) return;
+
+    // 如果下拉超过 120px，则收起播放器
+    if (isDragging && dragOffsetY > 120) {
+      toggleLyric();
+    }
+
+    // 重置状态
+    setIsDragging(false);
+    setDragOffsetY(0);
+  };
 
   if (!currentTrack) return null;
 
@@ -395,7 +446,7 @@ const AudioPlayer = () => {
                         style={{
                           zIndex: 20005,
                           height: 'auto',
-                          padding: '10px',
+                          padding: '12px',
                           border: 'none',
                           boxShadow: 'none',
                           outline: 'none',
@@ -474,7 +525,16 @@ const AudioPlayer = () => {
         </div>
       </div>
 
-      <div className={`player-expanded-view ${showMobileLyrics ? 'mobile-lyrics-active' : ''}`}>
+      <div 
+        className={`player-expanded-view ${showMobileLyrics ? 'mobile-lyrics-active' : ''} ${isDragging ? 'is-dragging' : ''}`}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ 
+          transform: dragOffsetY > 0 ? `translateY(${dragOffsetY}px)` : '',
+          transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)'
+        }}
+      >
         <Button variant="link" onClick={toggleLyric} className="close-lyrics-btn"><FaTimes /></Button>
         
         <div className="expanded-main-wrapper" onClick={() => {

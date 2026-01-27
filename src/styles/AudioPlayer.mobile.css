@@ -1,49 +1,73 @@
 /* 移动端基础布局与交互样式 */
 
 @media (max-width: 768px) {
-  .player-inner {
-    padding: 8px 12px !important;
-    overflow: visible !important;
+  /* 通过提高权重 (body .audio-player) 来减少对 !important 的依赖 */
+  body .audio-player .player-inner {
+    padding: 8px 12px;
+    overflow: visible;
   }
 
-  .audio-player.expanded .player-inner {
+  body .audio-player.expanded .player-inner {
     pointer-events: auto;
-    height: 100% !important; /* 占据父容器全部高度 */
-    width: 100% !important;
-    /* 增加底部 padding，env(safe-area-inset-bottom) 适配全面屏手势区 */
-    padding: 0 0 calc(30px + env(safe-area-inset-bottom)) 0 !important; 
-    background: transparent !important;
+    height: 100%; /* 占据父容器全部高度 */
+    width: 100%;
+    /* 增加底部 padding，--safe-area-bottom 适配全面屏手势区 */
+    padding: 0 0 calc(30px + var(--safe-area-bottom)) 0; 
+    background: transparent;
     display: flex;
     flex-direction: column;
     justify-content: flex-end; /* 内容靠底部排列 */
-    overflow: visible !important;
-    z-index: 20000 !important;
+    overflow: visible;
+    z-index: 20000;
   }
 
-  .audio-player.expanded .progress-control-container {
-    display: none !important; /* 隐藏原有的绝对定位进度条，使用内部的新进度条 */
+  body .audio-player.expanded .progress-control-container {
+    display: none; /* 隐藏原有的绝对定位进度条，使用内部的新进度条 */
   }
 
   .mobile-progress-container {
-     margin: 10px 0 !important;
-     padding: 0px !important; /* 这里调整进度条的左右间距 */
+     margin: 10px 0;
+     padding: 0px; /* 这里调整进度条的左右间距 */
    }
 
   .mobile-progress-container .progress-bar-container {
-    height: 20px !important;
-    display: flex !important;
-    align-items: center !important;
+    height: 32px; /* 增大点击热区 */
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  /* 移动端进度条视觉优化：容器大但条纤细 */
+  .mobile-progress-container .progress {
+    height: 4px !important; /* 视觉高度保持纤细 */
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.05) !important;
+    border-radius: 2px !important;
+  }
+
+  .mobile-progress-container .progress-bar {
+    background-color: var(--color-accent) !important;
   }
 
   .mobile-expanded-player-content {
-    background: transparent !important;
+    background: transparent;
     display: flex;
     flex-direction: column;
     /* 增加间距，让歌曲信息、进度条和控制按钮有呼吸感 */
     gap: 15px;
-    position: relative !important;
-    z-index: 20001 !important;
-    padding-top: 10px !important;
+    position: relative;
+    z-index: 20001;
+    padding-top: 10px;
+  }
+
+  /* 手势拖动状态：禁用过渡动画，实现跟手感 */
+  .mobile-expanded-player-content.is-dragging {
+    transition: none !important;
+  }
+
+  /* 手势拖动状态：禁用过渡动画，实现跟手感 */
+  .player-expanded-view.is-dragging {
+    transition: none !important;
   }
 
   .expanded-main-wrapper {
@@ -56,33 +80,27 @@
 
   /* 移动端歌曲信息显示：不再使用绝对定位，而是作为 Flex 项目自然排列 */
   .mobile-track-info-expanded {
-    position: relative !important;
-    width: 100% !important;
-    height: auto !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-    align-items: flex-start !important;
-    padding: 0 24px !important; /* 左右对齐播放按钮的间距 */
-    text-align: left !important;
-    background: transparent !important;
-    gap: 4px !important;
-    margin: 0 !important;
-    z-index: 20003 !important;
-  }
-
-  /* 移除之前针对封面和歌词区域的定位覆盖 */
-  .album-info-section .mobile-track-info-expanded,
-  .lyrics-section .mobile-track-info-expanded {
-    display: none !important;
+    position: relative;
+    width: 100%;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 0 24px; /* 左右对齐播放按钮的间距 */
+    text-align: left;
+    background: transparent;
+    gap: 4px;
+    margin: 0;
+    z-index: 20003;
   }
 
   .mobile-track-info-expanded .track-name {
     color: var(--color-text-primary);
     font-weight: 700;
-    font-size: 1.3rem !important;
+    font-size: 1.3rem;
     margin-bottom: 0;
-    max-width: 95% !important;
+    max-width: 95%;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -91,8 +109,8 @@
 
   .mobile-track-info-expanded .track-artist {
     color: var(--color-text-secondary);
-    font-size: 1rem !important;
-    max-width: 95% !important;
+    font-size: 1rem;
+    max-width: 95%;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -100,7 +118,7 @@
   }
 
   .mobile-track-info-expanded .track-artist::before {
-    display: none !important;
+    display: none;
   }
 
   /* 呼吸效果提示 */
