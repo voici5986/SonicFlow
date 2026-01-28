@@ -3,7 +3,8 @@ import { Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
 import { useRegion } from '../contexts/RegionContext';
 import { useDebounce } from '../utils/throttleDebounce';
-import { FaGoogle } from 'react-icons/fa';
+import { FaEnvelope, FaLock, FaWaveSquare } from 'react-icons/fa';
+import { FcGoogle } from 'react-icons/fc';
 
 /**
  * 登录表单组件
@@ -133,73 +134,66 @@ const LoginForm = ({ onToggleForm, onLoginSuccess }) => {
   };
 
   return (
-    <div className="login-form-container py-3">
-      <h3 className="text-center mb-4">登录账号</h3>
+    <div className="auth-form-container">
+      {/* 移动端显示的品牌区域 */}
+      <div className="brand-section d-lg-none">
+        <div className="brand-logo">
+          <FaWaveSquare />
+        </div>
+        <div className="brand-name">SonicFlow</div>
+        <div className="brand-tagline">让音乐随心而动</div>
+      </div>
+
+      <h3 className="text-center mb-4 d-none d-lg-block">登录账号</h3>
+      
       {error && <Alert variant="danger">{error}</Alert>}
       {resetEmailSent && <Alert variant="success">重置密码邮件已发送，请查收</Alert>}
       
       <Form onSubmit={handleSubmit} data-testid="login-form">
-        <Form.Group className="mb-3" controlId="formEmail">
-          <Form.Label>邮箱地址</Form.Label>
-          <Form.Control
-            type="email"
-            placeholder="请输入邮箱地址"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              handleEmailChange(e.target.value);
-            }}
-            required
-            disabled={loading || !accountFeatureAvailable}
-          />
-        </Form.Group>
-
-        <Form.Group className="mb-3" controlId="formPassword">
-          <Form.Label>密码</Form.Label>
-          <Form.Control
-            type="password"
-            placeholder="请输入密码"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              handlePasswordChange(e.target.value);
-            }}
-            required
-            disabled={loading || !accountFeatureAvailable}
-          />
-        </Form.Group>
-
-        <div className="d-flex justify-content-between mb-4">
-          <button
-            type="button"
-            className="text-primary"
-            onClick={handleForgotPassword}
-            style={{ cursor: 'pointer', textDecoration: 'none', background: 'none', border: 'none', padding: '0' }}
-          >
-            忘记密码？
-          </button>
+        <div className="form-group">
+          <div className="input-wrapper">
+            <div className="input-icon">
+              <FaEnvelope />
+            </div>
+            <input
+              type="email"
+              className="input-field"
+              placeholder="电子邮箱"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                handleEmailChange(e.target.value);
+              }}
+              required
+              disabled={loading || !accountFeatureAvailable}
+            />
+          </div>
         </div>
 
-        <Button
-          variant="link"
+        <div className="form-group">
+          <div className="input-wrapper">
+            <div className="input-icon">
+              <FaLock />
+            </div>
+            <input
+              type="password"
+              className="input-field"
+              placeholder="密码"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                handlePasswordChange(e.target.value);
+              }}
+              required
+              disabled={loading || !accountFeatureAvailable}
+            />
+          </div>
+        </div>
+
+        <button
           type="submit"
           disabled={loading || !accountFeatureAvailable}
-          className="w-100 mb-3"
-          style={{
-            backgroundColor: 'var(--color-background)',
-            color: 'var(--color-text-primary)',
-            borderRadius: 'var(--border-radius)',
-            padding: '0.6rem 1rem',
-            fontWeight: '600',
-            textDecoration: 'none',
-            border: '1px solid var(--color-border)',
-            boxShadow: 'var(--shadow-sm)',
-            transition: 'all 0.2s ease',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '48px'
-          }}
+          className="btn-auth btn-primary-auth"
         >
           {loading ? (
             <Spinner
@@ -209,44 +203,37 @@ const LoginForm = ({ onToggleForm, onLoginSuccess }) => {
               role="status"
               aria-hidden="true"
             />
-          ) : "登录"}
-        </Button>
+          ) : "立即登录"}
+        </button>
 
-        <Button
-          variant="link"
+        <button
           type="button"
           onClick={handleGoogleLogin}
           disabled={loading || !accountFeatureAvailable}
-          className="w-100 mb-3"
-          style={{
-            backgroundColor: 'var(--color-background)',
-            color: 'var(--color-text-primary)',
-            borderRadius: 'var(--border-radius)',
-            padding: '0.6rem 1rem',
-            fontWeight: '600',
-            textDecoration: 'none',
-            border: '1px solid var(--color-border)',
-            boxShadow: 'var(--shadow-sm)',
-            transition: 'all 0.2s ease',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '48px'
-          }}
+          className="btn-auth btn-google-auth"
         >
-          <FaGoogle className="me-2" /> Google 登录
-        </Button>
+          <FcGoogle /> 使用 Google 账号登录
+        </button>
 
-        <div className="text-center mt-3">
-          <span style={{ color: 'var(--color-text-secondary)' }}>还没有账号？</span>{' '}
+        <div className="d-flex justify-content-between align-items-center mt-4">
           <button
             type="button"
-            className="text-accent"
-            onClick={onToggleForm}
-            style={{ cursor: 'pointer', textDecoration: 'none', background: 'none', border: 'none', padding: '0', color: 'var(--color-accent)', fontWeight: 'bold' }}
+            onClick={handleForgotPassword}
+            style={{ cursor: 'pointer', textDecoration: 'none', background: 'none', border: 'none', padding: '0', fontSize: '15px', color: '#4A90E2', fontWeight: '500' }}
           >
-            立即注册
+            忘记密码？
           </button>
+          
+          <div>
+            <button
+              type="button"
+              className="text-accent"
+              onClick={onToggleForm}
+              style={{ cursor: 'pointer', textDecoration: 'none', background: 'none', border: 'none', padding: '0', color: 'var(--color-accent)', fontWeight: '700', fontSize: '15px' }}
+            >
+              免费注册
+            </button>
+          </div>
         </div>
       </Form>
     </div>

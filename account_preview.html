@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SonicFlow 账号页面重构方案预览</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            /* 同步自 theme.css */
+            --color-primary: #1F1F1F;
+            --color-primary-light: #2F3437;
+            --color-accent: #D15C5C;
+            --color-success: #28a745;
+            --color-danger: #e74c3c;
+            --color-text-primary: #1F1F1F;
+            --color-text-secondary: #2F3437;
+            --color-text-muted: #9B9A97;
+            --color-background: #FAFAF9;
+            --color-background-alt: #F7F6F4;
+            --color-border: #E9E9E9;
+            --border-radius: 10px;
+            --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #E0E0E0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: var(--color-text-primary);
+        }
+
+        /* 模拟手机容器 */
+        .phone-container {
+            width: 375px;
+            height: 812px;
+            background-color: var(--color-background);
+            border: 12px solid #222;
+            border-radius: 40px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.2);
+        }
+
+        .screen-content {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow-y: auto;
+            scrollbar-width: none;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .screen-content::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* 背景装饰 */
+        .bg-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 240px;
+            background: linear-gradient(135deg, #F0F0F0 0%, var(--color-background) 100%);
+            z-index: 0;
+        }
+
+        .bg-accent-blob {
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(209, 92, 92, 0.08) 0%, transparent 70%);
+            z-index: 0;
+        }
+
+        /* 页面视图切换 */
+        .view {
+            display: none;
+            padding: 24px;
+            flex: 1;
+            z-index: 1;
+            animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .view.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- 登录视图样式 --- */
+        .login-view {
+            justify-content: center;
+            align-items: center;
+            padding-top: 60px;
+        }
+
+        .brand-logo {
+            width: 80px;
+            height: 80px;
+            background: var(--color-primary);
+            color: white;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transform: rotate(-5deg);
+        }
+
+        .brand-name {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            letter-spacing: -1px;
+            color: var(--color-primary);
+        }
+
+        .brand-tagline {
+            font-size: 14px;
+            color: var(--color-text-muted);
+            margin-bottom: 48px;
+        }
+
+        .form-group {
+            width: 100%;
+            margin-bottom: 16px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--color-text-muted);
+            font-size: 14px;
+        }
+
+        .input-field {
+            width: 100%;
+            height: 54px;
+            background: white;
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius);
+            padding: 16px 16px 16px 44px;
+            color: var(--color-text-primary);
+            font-size: 15px;
+            transition: var(--transition);
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--color-accent);
+            box-shadow: 0 0 0 4px rgba(209, 92, 92, 0.05);
+        }
+
+        .btn {
+            width: 100%;
+            height: 54px;
+            border-radius: var(--border-radius);
+            border: none;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .btn-primary {
+            background-color: var(--color-primary);
+            color: white;
+            margin-top: 12px;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.97);
+            background-color: #000;
+        }
+
+        .btn-google {
+            background-color: white;
+            border: 1px solid var(--color-border);
+            color: var(--color-text-primary);
+            margin-top: 16px;
+        }
+
+        .divider {
+            margin: 32px 0;
+            display: flex;
+            align-items: center;
+            width: 100%;
+            color: var(--color-text-muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .divider::before, .divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: var(--color-border);
+            margin: 0 16px;
+        }
+
+        /* --- 个人中心视图样式 --- */
+        .profile-view {
+            padding-top: 20px;
+        }
+
+        .profile-card {
+            background: white;
+            border-radius: 24px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .profile-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            background: var(--color-background-alt);
+            z-index: 0;
+        }
+
+        .avatar-wrapper {
+            width: 90px;
+            height: 90px;
+            border-radius: 30px;
+            background: white;
+            padding: 4px;
+            margin-bottom: 16px;
+            z-index: 1;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            transform: rotate(3deg);
+        }
+
+        .avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 26px;
+            background: var(--color-background-alt);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: var(--color-primary);
+        }
+
+        .user-info {
+            text-align: center;
+            z-index: 1;
+        }
+
+        .user-name {
+            font-size: 22px;
+            font-weight: 800;
+            margin: 0 0 4px 0;
+            color: var(--color-primary);
+        }
+
+        .user-email {
+            font-size: 14px;
+            color: var(--color-text-muted);
+        }
+
+        .stats-row {
+            display: flex;
+            width: 100%;
+            margin-top: 24px;
+            border-top: 1px solid var(--color-border);
+            padding-top: 20px;
+            justify-content: space-around;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--color-primary);
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--color-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        .menu-group {
+            margin-bottom: 24px;
+        }
+
+        .group-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--color-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            padding-left: 4px;
+        }
+
+        .menu-container {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        .menu-item {
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: var(--transition);
+            cursor: pointer;
+            border-bottom: 1px solid var(--color-background-alt);
+        }
+
+        .menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .menu-item:active {
+            background: var(--color-background-alt);
+        }
+
+        .menu-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--color-background-alt);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-primary);
+            font-size: 14px;
+        }
+
+        .menu-text {
+            flex: 1;
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .menu-suffix {
+            color: var(--color-text-muted);
+            font-size: 12px;
+        }
+
+        .logout-container {
+            margin-top: auto;
+            padding-bottom: 30px;
+        }
+
+        .btn-logout {
+            background-color: white;
+            color: var(--color-danger);
+            border: 1px solid var(--color-border);
+        }
+
+        .btn-logout:active {
+            background-color: #FFF5F5;
+            border-color: #FFDADA;
+        }
+
+        /* 顶部状态栏 */
+        .status-bar {
+            height: 44px;
+            padding: 0 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 10;
+            color: var(--color-primary);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="phone-container">
+        <div class="bg-pattern"></div>
+        <div class="bg-accent-blob"></div>
+        
+        <div class="status-bar">
+            <span>9:41</span>
+            <div>
+                <i class="fas fa-signal"></i>
+                <i class="fas fa-wifi" style="margin: 0 4px;"></i>
+                <i class="fas fa-battery-full"></i>
+            </div>
+        </div>
+
+        <div class="screen-content">
+            <!-- 登录视图 -->
+            <div id="loginView" class="view login-view active">
+                <div class="brand-logo">
+                    <i class="fas fa-wave-square"></i>
+                </div>
+                <div class="brand-name">SonicFlow</div>
+                <div class="brand-tagline">让音乐随心而动</div>
+                
+                <div class="form-group">
+                    <div class="input-wrapper">
+                        <i class="far fa-envelope input-icon"></i>
+                        <input type="email" class="input-field" placeholder="电子邮箱">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input type="password" class="input-field" placeholder="密码">
+                    </div>
+                </div>
+                
+                <div style="width: 100%; text-align: right; margin-bottom: 24px;">
+                    <span style="font-size: 13px; color: var(--color-accent); font-weight: 500;">忘记密码？</span>
+                </div>
+                
+                <button class="btn btn-primary" onclick="showView('profileView')">立即登录</button>
+                
+                <div class="divider">第三方登录</div>
+                
+                <button class="btn btn-google">
+                    <svg width="18" height="18" viewBox="0 0 18 18">
+                        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+                        <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+                        <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.712s.102-1.172.282-1.712V4.956H.957a8.996 8.996 0 0 0 0 8.088l3.007-2.332z" fill="#FBBC05"/>
+                        <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.956l3.007 2.332c.708-2.127 2.692-3.711 5.036-3.711z" fill="#EA4335"/>
+                    </svg>
+                    使用 Google 账号继续
+                </button>
+                
+                <div style="margin-top: 32px; font-size: 14px; color: var(--color-text-muted);">
+                    还没有账号？ <span style="color: var(--color-accent); font-weight: 700;">免费注册</span>
+                </div>
+            </div>
+
+            <!-- 个人中心视图 -->
+            <div id="profileView" class="view profile-view">
+                <div class="profile-card">
+                    <div class="avatar-wrapper">
+                        <div class="avatar">
+                            <i class="fas fa-headphones-alt"></i>
+                        </div>
+                    </div>
+                    <div class="user-info">
+                        <h2 class="user-name">Sonic Explorer</h2>
+                        <span class="user-email">explorer@sonicflow.com</span>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stat-item">
+                            <span class="stat-value">128</span>
+                            <span class="stat-label">收藏</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">42</span>
+                            <span class="stat-label">歌单</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">1.2k</span>
+                            <span class="stat-label">听过</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="menu-group">
+                    <div class="group-title">账户</div>
+                    <div class="menu-container">
+                        <div class="menu-item">
+                            <div class="menu-icon"><i class="fas fa-sync-alt"></i></div>
+                            <span class="menu-text">多端数据同步</span>
+                            <span class="menu-suffix"><i class="fas fa-chevron-right"></i></span>
+                        </div>
+                        <div class="menu-item">
+                            <div class="menu-icon"><i class="fas fa-shield-alt"></i></div>
+                            <span class="menu-text">账号安全</span>
+                            <span class="menu-suffix"><i class="fas fa-chevron-right"></i></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="menu-group">
+                    <div class="group-title">偏好</div>
+                    <div class="menu-container">
+                        <div class="menu-item">
+                            <div class="menu-icon"><i class="fas fa-paint-brush"></i></div>
+                            <span class="menu-text">外观设置</span>
+                            <span class="menu-suffix">浅色 <i class="fas fa-chevron-right" style="margin-left: 8px;"></i></span>
+                        </div>
+                        <div class="menu-item">
+                            <div class="menu-icon"><i class="fas fa-database"></i></div>
+                            <span class="menu-text">清除缓存</span>
+                            <span class="menu-suffix">124 MB <i class="fas fa-chevron-right" style="margin-left: 8px;"></i></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="logout-container">
+                    <button class="btn btn-logout" onclick="showView('loginView')">
+                        <i class="fas fa-power-off"></i> 退出登录
+                    </button>
+                    <div style="text-align: center; margin-top: 16px; font-size: 11px; color: var(--color-text-muted);">
+                        SonicFlow Version 2.1.0 (Build 2026)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showView(viewId) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            
+            // 自动滚动到顶部
+            document.querySelector('.screen-content').scrollTop = 0;
+        }
+    </script>
+</body>
+</html>

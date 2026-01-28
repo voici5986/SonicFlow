@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Container, Row, Col, Card, Button, Spinner, Modal, Form, Alert, ProgressBar, Dropdown, InputGroup } from 'react-bootstrap';
-import { FaPlay, FaPause, FaDownload, FaTrash, FaFileExport, FaFileImport, FaCloudDownloadAlt, FaExchangeAlt, FaSearch } from 'react-icons/fa';
+import { Container, Row, Col, Card, Button, Spinner, Modal, Form, Alert, Dropdown, InputGroup } from 'react-bootstrap';
+import { FaPlay, FaPause, FaDownload, FaTrash, FaFileExport, FaFileImport, FaExchangeAlt, FaSearch } from 'react-icons/fa';
 import AlbumCover from '../components/AlbumCover';
 import HeartButton from '../components/HeartButton';
 import MusicCardActions from '../components/MusicCardActions';
 import { getFavorites, toggleFavorite, saveFavorites, MAX_FAVORITES_ITEMS } from '../services/storage';
 import { toast } from 'react-toastify';
-import { downloadTrack, downloadTracks } from '../services/downloadService';
+import { downloadTrack } from '../services/downloadService';
 import { searchMusic } from '../services/musicApiService';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -27,12 +27,6 @@ const Favorites = () => {
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef(null);
 
-  // 新增批量下载相关状态
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState(0);
-  const [showDownloadModal, setShowDownloadModal] = useState(false);
-  const [downloadStatus, setDownloadStatus] = useState([]);
-  const [downloadQuality, setDownloadQuality] = useState('320'); // 默认选择320kbps音质
   // 添加单首歌曲下载状态
   const [downloading, setDownloading] = useState(false);
   const [currentDownloadingTrack, setCurrentDownloadingTrack] = useState(null);
@@ -642,47 +636,6 @@ const Favorites = () => {
     }
   };
 
-  // 开始批量下载过程
-  const startBulkDownload = async () => {
-    if (isDownloading || favorites.length === 0) return;
-
-    // 使用用户选择的音质
-    const actualQuality = downloadQuality;
-
-    setIsDownloading(true);
-
-    // 使用下载服务模块批量下载
-    await downloadTracks(favorites, actualQuality, {
-      onStart: () => {
-        // 开始批量下载
-        setDownloadProgress(0);
-      },
-      onProgress: (index, progress, status) => {
-        // 更新下载进度
-        setDownloadProgress(progress);
-
-        // 更新单曲下载状态
-        const newStatus = [...downloadStatus];
-        newStatus[index] = status;
-        setDownloadStatus(newStatus);
-      },
-      onFinish: (successCount, totalCount) => {
-        // 下载完成
-        setDownloadProgress(100);
-        setIsDownloading(false);
-      }
-    });
-  };
-
-  // 关闭下载模态框
-  const handleCloseDownload = () => {
-    if (!isDownloading) {
-      setShowDownloadModal(false);
-      setDownloadStatus([]);
-      setDownloadProgress(0);
-    }
-  };
-
   // 渲染登录提醒组件
   const renderLoginReminder = () => {
     if (!currentUser) {
@@ -690,8 +643,7 @@ const Favorites = () => {
         <div className="login-prompt-container">
           <div className="d-flex align-items-center login-prompt-content">
             <div className="flex-grow-1">
-              <h5 className="login-prompt-title">登录您的账号</h5>
-              <p className="login-prompt-desc">登录后可以将您的收藏同步到云端，在任何设备上访问您喜爱的音乐。</p>
+              <p className="login-prompt-desc mb-0">同步收藏，在任何设备访问您喜爱的音乐。</p>
             </div>
             <div className="login-prompt-action">
               <Button
@@ -726,15 +678,6 @@ const Favorites = () => {
         </div>
         <div className="d-flex justify-content-end">
           <Button
-            variant="outline-primary"
-            size="sm"
-            className="me-2 d-none d-md-inline-flex minimal-action-btn"
-            onClick={() => setShowDownloadModal(true)}
-            disabled={favorites.length === 0}
-          >
-            <FaCloudDownloadAlt className="me-1" /> 批量下载
-          </Button>
-          <Button
             variant="outline-success"
             size="sm"
             className="me-2 d-none d-md-inline-flex minimal-action-btn"
@@ -753,17 +696,8 @@ const Favorites = () => {
           </Button>
 
           {/* 移动端显示的按钮组 */}
-          <div className="d-flex d-md-none">
-            <Button
-              size="sm"
-              className="me-2 minimal-action-btn"
-              onClick={() => setShowDownloadModal(true)}
-              disabled={favorites.length === 0}
-            >
-              <FaCloudDownloadAlt /> <span className="d-none d-sm-inline">批量下载</span>
-            </Button>
-
-            <Dropdown>
+          <div className="d-flex justify-content-end">
+          <Dropdown>
               <Dropdown.Toggle size="sm" id="dropdown-import-export" className="minimal-action-btn">
                 <FaExchangeAlt /> <span className="d-none d-sm-inline">导入导出</span>
               </Dropdown.Toggle>
@@ -917,58 +851,6 @@ const Favorites = () => {
                 导入中...
               </>
             ) : '开始导入'}
-          </Button>
-        </Modal.Footer>
-      </Modal>
-
-      {/* 批量下载模态框 */}
-      <Modal show={showDownloadModal} onHide={handleCloseDownload} backdrop="static" size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>批量下载收藏歌曲</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Alert variant="info">
-            将下载您收藏的 {favorites.length} 首歌曲。请选择音质并确认下载。
-          </Alert>
-
-          <Form.Group className="mb-3">
-            <Form.Label>选择音质</Form.Label>
-            <Form.Select
-              value={downloadQuality}
-              onChange={(e) => setDownloadQuality(e.target.value)}
-            >
-              <option value="128">128kbps</option>
-              <option value="192">192kbps</option>
-              <option value="320">320kbps</option>
-              <option value="999">无损音质</option>
-            </Form.Select>
-          </Form.Group>
-
-          {isDownloading && (
-            <>
-              <ProgressBar
-                now={downloadProgress}
-                label={`${downloadProgress}%`}
-                className="mb-3"
-              />
-            </>
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleCloseDownload} disabled={isDownloading}>
-            取消
-          </Button>
-          <Button
-            variant="primary"
-            onClick={startBulkDownload}
-            disabled={isDownloading || favorites.length === 0}
-          >
-            {isDownloading ? (
-              <>
-                <Spinner animation="border" size="sm" className="me-1" />
-                下载中...
-              </>
-            ) : '开始下载'}
           </Button>
         </Modal.Footer>
       </Modal>

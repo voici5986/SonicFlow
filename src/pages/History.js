@@ -119,8 +119,7 @@ const History = () => {
         <div className="login-prompt-container">
           <div className="d-flex align-items-center login-prompt-content">
             <div className="flex-grow-1">
-              <h5 className="login-prompt-title">登录您的账号</h5>
-              <p className="login-prompt-desc">登录后可以将您的播放历史同步到云端，在任何设备上继续您的音乐旅程。</p>
+              <p className="login-prompt-desc mb-0">同步播放历史，在任何设备继续音乐旅程。</p>
             </div>
             <div className="login-prompt-action">
               <Button 

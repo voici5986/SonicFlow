@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, Card, Image, Spinner, Container, Badge } from 'react-bootstrap';
+import { Spinner } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
-import { getFavorites, getHistory } from '../services/storage';
-import { FaHeart, FaHistory, FaSignOutAlt, FaSync } from 'react-icons/fa';
-import FirebaseStatus from './FirebaseStatus';
-import ClearDataButton from './ClearDataButton';
+import { getFavorites, getHistory, clearHistory, clearSearchHistory, resetPendingChanges } from '../services/storage';
+import { clearSyncTimestamp } from '../services/syncService';
+import { clearMemoryCache } from '../services/memoryCache';
+import { FaHeart, FaHistory, FaSignOutAlt, FaCloud, FaChevronRight, FaTrash } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { useSync } from '../contexts/SyncContext';
 import { initialSync } from '../services/syncService';
-import '../styles/UserProfile.css';
+import '../styles/User.mobile.css';
 
 const UserProfile = ({ onTabChange }) => {
   const { currentUser, signOut } = useAuth();
@@ -136,6 +136,49 @@ const UserProfile = ({ onTabChange }) => {
       onTabChange(tabId);
     }
   };
+
+  // 处理清除数据
+  const handleClearData = async () => {
+    if (window.confirm('确定要清除本地缓存数据吗？这将清除播放历史、搜索记录和临时缓存，但保留您的收藏。')) {
+      try {
+        const operations = [];
+        
+        // 清除历史记录
+        operations.push(clearHistory());
+        
+        // 清除搜索历史
+        operations.push(clearSearchHistory());
+        
+        // 清除内存缓存
+        operations.push(Promise.resolve(clearMemoryCache()));
+        
+        // 通知Service Worker清理缓存
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({
+            type: 'CLEAN_CACHE'
+          });
+        }
+        
+        // 清除同步时间戳
+        if (currentUser) {
+          operations.push(clearSyncTimestamp(currentUser.uid));
+        }
+        
+        // 重置待同步变更计数
+        operations.push(resetPendingChanges());
+        
+        await Promise.all(operations);
+        
+        toast.success('本地缓存已清除');
+        
+        // 触发自定义事件
+        window.dispatchEvent(new Event('local:data_cleared'));
+      } catch (error) {
+        console.error('清除缓存失败:', error);
+        toast.error('清除缓存失败');
+      }
+    }
+  };
   
   if (!currentUser) {
     return null;
@@ -151,179 +194,93 @@ const UserProfile = ({ onTabChange }) => {
       date = new Date(date);
     }
     return date.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
       hour: '2-digit',
       minute: '2-digit'
     });
   };
-  
-  // 渲染同步状态
-  const renderSyncStatus = () => {
-    const timeString = syncStatus.timestamp ? formatTime(syncStatus.timestamp) : '未同步';
-    let statusClass = '';
-    let statusText = '';
-    
-    if (syncStatus.loading) {
-      statusClass = 'info';
-      statusText = `正在同步: ${syncStatus.message}`;
-    } else if (syncStatus.success === true) {
-      statusClass = 'success';
-      statusText = `同步成功: ${timeString}`;
-    } else if (syncStatus.success === false) {
-      statusClass = 'danger';
-      statusText = `同步失败: ${timeString}`;
-    } else {
-      statusClass = 'secondary';
-      statusText = '未同步';
-    }
-    
-    return (
-      <div className="sync-status-container">
-        <div className={`sync-status ${statusClass}`}>
-          {statusText}
-        </div>
-      </div>
-    );
+
+  // 获取同步状态文本
+  const getSyncStatusText = () => {
+    if (syncStatus.loading) return '正在同步...';
+    if (syncStatus.success === true) return `上次同步 ${formatTime(syncStatus.timestamp)}`;
+    if (syncStatus.success === false) return '同步失败';
+    return '未同步';
   };
   
   return (
-    <div className="user-profile-container">
-      <Container>
-        <div className="user-dashboard">
-          {/* 1. 用户资料卡片 */}
-          <Card className="profile-card">
-            <Card.Body>
-              <div className="avatar-container">
-                {currentUser.photoURL ? (
-                  <Image 
-                    src={currentUser.photoURL} 
-                    roundedCircle 
-                    className="user-avatar"
-                  />
-                ) : (
-                  <div className="avatar-initial rounded-circle d-flex justify-content-center align-items-center">
-                    {userInitial}
-                  </div>
-                )}
-              </div>
-              <div className="user-info">
-                <h3 className="user-name">{currentUser.displayName || '用户'}</h3>
-                <p className="user-email">{currentUser.email}</p>
-                <Button 
-                  variant="link" 
-                  className="logout-button w-100 mt-2"
-                  onClick={handleLogout}
-                  style={{
-                    backgroundColor: 'var(--color-background)',
-                    color: 'var(--color-danger)',
-                    borderRadius: 'var(--border-radius)',
-                    padding: '0.6rem 1rem',
-                    fontWeight: '600',
-                    textDecoration: 'none',
-                    border: '1px solid var(--color-border)',
-                    boxShadow: 'var(--shadow-sm)',
-                    transition: 'all 0.2s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '48px'
-                  }}
-                >
-                  <FaSignOutAlt className="me-2" /> 退出登录
-                </Button>
-              </div>
-            </Card.Body>
-          </Card>
-          
-          {/* 2. 统计卡片 */}
-          <Card className="stats-card">
-            <Card.Body>
-              <div 
-                className="stats-item clickable" 
-                onClick={() => handleStatsCardClick('favorites')}
-              >
-                <div className="stats-icon favorites">
-                  <FaHeart />
-                </div>
-                <div className="stats-content">
-                  <div className="stats-value">{favoritesCount}</div>
-                  <p className="stats-label">收藏的歌曲</p>
-                </div>
-              </div>
-              
-              <div 
-                className="stats-item clickable" 
-                onClick={() => handleStatsCardClick('history')}
-              >
-                <div className="stats-icon history">
-                  <FaHistory />
-                </div>
-                <div className="stats-content">
-                  <div className="stats-value">{historyCount}</div>
-                  <p className="stats-label">历史记录</p>
-                </div>
-              </div>
-              
-              <ClearDataButton onClick={() => {}} />
-            </Card.Body>
-          </Card>
-          
-          {/* 3. 同步卡片 */}
-          <Card className="sync-card">
-            <Card.Body>
-              {/* Firebase状态指示器 */}
-              <FirebaseStatus />
-              
-              {/* 同步状态 */}
-              {renderSyncStatus()}
-              
-              {/* 待同步项信息 */}
-              {!syncStatus.loading && pendingChanges.count > 0 && (
-                <div className="pending-changes-info mb-2 text-center">
-                  <Badge bg="warning" text="dark">
-                    {pendingChanges.count}项待同步
-                    {pendingChanges.details.favorites > 0 && ` (${pendingChanges.details.favorites}收藏)`}
-                    {pendingChanges.details.history > 0 && ` (${pendingChanges.details.history}历史)`}
-                  </Badge>
-                </div>
-              )}
-              
-              {/* 同步按钮 */}
-              <Button 
-                variant="link" 
-                onClick={handleManualSync}
-                disabled={syncStatus.loading}
-                className="sync-button w-100"
-                style={{
-                  backgroundColor: 'var(--color-background)',
-                  color: 'var(--color-text-primary)',
-                  borderRadius: 'var(--border-radius)',
-                  padding: '0.6rem 1rem',
-                  fontWeight: '600',
-                  textDecoration: 'none',
-                  border: '1px solid var(--color-border)',
-                  boxShadow: 'var(--shadow-sm)',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '48px'
-                }}
-              >
-                {syncStatus.loading ? (
-                  <Spinner animation="border" size="sm" />
-                ) : (
-                  <>
-                    <FaSync className={`me-2 ${syncStatus.loading ? 'fa-spin' : ''}`} /> 立即同步
-                  </>
-                )}
-              </Button>
-            </Card.Body>
-          </Card>
+    <div>
+      {/* 1. 用户资料卡片 */}
+      <div className="profile-card">
+        <div className="avatar-wrapper">
+          <div className="avatar-content">
+            {currentUser.photoURL ? (
+              <img 
+                src={currentUser.photoURL} 
+                alt="Avatar"
+                className="avatar-image"
+              />
+            ) : (
+              userInitial
+            )}
+          </div>
         </div>
-      </Container>
+        
+        <div className="user-info-section">
+          <h3 className="user-name-large">{currentUser.displayName || '用户'}</h3>
+          <p className="user-email-text">{currentUser.email}</p>
+        </div>
+        
+        <div className="stats-row">
+          <div 
+            className="stat-item" 
+            onClick={() => handleStatsCardClick('favorites')}
+          >
+            <span className="stat-value">{favoritesCount}</span>
+            <span className="stat-label">收藏</span>
+          </div>
+          <div 
+            className="stat-item" 
+            onClick={() => handleStatsCardClick('history')}
+          >
+            <span className="stat-value">{historyCount}</span>
+            <span className="stat-label">历史</span>
+          </div>
+        </div>
+      </div>
+      
+      {/* 2. 功能菜单 */}
+      <div className="menu-group">
+        <div className="group-title">数据管理</div>
+        <div className="menu-container">
+          <div className="menu-item" onClick={handleManualSync}>
+            <div className="menu-icon-box" style={{ color: '#4A90E2', background: '#F0F7FF' }}>
+              <FaCloud />
+            </div>
+            <div className="menu-text">云端同步</div>
+            <div className="menu-suffix">
+              {syncStatus.loading && <Spinner animation="border" size="sm" className="me-2" />}
+              {getSyncStatusText()} <FaChevronRight />
+            </div>
+          </div>
+          
+          <div className="menu-item" onClick={handleClearData}>
+            <div className="menu-icon-box" style={{ color: '#D15C5C', background: '#FFF5F5' }}>
+              <FaTrash />
+            </div>
+            <div className="menu-text">清除本地缓存</div>
+            <div className="menu-suffix">
+              <FaChevronRight />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="logout-container">
+        <button className="btn-auth btn-logout" onClick={handleLogout}>
+          <FaSignOutAlt className="me-2" /> 退出登录
+        </button>
+        <div className="version-text">SonicFlow v1.0.0</div>
+      </div>
     </div>
   );
 };

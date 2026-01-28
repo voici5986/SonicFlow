@@ -9,7 +9,6 @@ import './styles/AudioPlayer.css';
 import './styles/Navigation.mobile.css';
 import './styles/Navigation.desktop.css';
 import './styles/Orientation.css';
-import './styles/UserProfile.css';
 import App from './App';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';

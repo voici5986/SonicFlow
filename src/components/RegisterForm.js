@@ -3,6 +3,7 @@ import { Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
 import { useRegion } from '../contexts/RegionContext';
 import { useDebounce } from '../utils/throttleDebounce';
+import { FaUser, FaEnvelope, FaLock, FaWaveSquare } from 'react-icons/fa';
 
 /**
  * 注册表单组件
@@ -119,95 +120,108 @@ const RegisterForm = ({ onToggleForm, onRegisterSuccess }) => {
   };
   
   return (
-    <div className="register-form p-4 music-card" style={{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text-primary)' }}>
-      <h4 className="mb-4">创建账号</h4>
+    <div className="auth-form-container">
+      {/* 移动端显示的品牌区域 */}
+      <div className="brand-section d-lg-none">
+        <div className="brand-logo">
+          <FaWaveSquare />
+        </div>
+        <div className="brand-name">SonicFlow</div>
+        <div className="brand-tagline">让音乐随心而动</div>
+      </div>
+
+      <h3 className="text-center mb-4 d-none d-lg-block">创建账号</h3>
       
       {error && <Alert variant="danger">{error}</Alert>}
       
       <Form onSubmit={handleSubmit}>
-        <Form.Group className="mb-3">
-          <Form.Label style={{ color: 'var(--color-text-secondary)' }}>昵称</Form.Label>
-          <Form.Control
-            type="text"
-            value={displayName}
-            className="search-input"
-            onChange={(e) => {
-              setDisplayName(e.target.value);
-              handleDisplayNameChange(e.target.value);
-            }}
-            placeholder="请输入您的昵称"
-            disabled={loading || !accountFeatureAvailable}
-          />
-        </Form.Group>
+        <div className="form-group">
+          <div className="input-wrapper">
+            <div className="input-icon">
+              <FaUser />
+            </div>
+            <input
+              type="text"
+              className="input-field"
+              placeholder="昵称"
+              value={displayName}
+              onChange={(e) => {
+                setDisplayName(e.target.value);
+                handleDisplayNameChange(e.target.value);
+              }}
+              required
+              disabled={loading || !accountFeatureAvailable}
+            />
+          </div>
+        </div>
         
-        <Form.Group className="mb-3">
-          <Form.Label style={{ color: 'var(--color-text-secondary)' }}>电子邮箱</Form.Label>
-          <Form.Control
-            type="email"
-            value={email}
-            className="search-input"
-            onChange={(e) => {
-              setEmail(e.target.value);
-              handleEmailChange(e.target.value);
-            }}
-            placeholder="请输入您的邮箱"
-            disabled={loading || !accountFeatureAvailable}
-          />
-        </Form.Group>
+        <div className="form-group">
+          <div className="input-wrapper">
+            <div className="input-icon">
+              <FaEnvelope />
+            </div>
+            <input
+              type="email"
+              className="input-field"
+              placeholder="电子邮箱"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                handleEmailChange(e.target.value);
+              }}
+              required
+              disabled={loading || !accountFeatureAvailable}
+            />
+          </div>
+        </div>
         
-        <Form.Group className="mb-3">
-          <Form.Label style={{ color: 'var(--color-text-secondary)' }}>密码</Form.Label>
-          <Form.Control
-            type="password"
-            value={password}
-            className="search-input"
-            onChange={(e) => {
-              setPassword(e.target.value);
-              handlePasswordChange(e.target.value);
-            }}
-            placeholder="请设置密码"
-            disabled={loading || !accountFeatureAvailable}
-          />
-          <Form.Text style={{ color: 'var(--color-text-tertiary)' }}>
+        <div className="form-group">
+          <div className="input-wrapper">
+            <div className="input-icon">
+              <FaLock />
+            </div>
+            <input
+              type="password"
+              className="input-field"
+              placeholder="设置密码"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                handlePasswordChange(e.target.value);
+              }}
+              required
+              disabled={loading || !accountFeatureAvailable}
+            />
+          </div>
+          <div className="text-muted small mt-1 ps-1" style={{ fontSize: '12px' }}>
             密码长度至少为6个字符
-          </Form.Text>
-        </Form.Group>
+          </div>
+        </div>
         
-        <Form.Group className="mb-3">
-          <Form.Label style={{ color: 'var(--color-text-secondary)' }}>确认密码</Form.Label>
-          <Form.Control
-            type="password"
-            value={confirmPassword}
-            className="search-input"
-            onChange={(e) => {
-              setConfirmPassword(e.target.value);
-              handleConfirmPasswordChange(e.target.value);
-            }}
-            placeholder="请再次输入密码"
-            disabled={loading || !accountFeatureAvailable}
-          />
-        </Form.Group>
+        <div className="form-group">
+          <div className="input-wrapper">
+            <div className="input-icon">
+              <FaLock />
+            </div>
+            <input
+              type="password"
+              className="input-field"
+              placeholder="确认密码"
+              value={confirmPassword}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                handleConfirmPasswordChange(e.target.value);
+              }}
+              required
+              disabled={loading || !accountFeatureAvailable}
+            />
+          </div>
+        </div>
         
-        <Button 
-          variant="link" 
+        <button 
           type="submit" 
-          className="w-100 mb-3"
+          className="btn-auth btn-primary-auth"
           disabled={loading || !accountFeatureAvailable}
-          style={{
-            backgroundColor: 'var(--color-background)',
-            color: 'var(--color-text-primary)',
-            borderRadius: 'var(--border-radius)',
-            padding: '0.6rem 1rem',
-            fontWeight: '600',
-            textDecoration: 'none',
-            border: '1px solid var(--color-border)',
-            boxShadow: 'var(--shadow-sm)',
-            transition: 'all 0.2s ease',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '48px'
-          }}
         >
           {loading ? (
             <Spinner
@@ -217,16 +231,16 @@ const RegisterForm = ({ onToggleForm, onRegisterSuccess }) => {
               role="status"
               aria-hidden="true"
             />
-          ) : "注册"}
-        </Button>
+          ) : "立即注册"}
+        </button>
         
-        <div className="text-center mt-3">
-          <span style={{ color: 'var(--color-text-secondary)' }}>已有账号？</span>{' '}
+        <div className="text-center mt-4">
+          <span style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>已有账号？</span>{' '}
           <button
             type="button"
             className="text-accent"
             onClick={onToggleForm}
-            style={{ cursor: 'pointer', textDecoration: 'none', background: 'none', border: 'none', padding: '0', color: 'var(--color-accent)', fontWeight: 'bold' }}
+            style={{ cursor: 'pointer', textDecoration: 'none', background: 'none', border: 'none', padding: '0', color: 'var(--color-accent)', fontWeight: '700', fontSize: '14px' }}
           >
             立即登录
           </button>
