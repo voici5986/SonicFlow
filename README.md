@@ -12,7 +12,7 @@
 - 🎯 **全平台聚合搜索** - 支持网易云、QQ音乐、Spotify、YouTube Music 等 10+ 音乐平台
 - 🎧 **无损音质体验** - 支持最高 999k FLAC 无损音质在线播放及直接下载
 - ☁️ **云端数据同步** - 基于 Firebase 实现多设备间的收藏夹和播放历史无感同步
-- 🌐 **智能区域检测** - 自动切换"完整模式"或"中国模式"，适应不同网络环境
+
 - 📱 **PWA 支持** - 可作为本地应用安装，支持离线访问核心功能
 - 🎨 **现代化 UI** - 沉浸式播放器、双语歌词（支持滚动与预览）、响应式设计
 
@@ -113,7 +113,7 @@ npm run serve
 | 变量名 | 描述 | 默认值/示例 | 是否必需 |
 | :--- | :--- | :--- | :--- |
 | `REACT_APP_API_BASE` | 后端 API 地址 | `/api-v1` (开发环境代理至生产 API) | ✅ 必需 |
-| `REACT_APP_IPINFO_TOKEN` | IP 区域检测 Token | 前往 [ipinfo.io](https://ipinfo.io) 获取 | ❌ 可选 |
+
 | `FIREBASE_API_KEY` | Firebase API Key | 参见 [FIREBASE_SETUP.md](FIREBASE_SETUP.md) | ❌ 可选 |
 | `FIREBASE_AUTH_DOMAIN` | Firebase 认证域名 | your-project.firebaseapp.com | ❌ 可选 |
 | `FIREBASE_PROJECT_ID` | Firebase 项目 ID | your-project-id | ❌ 可选 |
@@ -124,7 +124,7 @@ npm run serve
 > 🔧 **配置说明**: 
 > - 必需配置 `REACT_APP_API_BASE` 以确保应用正常运行
 > - 如需使用云端同步功能，请配置所有 Firebase 相关变量
-> - IP 区域检测功能需要 `REACT_APP_IPINFO_TOKEN` 才能正常工作
+> 
 
 ## 📦 技术栈
 

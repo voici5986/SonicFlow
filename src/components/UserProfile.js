@@ -300,7 +300,7 @@ const UserProfile = ({ onTabChange }) => {
         </button>
       </div>
       
-      <div className="version">SonicFlow v1.0.0</div>
+      <div className="version">SonicFlow v{process.env.VITE_APP_VERSION}</div>
     </div>
   );
 };

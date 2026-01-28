@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
   auth,
   loginWithEmailAndPassword,
@@ -16,7 +16,6 @@ import {
 } from '../services/syncService';
 import { toast } from 'react-toastify';
 import { saveSyncStatus, getLocalUser, saveLocalUser, getNetworkStatus } from '../services/storage';
-import { APP_MODES, APP_EVENTS } from '../services/regionDetection';
 import useFirebaseStatus from '../hooks/useFirebaseStatus';
 
 // 创建认证上下文
@@ -34,61 +33,20 @@ export const AuthProvider = ({ children }) => {
   // 使用Firebase状态Hook
   const { isAvailable: isFirebaseAvailable, checkAvailability } = useFirebaseStatus({
     showToasts: false, // 不显示提示，由AuthContext自己处理
-    manualCheck: true // 手动检查，避免和regionDetection中的检查冲突
+    manualCheck: true // 手动检查
   });
 
   const [isOfflineMode, setIsOfflineMode] = useState(!isFirebaseAvailable);
 
-  // 添加对当前应用模式的引用
-  const appModeRef = useRef(null);
-
-  // 检测应用模式变化
+  // 仅根据 Firebase 可用性状态设置离线模式
   useEffect(() => {
-    const handleAppModeChange = (event) => {
-      if (event.detail && event.detail.mode) {
-        appModeRef.current = event.detail.mode;
-
-        // 如果切换到中国模式或离线模式，设置为离线模式
-        if (event.detail.mode === APP_MODES.CHINA || event.detail.mode === APP_MODES.OFFLINE) {
-          setIsOfflineMode(true);
-
-          // 如果没有当前用户，尝试加载本地用户
-          if (!currentUser) {
-            const localUser = getLocalUser();
-            if (localUser) {
-              setCurrentUser(localUser);
-            }
-          }
-        }
-        // 如果切换到完整模式，尝试恢复Firebase连接
-        else if (event.detail.mode === APP_MODES.FULL) {
-          checkAvailability().then(available => {
-            setIsOfflineMode(!available);
-          });
-        }
-      }
-    };
-
-    // 监听应用模式变化事件
-    window.addEventListener(APP_EVENTS.MODE_CHANGED, handleAppModeChange);
-
-    return () => {
-      window.removeEventListener(APP_EVENTS.MODE_CHANGED, handleAppModeChange);
-    };
-  }, [currentUser, checkAvailability]);
-
-
-  // 仅在非离线模式且应用模式已确定时，同步 Firebase 可用性状态
-  useEffect(() => {
-    if (appModeRef.current !== APP_MODES.CHINA && appModeRef.current !== APP_MODES.OFFLINE) {
-      setIsOfflineMode(!isFirebaseAvailable);
-    }
+    setIsOfflineMode(!isFirebaseAvailable);
   }, [isFirebaseAvailable]);
 
   // 注册
   const register = async (email, password, displayName) => {
-    // 如果处于离线模式或中国模式，创建本地用户
-    if (isOfflineMode || appModeRef.current === APP_MODES.CHINA) {
+    // 如果处于离线模式，创建本地用户
+    if (isOfflineMode) {
       try {
         // 创建简单的本地用户对象
         const localUser = {
@@ -133,8 +91,8 @@ export const AuthProvider = ({ children }) => {
 
   // 邮箱密码登录
   const login = async (email, password) => {
-    // 如果处于离线模式或中国模式，尝试获取本地用户
-    if (isOfflineMode || appModeRef.current === APP_MODES.CHINA) {
+    // 如果处于离线模式，尝试获取本地用户
+    if (isOfflineMode) {
       try {
         const localUser = getLocalUser();
 
@@ -175,9 +133,9 @@ export const AuthProvider = ({ children }) => {
 
   // Google登录
   const signInWithGoogle = async () => {
-    if (isOfflineMode || appModeRef.current === APP_MODES.CHINA) {
-      toast.error('当前模式下Google登录不可用');
-      return { success: false, error: new Error('当前模式下Google登录不可用') };
+    if (isOfflineMode) {
+      toast.error('当前网络不可用，Google登录不可用');
+      return { success: false, error: new Error('当前网络不可用，Google登录不可用') };
     }
 
     try {
@@ -205,7 +163,7 @@ export const AuthProvider = ({ children }) => {
 
     try {
       // 在退出登录前执行一次同步，确保数据保存到云端
-      if (currentUser && !isOfflineMode && appModeRef.current !== APP_MODES.CHINA) {
+      if (currentUser && !isOfflineMode) {
         try {
           console.log('退出登录前同步：检查数据变更');
 
@@ -295,9 +253,9 @@ export const AuthProvider = ({ children }) => {
 
   // 重置密码
   const resetPassword = async (email) => {
-    if (isOfflineMode || appModeRef.current === APP_MODES.CHINA) {
-      toast.error('当前模式下重置密码功能不可用');
-      return { success: false, error: new Error('当前模式下重置密码功能不可用') };
+    if (isOfflineMode) {
+      toast.error('当前网络不可用，重置密码功能不可用');
+      return { success: false, error: new Error('当前网络不可用，重置密码功能不可用') };
     }
 
     try {
@@ -317,8 +275,8 @@ export const AuthProvider = ({ children }) => {
 
   // 监听用户登录状态
   useEffect(() => {
-    // 离线模式或中国模式下不需要监听Firebase身份验证状态
-    if (isOfflineMode || appModeRef.current === APP_MODES.CHINA) {
+    // 离线模式下不需要监听Firebase身份验证状态
+    if (isOfflineMode) {
       setLoading(false);
       return () => { };
     }
@@ -348,18 +306,6 @@ export const AuthProvider = ({ children }) => {
             return;
           }
 
-          // 检查应用模式
-          if (appModeRef.current === APP_MODES.CHINA || appModeRef.current === APP_MODES.OFFLINE) {
-            console.warn('当前模式不支持同步，跳过登录同步');
-            setSyncComplete(true);
-            await saveSyncStatus({
-              loading: false,
-              success: false,
-              message: '当前模式不支持同步，同步已跳过',
-              timestamp: new Date()
-            }, user.uid);
-            return;
-          }
 
           // 检查Firebase可用性，使用Hook提供的方法
           const firebaseAvailable = await checkAvailability();

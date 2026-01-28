@@ -3,8 +3,6 @@
  * 统一处理音乐相关API调用，包括搜索、获取URL、歌词和封面
  */
 import axios from 'axios';
-import { getCurrentAppMode, APP_MODES } from '../services/regionDetection';
-import { ERROR_MESSAGES } from '../constants/strings';
 import { getMemoryCache, setMemoryCache, CACHE_TYPES } from './memoryCache';
 import audioStateManager from './audioStateManager';
 import { validateSearchResults } from '../utils/dataValidator';
@@ -23,11 +21,6 @@ const pendingLyricRequests = new Map();
  * 检查是否允许API请求
  */
 const checkApiAccess = () => {
-  const currentMode = getCurrentAppMode();
-  if (currentMode === APP_MODES.CHINA) {
-    throw new Error(ERROR_MESSAGES.REGION_RESTRICTED);
-  }
-
   return true;
 };
 

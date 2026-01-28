@@ -210,7 +210,7 @@
 @media (max-width: 768px) {
   /* 调整页面底部内边距：Tab栏(8vh) + 播放器收起高度(10vh) */
   body {
-    padding-bottom: calc(18vh + var(--safe-area-bottom)) !important;
+    padding-bottom: calc(var(--mobile-tab-bar-height) + var(--player-height-collapsed) + var(--safe-area-bottom)) !important;
     padding-top: 0 !important; /* 顶栏没了，不需要顶部内边距 */
   }
 

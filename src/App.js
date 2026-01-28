@@ -13,7 +13,6 @@ import UpdateNotification from './components/UpdateNotification';
 import AudioPlayer from './components/AudioPlayer';
 import { useAuth } from './contexts/AuthContext';
 import { useDevice } from './contexts/DeviceContext';
-import { RegionProvider } from './contexts/RegionContext';
 import PlayerProvider, { usePlayer } from './contexts/PlayerContext';
 import { lockToPortrait } from './utils/orientationManager';
 import { downloadTrack } from './services/downloadService';
@@ -40,22 +39,6 @@ const Favorites = React.lazy(() => import('./pages/Favorites'));
 const History = React.lazy(() => import('./pages/History'));
 const User = React.lazy(() => import('./pages/User'));
 
-// 离线模式横幅样式
-const offlineBannerStyle = {
-  position: 'fixed',
-  top: '56px',
-  left: 0,
-  width: '100%',
-  padding: '8px 0',
-  backgroundColor: 'var(--color-background-alt)',
-  color: 'var(--color-text-secondary)',
-  textAlign: 'center',
-  zIndex: 'var(--z-index-backdrop)',
-  borderBottom: '1px solid var(--color-border)',
-  fontSize: '0.9rem',
-  fontWeight: 500,
-  boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-};
 
 // 搜索状态管理
 const searchInitialState = {
@@ -126,7 +109,7 @@ const AppContent = () => {
     setActiveTab(tab);
   }, []);
 
-  const { isOfflineMode } = useAuth();
+
 
   const { isOnline } = useNetworkStatus({
     showToasts: true,
@@ -451,11 +434,6 @@ const AppContent = () => {
           onTabChange={handleTabChange}
         />
 
-        {isOfflineMode && (
-          <div style={offlineBannerStyle}>
-            当前处于离线模式，仅可访问已缓存的内容
-          </div>
-        )}
 
         <Container fluid className="mt-4 pb-5">
           {renderContent()}
@@ -474,15 +452,13 @@ const AppContent = () => {
 // 主App组件，只负责提供上下文
 const App = () => {
   return (
-    <RegionProvider>
-      <SyncProvider>
-        <PlayerProvider>
-          <FavoritesProvider>
-            <AppContent />
-          </FavoritesProvider>
-        </PlayerProvider>
-      </SyncProvider>
-    </RegionProvider>
+    <SyncProvider>
+      <PlayerProvider>
+        <FavoritesProvider>
+          <AppContent />
+        </FavoritesProvider>
+      </PlayerProvider>
+    </SyncProvider>
   );
 };
 

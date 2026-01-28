@@ -22,7 +22,8 @@ const firebaseConfig = {
   projectId: cleanEnvVar(process.env.REACT_APP_FIREBASE_PROJECT_ID),
   storageBucket: cleanEnvVar(process.env.REACT_APP_FIREBASE_STORAGE_BUCKET),
   messagingSenderId: cleanEnvVar(process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID),
-  appId: cleanEnvVar(process.env.REACT_APP_FIREBASE_APP_ID)
+  appId: cleanEnvVar(process.env.REACT_APP_FIREBASE_APP_ID),
+  measurementId: cleanEnvVar(process.env.REACT_APP_FIREBASE_MEASUREMENT_ID)
 };
 
 // 检查配置是否基本完整 (至少需要 apiKey 和 projectId)

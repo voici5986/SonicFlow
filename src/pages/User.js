@@ -6,21 +6,14 @@ import RegisterForm from '../components/RegisterForm';
 import ClearDataButton from '../components/ClearDataButton';
 import { useAuth } from '../contexts/AuthContext';
 import { getFavorites, getHistory } from '../services/storage';
-import { useRegion } from '../contexts/RegionContext';
 import { FaHeart, FaHistory } from 'react-icons/fa';
 import '../styles/User.mobile.css'; // 引入新的移动端优先样式
 
 const User = ({ onTabChange }) => {
   const { currentUser } = useAuth();
-  const { appMode } = useRegion(); // 添加appMode，确保组件能够响应模式变化
   const [isLogin, setIsLogin] = useState(true);
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [historyCount, setHistoryCount] = useState(0);
-  
-  // 添加调试日志，查看当前模式
-  useEffect(() => {
-    console.log(`User页面: 当前应用模式 = ${appMode}`);
-  }, [appMode]);
   
   // 加载统计数据
   useEffect(() => {
@@ -136,6 +129,7 @@ const User = ({ onTabChange }) => {
                     
                     <div className="text-muted small mt-3 text-center">
                       <p className="mb-1">登录后可以同步您的收藏和历史记录</p>
+                      <p className="mb-0">版本: {import.meta.env.VITE_APP_VERSION}</p>
                     </div>
                   </Card.Body>
                 </Card>

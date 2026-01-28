@@ -117,10 +117,6 @@ const getErrorMessage = (error, type) => {
     return '请求超时，请稍后重试';
   }
   
-  // 检查是否是区域限制错误
-  if (error.message && error.message.includes('中国大陆')) {
-    return '因法律风险，本服务不对IP为中国大陆地区的用户开放';
-  }
   
   // 根据错误类型返回适当的消息
   switch (type) {

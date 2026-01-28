@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
-import { useRegion } from '../contexts/RegionContext';
 import { useDebounce } from '../utils/throttleDebounce';
 import { FaEnvelope, FaLock, FaWaveSquare } from 'react-icons/fa';
 import { FcGoogle } from 'react-icons/fc';
@@ -35,20 +34,8 @@ const LoginForm = ({ onToggleForm, onLoginSuccess }) => {
   // 获取认证上下文
   const { login, signInWithGoogle, resetPassword } = useAuth();
   
-  // 获取区域上下文
-  const { isFeatureAvailable } = useRegion();
-  
   // 检查账号功能是否可用
-  const accountFeatureAvailable = isFeatureAvailable('account');
-  
-  // 当账号功能不可用时显示警告
-  useEffect(() => {
-    if (!accountFeatureAvailable) {
-      setError('当前区域无法使用账号功能，请尝试使用VPN或代理服务');
-    } else {
-      setError('');
-    }
-  }, [accountFeatureAvailable]);
+  const accountFeatureAvailable = true;
   
   // 处理表单提交
   const handleSubmit = async (e) => {
@@ -63,11 +50,6 @@ const LoginForm = ({ onToggleForm, onLoginSuccess }) => {
       return;
     }
     
-    // 检查账号功能是否可用
-    if (!accountFeatureAvailable) {
-      setError('当前区域无法使用账号功能，请尝试使用VPN或代理服务');
-      return;
-    }
     
     try {
       setLoading(true);
