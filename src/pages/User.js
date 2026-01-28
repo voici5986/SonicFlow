@@ -59,7 +59,7 @@ const User = ({ onTabChange }) => {
   if (currentUser) {
     return (
       <div className="user-page-container">
-        <Container className="py-4">
+        <Container className="py-3">
           <UserProfile onTabChange={onTabChange} />
         </Container>
       </div>
