@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getFavorites, getHistory, clearHistory, clearSearchHistory, resetPendingChanges } from '../services/storage';
 import { clearSyncTimestamp } from '../services/syncService';
 import { clearMemoryCache } from '../services/memoryCache';
-import { FaHeart, FaHistory, FaSignOutAlt, FaCloud, FaChevronRight, FaTrashAlt } from 'react-icons/fa';
+import { FaHeart, FaHistory, FaSignOutAlt, FaCloud, FaChevronRight, FaTrashAlt, FaDatabase, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { useSync } from '../contexts/SyncContext';
 import { initialSync } from '../services/syncService';
@@ -15,6 +15,8 @@ const UserProfile = ({ onTabChange }) => {
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [historyCount, setHistoryCount] = useState(0);
   const [syncCooldown, setSyncCooldown] = useState(false);
+  
+  const [showDataMgmt, setShowDataMgmt] = useState(false);
   
   // 使用同步上下文
   const { 
@@ -226,7 +228,7 @@ const UserProfile = ({ onTabChange }) => {
         <p className="user-email-text">{currentUser.email}</p>
       </div>
       
-      {/* 2. 统计/功能卡片列表 */}
+      {/* 2. 功能卡片列表 */}
       <div className="card-list">
         {/* 收藏卡片 */}
         <div 
@@ -257,47 +259,51 @@ const UserProfile = ({ onTabChange }) => {
             <FaChevronRight />
           </div>
         </div>
-      </div>
-      
-      <div className="section-title">设置</div>
 
-      {/* 3. 设置列表 */}
-      <div className="settings-list">
         {/* 云端同步 */}
-        <div className="setting-card" onClick={handleManualSync}>
-          <div className="setting-icon" style={{ color: '#4A90E2' }}>
+        <div className="long-card" onClick={handleManualSync}>
+          <div className="card-icon" style={{ color: '#4A90E2' }}>
             <FaCloud />
           </div>
-          <div className="setting-text">多端数据同步</div>
-          <div className="setting-value" style={{ fontSize: '12px' }}>
+          <div className="card-label">多端数据同步</div>
+          <div className="card-number" style={{ fontSize: '14px', fontWeight: 'normal', color: 'var(--color-text-muted)' }}>
              {syncStatus.loading ? (
                 <Spinner animation="border" size="sm" />
              ) : (
                 getSyncStatusText().replace('上次同步 ', '')
              )}
           </div>
-          <div className="setting-arrow">
+          <div className="card-arrow">
             <FaChevronRight />
           </div>
         </div>
-        
-        {/* 清除缓存 */}
-        <div className="setting-card" onClick={handleClearData}>
-          <div className="setting-icon" style={{ color: 'var(--color-text-muted)' }}>
-            <FaTrashAlt />
-          </div>
-          <div className="setting-text">清除本地缓存</div>
-          <div className="setting-arrow">
-            <FaChevronRight />
-          </div>
-        </div>
-      </div>
 
-      {/* 4. 退出登录 */}
-      <div className="logout-section">
-        <button className="logout-button" onClick={handleLogout}>
-          <FaSignOutAlt /> 退出登录
-        </button>
+        {/* 数据管理下拉 */}
+        <div className="data-mgmt-container">
+          <div 
+            className={`long-card ${showDataMgmt ? 'active' : ''}`} 
+            onClick={() => setShowDataMgmt(!showDataMgmt)}
+          >
+            <div className="card-icon" style={{ color: 'var(--color-text-muted)' }}>
+              <FaDatabase />
+            </div>
+            <div className="card-label">数据管理</div>
+            <div className="card-arrow">
+              {showDataMgmt ? <FaChevronUp /> : <FaChevronDown />}
+            </div>
+          </div>
+          
+          {showDataMgmt && (
+            <div className="data-mgmt-dropdown">
+              <div className="dropdown-item" onClick={handleClearData}>
+                <FaTrashAlt className="me-2" /> 清除本地缓存
+              </div>
+              <div className="dropdown-item logout" onClick={handleLogout}>
+                <FaSignOutAlt className="me-2" /> 退出登录
+              </div>
+            </div>
+          )}
+        </div>
       </div>
       
       <div className="version">SonicFlow v{process.env.VITE_APP_VERSION}</div>

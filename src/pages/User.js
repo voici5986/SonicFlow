@@ -129,7 +129,7 @@ const User = ({ onTabChange }) => {
                     
                     <div className="text-muted small mt-3 text-center">
                       <p className="mb-1">登录后可以同步您的收藏和历史记录</p>
-                      <p className="mb-0">版本: {import.meta.env.VITE_APP_VERSION}</p>
+                      <p className="mb-0">版本: {process.env.VITE_APP_VERSION}</p>
                     </div>
                   </Card.Body>
                 </Card>

@@ -21,6 +21,7 @@ export default defineConfig({
     define: {
         // envCompatible 插件已经处理了环境变量，此处只需保留基础兼容性
         'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
+        'process.env.VITE_APP_VERSION': JSON.stringify(process.env.npm_package_version),
     },
     esbuild: {
         // 强制对 src 下的所有 .js 文件使用 jsx 加载器

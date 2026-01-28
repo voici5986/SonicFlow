@@ -207,8 +207,58 @@
   display: flex;
   flex-direction: column;
   gap: 8px; /* 调整为 8px */
-  margin-bottom: 40px; /* 调整为 40px */
+  margin-bottom: 24px; /* 调整为 24px */
   padding: 0 20px;
+}
+
+.data-mgmt-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.data-mgmt-dropdown {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  margin-top: 4px;
+  overflow: hidden;
+  animation: slideDown 0.2s ease-out;
+}
+
+.dropdown-item {
+  padding: 14px 18px;
+  font-size: 15px;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.dropdown-item:hover {
+  background: var(--color-background-alt);
+}
+
+.dropdown-item:active {
+  background: var(--color-background-alt);
+  opacity: 0.8;
+}
+
+.dropdown-item.logout {
+  color: #EB5757;
+  border-top: 1px solid var(--color-border);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .section-title {
@@ -271,14 +321,14 @@
 }
 
 .card-label {
-  font-size: 15px; /* 调整为 15px */
+  font-size: 16px; /* 统一为 16px */
   font-weight: 500;
   flex: 1;
   color: var(--color-text-primary);
 }
 
 .setting-text {
-  font-size: 14px; /* 调整为 14px */
+  font-size: 16px; /* 统一为 16px */
   font-weight: 500;
   flex: 1;
   color: var(--color-text-primary);
@@ -292,7 +342,7 @@
 }
 
 .setting-value {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-muted);
   margin-right: 6px;
 }
@@ -305,10 +355,7 @@
 
 /* 退出登录区域 */
 .logout-section {
-  padding: 0 20px;
-  margin-top: 36px;
-  padding-top: 28px;
-  border-top: 1px solid var(--color-border);
+  display: none; /* 隐藏，已合并到数据管理 */
 }
 
 .logout-button {
@@ -338,7 +385,7 @@
 
 .version {
   text-align: center;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-text-muted);
   margin-top: 20px;
   margin-bottom: 0px;
