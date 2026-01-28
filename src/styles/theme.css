@@ -103,7 +103,7 @@
   
   /* 导航栏 */
   --navbar-height: 60px;
-  --mobile-tab-bar-height: 60px;
+  --mobile-tab-bar-height: 8vh;
   --navbar-shadow: 0 2px 15px rgba(0, 0, 0, 0.04);
   --navbar-border: 1px solid var(--color-border);
   
