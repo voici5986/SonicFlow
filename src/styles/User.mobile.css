@@ -3,10 +3,12 @@
 /* 基础容器 */
 .user-page-container {
   /* 
-   * 计算最小高度：视口高度 - (播放器高度 + 底部导航栏高度 + 底部安全区) 
-   * 移动端播放器收起高度为 10vh，底部导航栏为 8vh
+   * 计算最小高度：视口高度的 85% - (播放器高度 + 底部导航栏高度 + 底部安全区 + 顶部导航栏预留) 
+   * 使用 85vh 而非 100vh 是为了避开移动端浏览器地址栏/工具栏占用的空间
+   * 即使内容较少，body 背景色也会自动填充剩余空间，视觉上不会断层
    */
-  min-height: calc(100vh - 10vh - var(--mobile-tab-bar-height) - var(--safe-area-bottom));
+  min-height: calc(85vh - 10vh - var(--mobile-tab-bar-height) - var(--safe-area-bottom) - 60px);
+  padding-bottom: 0;
   background-color: var(--color-background);
   color: var(--color-text-primary);
 }
@@ -17,7 +19,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 0;
+  padding: 20px 0;
   text-align: center;
 }
 
