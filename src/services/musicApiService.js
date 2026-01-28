@@ -93,12 +93,6 @@ export const searchMusic = async (query, source, count = 20, page = 1) => {
       throw new Error('搜索请求超时，请稍后重试');
     }
 
-    // 处理API访问限制错误
-    if (error.message.includes('中国大陆')) {
-      console.error('[searchMusic] API访问受限:', error.message);
-      throw error;
-    }
-
     // 处理网络错误
     if (error.code === 'ERR_NETWORK') {
       console.error('[searchMusic] 网络连接错误:', error);
