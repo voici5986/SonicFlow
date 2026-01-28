@@ -235,22 +235,22 @@ const UserProfile = ({ onTabChange }) => {
             className="stat-item" 
             onClick={() => handleStatsCardClick('favorites')}
           >
-            <span className="stat-value">{favoritesCount}</span>
-            <span className="stat-label">收藏</span>
+            <span className="stat-value-inline">{favoritesCount}</span>
+            <span className="stat-label-inline">收藏</span>
           </div>
+          <div className="stats-divider"></div> {/* 分隔线 */}
           <div 
             className="stat-item" 
             onClick={() => handleStatsCardClick('history')}
           >
-            <span className="stat-value">{historyCount}</span>
-            <span className="stat-label">历史</span>
+            <span className="stat-value-inline">{historyCount}</span>
+            <span className="stat-label-inline">历史</span>
           </div>
         </div>
       </div>
       
       {/* 2. 功能菜单 */}
       <div className="menu-group">
-        <div className="group-title">数据管理</div>
         <div className="menu-container">
           <div className="menu-item" onClick={handleManualSync}>
             <div className="menu-icon-box" style={{ color: '#4A90E2', background: '#F0F7FF' }}>
