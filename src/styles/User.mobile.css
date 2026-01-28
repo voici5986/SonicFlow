@@ -155,55 +155,26 @@
   margin: 0 16px;
 }
 
-/* 个人中心样式 */
-.profile-card {
-  background: var(--color-surface, #ffffff);
-  border-radius: 24px;
-  padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: var(--shadow-md);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: relative;
-  overflow: hidden;
-  border: none;
+/* 个人中心新版样式 (严格复刻 pre.html) */
+.user-header {
+  text-align: center;
+  margin-bottom: 44px;
+  padding-top: 10px;
 }
 
-.profile-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 80px;
-  background: var(--color-background-alt);
-  z-index: 0;
-}
-
-.avatar-wrapper {
-  width: 90px;
-  height: 90px;
-  border-radius: 30px;
-  background: var(--color-surface, #ffffff);
-  padding: 4px;
-  margin-bottom: 16px;
-  z-index: 1;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-  transform: rotate(3deg);
-}
-
-.avatar-content {
-  width: 100%;
-  height: 100%;
-  border-radius: 26px;
-  background: var(--color-background-alt);
+.avatar-rect {
+  width: 72px; /* 调整为 72px */
+  height: 72px;
+  border-radius: 14px; /* Notion 风格小圆角 */
+  margin: 0 auto 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
-  color: var(--color-primary);
+  font-size: 28px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm); /* 减弱阴影 */
   overflow: hidden;
+  /* 移除边框 */
 }
 
 .avatar-image {
@@ -212,15 +183,10 @@
   object-fit: cover;
 }
 
-.user-info-section {
-  text-align: center;
-  z-index: 1;
-}
-
 .user-name-large {
-  font-size: 22px;
-  font-weight: 800;
-  margin: 0 0 4px 0;
+  font-size: 22px; /* 调整为 22px */
+  font-weight: 600; /* 调整字重 */
+  margin-bottom: 4px;
   color: var(--color-text-primary);
 }
 
@@ -229,170 +195,179 @@
   color: var(--color-text-muted);
 }
 
-.stats-row {
+/* 列表容器 */
+.card-list, .settings-list {
   display: flex;
-  width: 100%;
-  margin-top: 24px;
-  border-top: 1px solid var(--color-border);
-  padding-top: 20px;
-  justify-content: center; /* 居中对齐 */
-  align-items: center; /* 垂直居中 */
+  flex-direction: column;
+  gap: 8px; /* 调整为 8px */
+  margin-bottom: 40px; /* 调整为 40px */
+  padding: 0 20px;
 }
 
-.stat-item {
-  display: flex; /* 使用flex布局 */
-  align-items: center; /* 垂直居中 */
-  gap: 6px; /* 数字和文字之间的间距 */
+.section-title {
+  font-size: 12px; /* 调整为 12px */
+  font-weight: 500;
+  color: var(--color-text-muted);
+  margin-bottom: 10px;
+  padding-left: 4px; /* 调整为 4px */
+  /* text-transform: uppercase; */ /* pre.html 没有强制大写 */
+  /* letter-spacing: 0.5px; */
+}
+
+/* 长卡片样式 */
+.long-card, .setting-card {
+  background: var(--color-surface);
+  border-radius: 10px; /* 调整为 10px */
+  padding: 14px 18px; /* 调整 padding */
   cursor: pointer;
-  padding: 8px 12px; /* 调整内边距 */
-  border-radius: 8px;
-  transition: var(--transition-fast);
-}
-
-.stat-item:active {
-  background-color: var(--color-background-alt);
-}
-
-.stat-value-inline {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--color-text-primary);
-  display: inline; /* 行内显示 */
-}
-
-.stat-label-inline {
-  font-size: 14px; /* 调整字体大小 */
-  color: var(--color-text-muted);
-  /* text-transform: uppercase; */ /* 移除大写 */
-  letter-spacing: 0.5px;
-  /* margin-top: 2px; */ /* 移除上边距 */
-  display: inline; /* 行内显示 */
-}
-
-.stats-divider {
-  width: 1px;
-  height: 24px; /* 分隔线高度 */
-  background-color: var(--color-border);
-  margin: 0 16px; /* 分隔线左右间距 */
-}
-
-/* 菜单列表样式 */
-.menu-group {
-  margin-bottom: 24px;
-}
-
-.group-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 12px;
-  padding-left: 4px;
-}
-
-.menu-container {
-  background: var(--color-surface, #ffffff);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: 14px; /* 调整 gap */
+  border: 1px solid var(--color-border);
+  transition: background 0.15s ease, transform 0.12s ease;
+  box-shadow: none; /* 移除默认阴影，保持扁平 */
+  position: relative;
   overflow: hidden;
 }
 
-.menu-item {
-  padding: 16px 20px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  transition: var(--transition-fast);
-  cursor: pointer;
-  border-bottom: 1px solid var(--color-background-alt);
-  text-decoration: none;
-  color: var(--color-text-primary);
-}
-
-.menu-item:last-child {
-  border-bottom: none;
-}
-
-.menu-item:active, .menu-item:hover {
+.long-card:hover, .setting-card:hover {
   background: var(--color-background-alt);
-  color: var(--color-text-primary);
+  /* transform: translateY(-1px); */ /* pre.html 没有位移 */
+  /* box-shadow: var(--shadow-md); */
 }
 
-.menu-icon-box {
-  width: 36px;
-  height: 36px;
+.long-card:active, .setting-card:active {
   background: var(--color-background-alt);
-  border-radius: 10px;
+  transform: scale(0.98);
+}
+
+.card-icon {
+  width: 20px; /* 调整图标容器大小 */
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-primary);
-  font-size: 14px;
+  font-size: 18px; /* 调整图标字体大小 */
+  flex-shrink: 0;
+  color: var(--color-text-muted); /* 默认颜色，会被内联样式覆盖 */
 }
 
-.menu-text {
-  flex: 1;
-  font-size: 15px;
-  font-weight: 500;
-}
-
-.menu-suffix {
-  color: var(--color-text-muted);
-  font-size: 12px;
+.setting-icon {
+  width: 18px;
+  height: 18px;
   display: flex;
   align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.card-label {
+  font-size: 15px; /* 调整为 15px */
+  font-weight: 500;
+  flex: 1;
+  color: var(--color-text-primary);
+}
+
+.setting-text {
+  font-size: 14px; /* 调整为 14px */
+  font-weight: 500;
+  flex: 1;
+  color: var(--color-text-primary);
+}
+
+.card-number {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  margin-right: 6px;
+}
+
+.setting-value {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-right: 6px;
+}
+
+.card-arrow, .setting-arrow {
+  color: var(--color-text-muted); /* #C4C4C2 */
+  font-size: 14px;
+  opacity: 0.6;
+}
+
+/* 退出登录区域 */
+.logout-section {
+  padding: 0 20px;
+  margin-top: 36px;
+  padding-top: 28px;
+  border-top: 1px solid var(--color-border);
+}
+
+.logout-button {
+  background: var(--color-primary);
+  border: none; /* 移除边框 */
+  color: white;
+  font-size: 14px;
+  padding: 14px;
+  cursor: pointer;
+  width: 100%;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 8px;
 }
 
-.logout-container {
-  margin-top: auto;
-  padding-bottom: 30px;
+.logout-button:hover {
+  background: var(--color-primary-light);
 }
 
-.btn-logout {
-  background-color: var(--color-surface, #ffffff);
-  color: var(--color-danger);
-  border: 1px solid var(--color-border);
+.logout-button:active {
+  background: var(--color-primary-dark);
 }
 
-.btn-logout:active {
-  background-color: #FFF5F5;
-  border-color: #FFDADA;
-}
-
-.version-text {
+.version {
   text-align: center;
-  margin-top: 16px;
   font-size: 11px;
   color: var(--color-text-muted);
+  margin-top: 28px;
+  margin-bottom: 20px;
+  opacity: 1;
 }
 
-/* 移动端适配 */
+/* 移动端适配覆盖 */
 @media (max-width: 768px) {
   .user-page-container {
     padding: 0;
-    min-height: auto; /* 移除最小高度限制，避免强制撑开 */
+    min-height: 100vh;
+    background-color: #F7F7F5; /* 与 pre.html 保持一致 */
   }
   
   .auth-form-container {
     padding-top: 0;
-    padding-bottom: 0; /* 减少底部 padding */
+    padding-bottom: 0;
   }
   
   .brand-section {
-    padding: 24px 0; /* 减少品牌区域 padding */
+    padding: 24px 0;
   }
 
   .brand-logo {
-    width: 64px; /* 稍微缩小 logo */
+    width: 64px;
     height: 64px;
     font-size: 32px;
     margin-bottom: 16px;
   }
   
-  .profile-card {
-    border-radius: 0 0 24px 24px;
-    margin-top: -1px;
+  .long-card, .setting-card {
+    /* 移动端保持边框，或者根据 pre.html 移除？ pre.html 有 border: 1px solid #E9E9E7 */
+    border: 1px solid var(--color-border); 
+  }
+  
+  .user-header {
+    margin-bottom: 44px;
   }
 }

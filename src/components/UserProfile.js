@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getFavorites, getHistory, clearHistory, clearSearchHistory, resetPendingChanges } from '../services/storage';
 import { clearSyncTimestamp } from '../services/syncService';
 import { clearMemoryCache } from '../services/memoryCache';
-import { FaHeart, FaHistory, FaSignOutAlt, FaCloud, FaChevronRight, FaTrash } from 'react-icons/fa';
+import { FaHeart, FaHistory, FaSignOutAlt, FaCloud, FaChevronRight, FaTrashAlt } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { useSync } from '../contexts/SyncContext';
 import { initialSync } from '../services/syncService';
@@ -209,78 +209,98 @@ const UserProfile = ({ onTabChange }) => {
   
   return (
     <div>
-      {/* 1. 用户资料卡片 */}
-      <div className="profile-card">
-        <div className="avatar-wrapper">
-          <div className="avatar-content">
-            {currentUser.photoURL ? (
-              <img 
-                src={currentUser.photoURL} 
-                alt="Avatar"
-                className="avatar-image"
-              />
-            ) : (
-              userInitial
-            )}
+      {/* 1. 用户信息头部 */}
+      <div className="user-header">
+        <div className="avatar-rect">
+          {currentUser.photoURL ? (
+            <img 
+              src={currentUser.photoURL} 
+              alt="Avatar"
+              className="avatar-image"
+            />
+          ) : (
+            userInitial
+          )}
+        </div>
+        <h3 className="user-name-large">{currentUser.displayName || '用户'}</h3>
+        <p className="user-email-text">{currentUser.email}</p>
+      </div>
+      
+      {/* 2. 统计/功能卡片列表 */}
+      <div className="card-list">
+        {/* 收藏卡片 */}
+        <div 
+          className="long-card" 
+          onClick={() => handleStatsCardClick('favorites')}
+        >
+          <div className="card-icon" style={{ color: '#EB5757' }}>
+              <FaHeart />
+            </div>
+          <div className="card-label">收藏</div>
+          <div className="card-number">{favoritesCount}</div>
+          <div className="card-arrow">
+            <FaChevronRight />
           </div>
         </div>
-        
-        <div className="user-info-section">
-          <h3 className="user-name-large">{currentUser.displayName || '用户'}</h3>
-          <p className="user-email-text">{currentUser.email}</p>
-        </div>
-        
-        <div className="stats-row">
-          <div 
-            className="stat-item" 
-            onClick={() => handleStatsCardClick('favorites')}
-          >
-            <span className="stat-value-inline">{favoritesCount}</span>
-            <span className="stat-label-inline">收藏</span>
+
+        {/* 历史卡片 */}
+        <div 
+          className="long-card" 
+          onClick={() => handleStatsCardClick('history')}
+        >
+          <div className="card-icon" style={{ color: '#787774' }}>
+            <FaHistory />
           </div>
-          <div className="stats-divider"></div> {/* 分隔线 */}
-          <div 
-            className="stat-item" 
-            onClick={() => handleStatsCardClick('history')}
-          >
-            <span className="stat-value-inline">{historyCount}</span>
-            <span className="stat-label-inline">历史</span>
+          <div className="card-label">历史</div>
+          <div className="card-number">{historyCount}</div>
+          <div className="card-arrow">
+            <FaChevronRight />
           </div>
         </div>
       </div>
       
-      {/* 2. 功能菜单 */}
-      <div className="menu-group">
-        <div className="menu-container">
-          <div className="menu-item" onClick={handleManualSync}>
-            <div className="menu-icon-box" style={{ color: '#4A90E2', background: '#F0F7FF' }}>
-              <FaCloud />
-            </div>
-            <div className="menu-text">云端同步</div>
-            <div className="menu-suffix">
-              {syncStatus.loading && <Spinner animation="border" size="sm" className="me-2" />}
-              {getSyncStatusText()} <FaChevronRight />
-            </div>
+      <div className="section-title">设置</div>
+
+      {/* 3. 设置列表 */}
+      <div className="settings-list">
+        {/* 云端同步 */}
+        <div className="setting-card" onClick={handleManualSync}>
+          <div className="setting-icon" style={{ color: '#4A90E2' }}>
+            <FaCloud />
           </div>
-          
-          <div className="menu-item" onClick={handleClearData}>
-            <div className="menu-icon-box" style={{ color: '#D15C5C', background: '#FFF5F5' }}>
-              <FaTrash />
-            </div>
-            <div className="menu-text">清除本地缓存</div>
-            <div className="menu-suffix">
-              <FaChevronRight />
-            </div>
+          <div className="setting-text">多端数据同步</div>
+          <div className="setting-value" style={{ fontSize: '12px' }}>
+             {syncStatus.loading ? (
+                <Spinner animation="border" size="sm" />
+             ) : (
+                getSyncStatusText().replace('上次同步 ', '')
+             )}
+          </div>
+          <div className="setting-arrow">
+            <FaChevronRight />
+          </div>
+        </div>
+        
+        {/* 清除缓存 */}
+        <div className="setting-card" onClick={handleClearData}>
+          <div className="setting-icon" style={{ color: 'var(--color-text-muted)' }}>
+            <FaTrashAlt />
+          </div>
+          <div className="setting-text">清除本地缓存</div>
+          <div className="setting-arrow">
+            <FaChevronRight />
           </div>
         </div>
       </div>
 
-      <div className="logout-container">
-        <button className="btn-auth btn-logout" onClick={handleLogout}>
-          <FaSignOutAlt className="me-2" /> 退出登录
+      {/* 4. 退出登录 */}
+      <div className="logout-section">
+        <button className="logout-button" onClick={handleLogout}>
+          <FaSignOutAlt /> 退出登录
         </button>
-        <div className="version-text">SonicFlow v1.0.0</div>
       </div>
+      
+      <div className="version">SonicFlow v1.0.0</div>
     </div>
   );
 };
