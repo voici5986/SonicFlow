@@ -1,12 +1,14 @@
 /* 添加全局样式优化 */
 /* 主要变量已移至theme.css */
 
-body {
+html, body {
   margin: 0;
   font-family: var(--font-family-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--color-background);
+  /* 禁用浏览器默认的下拉刷新和边缘回弹效果，提升 PWA 类原生体验 */
+  overscroll-behavior-y: none;
 }
 
 /* 美化按钮 */
