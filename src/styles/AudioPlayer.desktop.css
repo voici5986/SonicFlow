@@ -40,6 +40,43 @@
     z-index: var(--z-index-base);
   }
 
+  /* 播放控制按钮特定样式 */
+  .control-icon-btn.accent-control {
+    opacity: 1 !important;
+  }
+
+  .play-pause-button {
+    background-color: var(--color-accent);
+    border-radius: 50%;
+    color: white;
+    width: 45px;
+    height: 45px;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+    box-shadow: 0 4px 12px rgba(209, 92, 92, 0.3);
+  }
+
+  .play-pause-button:hover {
+    transform: scale(1.05);
+    background-color: #e06d6d; /* 稍微亮一点的红色 */
+  }
+
+  .play-pause-button:active {
+    transform: scale(0.95);
+  }
+
+  /* 调整图标位置 */
+  .play-pause-button svg {
+    display: block;
+  }
+
+  /* 播放图标由于视觉重心问题，通常需要微调 */
+  .play-pause-button .play-icon {
+    margin-left: 3px;
+  }
+
   .player-right-section {
     display: flex;
     align-items: center;
@@ -76,5 +113,113 @@
   .progress-control-container .progress-bar {
     height: 100% !important;
     background-color: var(--color-accent) !important;
+  }
+
+  /* 桌面端全屏展开视图样式（仿移动端沉浸式，但适配大屏布局） */
+  .desktop-expanded-view {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important; /* 桌面端全屏覆盖，包括播放器栏高度 */
+    height: 100vh !important;
+    padding: 40px 60px !important;
+    background-color: var(--card-background) !important;
+    z-index: var(--z-index-player-expanded) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  .desktop-expanded-view .close-lyrics-btn {
+    position: absolute !important;
+    top: 30px !important;
+    right: 40px !important;
+    z-index: 100 !important;
+    color: var(--color-text-secondary) !important;
+  }
+
+  .desktop-expanded-view .expanded-main-wrapper {
+    display: flex !important;
+    flex-direction: row !important; /* 左右布局 */
+    gap: 100px !important;
+    max-width: 1400px !important; /* 增大最大宽度以配合黄金比例 */
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 40px !important;
+    align-items: center !important;
+  }
+
+  .desktop-expanded-view .album-info-section {
+    width: 35% !important; /* 黄金比例：封面占 35% */
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+    border-right: none !important;
+    padding-right: 0 !important;
+  }
+
+  .desktop-expanded-view .album-cover-container {
+    width: 100% !important;
+    max-width: 550px !important; /* 适当增大封面上限 */
+    aspect-ratio: 1/1 !important;
+    margin-bottom: 0 !important;
+  }
+
+  .desktop-expanded-view .album-cover-large,
+  .desktop-expanded-view .album-cover-wrapper {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    border-radius: 24px !important;
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.25) !important;
+  }
+
+  .desktop-expanded-view .lyrics-section {
+    width: 65% !important; /* 黄金比例：歌词占 65% */
+    padding-left: 20px !important;
+    height: 85vh !important; /* 使用用户调整后的高度 */
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .desktop-expanded-view .lyrics-scroll-container {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%) !important;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%) !important;
+  }
+
+  .desktop-expanded-view .lyric-line {
+    font-size: 1.2rem !important;
+    padding: 15px 0 !important;
+    text-align: left !important; /* 桌面端左对齐更有现代感 */
+    transition: all 0.3s ease !important;
+    opacity: 0.4 !important;
+    color: var(--color-text-secondary) !important;
+  }
+
+  .desktop-expanded-view .lyric-line.active {
+    opacity: 1 !important;
+    font-size: 1.4rem !important;
+    font-weight: 700 !important;
+    color: var(--color-accent) !important;
+  }
+
+  /* 桌面端隐藏不必要的移动端元素 */
+  .desktop-expanded-view .close-lyrics-btn svg {
+    font-size: 1.4rem;
+  }
+}
+
+/* 全局隐藏规则：在桌面端隐藏移动端特有组件 */
+@media (min-width: 769px) {
+  .mobile-mini-player,
+  .mobile-progress-container {
+    display: none !important;
   }
 }

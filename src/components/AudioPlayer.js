@@ -3,8 +3,10 @@ import ProgressBar from './ProgressBar';
 import '../styles/AudioPlayer.css';
 import useAudioPlayerViewState from '../hooks/useAudioPlayerViewState';
 import { usePlayer } from '../contexts/PlayerContext';
+import { useDevice } from '../contexts/DeviceContext';
 import MobileMiniPlayer from './MobileMiniPlayer';
 import MobileExpandedView from './MobileExpandedView';
+import DesktopExpandedView from './DesktopExpandedView';
 import DesktopPlayerControl from './DesktopPlayerControl';
 
 /**
@@ -39,9 +41,7 @@ const AudioPlayer = () => {
     getPlayModeTitle
   } = useAudioPlayerViewState(playerContextProps);
   
-  // Extract playerUrl if available in context or define fallback
-  // In original code, playerUrl was used in DesktopPlayerControl download button
-  // Assuming it's available or we use currentTrack.url
+  const { isMobile } = useDevice();
   const playerUrl = playerContextProps.playerUrl;
 
   if (!currentTrack) return null;
@@ -58,57 +58,74 @@ const AudioPlayer = () => {
 
           <div className="player-content">
             {/* 移动端迷你播放器 */}
-            <MobileMiniPlayer 
-              currentTrack={currentTrack}
-              isPlaying={isPlaying}
-              togglePlay={togglePlay}
-              toggleLyric={toggleLyric}
-              lyricExpanded={lyricExpanded}
-              showMobileLyrics={showMobileLyrics}
-              setShowMobileLyrics={setShowMobileLyrics}
-              handleTogglePlayMode={handleTogglePlayMode}
-              handlePrevious={handlePrevious}
-              handleNext={handleNext}
-              playMode={playMode}
-              getPlayModeTitle={getPlayModeTitle}
-              renderPlayModeIcon={renderPlayModeIcon}
-            />
+            {isMobile && (
+              <MobileMiniPlayer 
+                currentTrack={currentTrack}
+                isPlaying={isPlaying}
+                togglePlay={togglePlay}
+                toggleLyric={toggleLyric}
+                lyricExpanded={lyricExpanded}
+                showMobileLyrics={showMobileLyrics}
+                setShowMobileLyrics={setShowMobileLyrics}
+                handleTogglePlayMode={handleTogglePlayMode}
+                handlePrevious={handlePrevious}
+                handleNext={handleNext}
+                playMode={playMode}
+                getPlayModeTitle={getPlayModeTitle}
+                renderPlayModeIcon={renderPlayModeIcon}
+              />
+            )}
 
             {/* 桌面端播放控制 */}
-            <DesktopPlayerControl 
-              currentTrack={currentTrack}
-              isPlaying={isPlaying}
-              togglePlay={togglePlay}
-              toggleLyric={toggleLyric}
-              lyricExpanded={lyricExpanded}
-              handlePrevious={handlePrevious}
-              handleNext={handleNext}
-              handleTogglePlayMode={handleTogglePlayMode}
-              playMode={playMode}
-              getPlayModeTitle={getPlayModeTitle}
-              renderPlayModeIcon={renderPlayModeIcon}
-              playerUrl={playerUrl}
-            />
+            {!isMobile && (
+              <DesktopPlayerControl 
+                currentTrack={currentTrack}
+                isPlaying={isPlaying}
+                togglePlay={togglePlay}
+                toggleLyric={toggleLyric}
+                lyricExpanded={lyricExpanded}
+                handlePrevious={handlePrevious}
+                handleNext={handleNext}
+                handleTogglePlayMode={handleTogglePlayMode}
+                playMode={playMode}
+                getPlayModeTitle={getPlayModeTitle}
+                renderPlayModeIcon={renderPlayModeIcon}
+                playerUrl={playerUrl}
+              />
+            )}
           </div>
         </div>
       </div>
 
-      {/* 移动端全屏展开视图 */}
-      <MobileExpandedView 
-        currentTrack={currentTrack}
-        isPlaying={isPlaying}
-        toggleLyric={toggleLyric}
-        showMobileLyrics={showMobileLyrics}
-        setShowMobileLyrics={setShowMobileLyrics}
-        isDragging={isDragging}
-        dragOffsetY={dragOffsetY}
-        handleTouchStart={handleTouchStart}
-        handleTouchMove={handleTouchMove}
-        handleTouchEnd={handleTouchEnd}
-        lyricsContainerRef={lyricsContainerRef}
-        processedLyrics={processedLyrics}
-        currentLyricIndex={currentLyricIndex}
-      />
+      {/* 展开视图：实现视图分离 */}
+      {lyricExpanded && (
+        isMobile ? (
+          <MobileExpandedView 
+            currentTrack={currentTrack}
+            isPlaying={isPlaying}
+            toggleLyric={toggleLyric}
+            showMobileLyrics={showMobileLyrics}
+            setShowMobileLyrics={setShowMobileLyrics}
+            isDragging={isDragging}
+            dragOffsetY={dragOffsetY}
+            handleTouchStart={handleTouchStart}
+            handleTouchMove={handleTouchMove}
+            handleTouchEnd={handleTouchEnd}
+            lyricsContainerRef={lyricsContainerRef}
+            processedLyrics={processedLyrics}
+            currentLyricIndex={currentLyricIndex}
+          />
+        ) : (
+          <DesktopExpandedView 
+            currentTrack={currentTrack}
+            isPlaying={isPlaying}
+            toggleLyric={toggleLyric}
+            lyricsContainerRef={lyricsContainerRef}
+            processedLyrics={processedLyrics}
+            currentLyricIndex={currentLyricIndex}
+          />
+        )
+      )}
     </>
   );
 };

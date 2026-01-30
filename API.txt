@@ -69,3 +69,13 @@ id：歌词ID。必选项，歌词ID即lyric_id（一般与曲目ID相同），�
 
 返回：lyric（LRC格式的原语种歌词）、tlyric（LRC格式的中文翻译歌词，不一定会返回）
 
+
+Gemini
+
+
+
+
+Gemini
+
+Fast
+询问 Gemini...

@@ -220,3 +220,147 @@
     overflow: hidden !important; /* 全屏模式下禁止 body 滚动 */
   }
 }
+
+/* 桌面端两栏布局 */
+.desktop-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--color-background);
+}
+
+.desktop-layout .main-content {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* 适配桌面端侧边栏模式下的 Navigation */
+.desktop-layout .navigation-sidebar {
+  width: var(--sidebar-width);
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  background-color: var(--color-background-alt);
+  border-right: 1px solid var(--color-border);
+  z-index: 100;
+  overflow: hidden;
+}
+
+/* 桌面端内容区内边距 */
+.desktop-layout .content-area {
+  padding: 32px 48px !important;
+  max-width: 1400px;
+  margin: 0 auto !important;
+  width: 100%;
+}
+
+.desktop-layout .home-desktop {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.desktop-layout .home-search-hero {
+  background-color: var(--card-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-lg);
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.desktop-layout .home-search-title {
+  max-width: 640px;
+}
+
+.desktop-layout .home-search-eyebrow {
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  font-weight: 600;
+}
+
+.desktop-layout .home-search-heading {
+  font-size: 28px;
+  line-height: 1.2;
+  margin: 6px 0 0 0;
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.desktop-layout .home-search-subtitle {
+  margin: 8px 0 0 0;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.desktop-layout .home-search-form {
+  margin: 0;
+}
+
+.desktop-layout .home-results {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.desktop-layout .home-empty {
+  display: flex;
+  justify-content: center;
+}
+
+.desktop-layout .home-empty-card {
+  width: 100%;
+  max-width: 720px;
+  background-color: var(--card-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-lg);
+  padding: 24px 28px;
+  box-shadow: var(--shadow-sm);
+}
+
+.desktop-layout .home-empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.desktop-layout .home-empty-desc {
+  margin-top: 8px;
+  color: var(--color-text-tertiary);
+  font-size: 14px;
+}
+
+.desktop-layout .home-empty-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.desktop-layout .home-empty-tags span {
+  border: 1px solid var(--color-border);
+  color: var(--color-text-tertiary);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  background-color: var(--color-background-alt);
+}
+
+@media (max-width: 768px) {
+  .desktop-layout {
+    display: block;
+  }
+  .desktop-layout .main-content {
+    margin-left: 0;
+  }
+}

@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Start 桌面端重构预览 V2 (Notion Style)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* 严格遵循 theme.css 的 Notion 调色盘 */
+            --color-text-primary: #1F1F1F;
+            --color-text-secondary: #2F3437;
+            --color-text-tertiary: #6B6F76;
+            --color-background: #FAFAF9;      /* Notion 主背景 */
+            --color-background-alt: #F7F6F4;  /* Notion 侧边栏背景 */
+            --color-border: #E9E9E9;          /* 极细边框 */
+            --color-accent: #D15C5C;          /* 唯一的主题点缀色 */
+            --card-background: #FFFFFF;
+            
+            --sidebar-width: 240px;
+            --player-height: 85px;
+            --border-radius: 12px;
+            --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.05);
+            --transition: all 0.2s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Montserrat', -apple-system, sans-serif;
+            background-color: var(--color-background);
+            color: var(--color-text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* --- 左侧侧边栏 (Notion 侧边栏风格) --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--color-background-alt);
+            border-right: 1px solid var(--color-border);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 12px;
+            z-index: 100;
+        }
+
+        .logo {
+            padding: 0 12px;
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--color-text-primary);
+        }
+
+        .logo-icon {
+            width: 24px;
+            height: 24px;
+            background: var(--color-text-primary);
+            border-radius: 4px;
+        }
+
+        .nav-item {
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--color-text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .nav-item:hover {
+            background-color: rgba(0, 0, 0, 0.04);
+            color: var(--color-text-primary);
+        }
+
+        .nav-item.active {
+            background-color: rgba(0, 0, 0, 0.06);
+            color: var(--color-text-primary);
+            font-weight: 600;
+        }
+
+        .nav-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--color-text-tertiary);
+            margin: 16px 12px 8px;
+            letter-spacing: 0.5px;
+        }
+
+        /* --- 主内容区 --- */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 搜索居中状态 (首页初始状态) */
+        .search-hero {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding-bottom: 10vh;
+        }
+
+        .search-container {
+            width: 100%;
+            max-width: 560px;
+            position: relative;
+            transition: var(--transition);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 14px 20px 14px 48px;
+            border-radius: 10px;
+            border: 1px solid var(--color-border);
+            background: var(--card-background);
+            font-family: inherit;
+            font-size: 15px;
+            box-shadow: var(--shadow-subtle);
+            transition: var(--transition);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--color-text-tertiary);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        }
+
+        .search-icon-main {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--color-text-tertiary);
+        }
+
+        .search-hint {
+            margin-top: 16px;
+            font-size: 13px;
+            color: var(--color-text-tertiary);
+        }
+
+        /* 搜索结果网格 (隐藏状态，仅作演示) */
+        .results-view {
+            padding: 32px 48px;
+            display: none; /* 初始隐藏 */
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            color: var(--color-text-primary);
+        }
+
+        .music-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 20px;
+        }
+
+        .music-card {
+            background: transparent;
+            border-radius: var(--border-radius);
+            padding: 0;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .card-cover {
+            width: 100%;
+            aspect-ratio: 1;
+            background: #E9E9E9;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            position: relative;
+            border: 1px solid rgba(0,0,0,0.02);
+            overflow: hidden;
+        }
+
+        .music-card:hover .card-cover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.06);
+        }
+
+        .card-info .title {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--color-text-primary);
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-info .artist {
+            font-size: 12px;
+            color: var(--color-text-tertiary);
+        }
+
+        /* --- 底部播放栏 (收起模式) --- */
+        .bottom-player {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: var(--player-height);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid var(--color-border);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            z-index: 1000;
+        }
+
+        .player-left {
+            width: 300px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .mini-cover {
+            width: 44px;
+            height: 44px;
+            border-radius: 4px;
+            background: #EEE;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .mini-cover:hover {
+            transform: scale(1.05);
+        }
+
+        .player-center {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .control-btn {
+            cursor: pointer;
+            color: var(--color-text-secondary);
+            font-size: 18px;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn:hover {
+            color: var(--color-text-primary);
+        }
+
+        .play-pause {
+            width: 36px;
+            height: 36px;
+            background: var(--color-text-primary);
+            color: white;
+            border-radius: 50%;
+            font-size: 14px;
+        }
+
+        .progress-wrapper {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 11px;
+            color: var(--color-text-tertiary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .progress-bar-bg {
+            flex: 1;
+            height: 3px;
+            background: var(--color-border);
+            border-radius: 2px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .progress-bar-fill {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 35%;
+            background: var(--color-text-primary);
+            border-radius: 2px;
+        }
+
+        .player-right {
+            width: 300px;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .volume-bar {
+            width: 80px;
+            height: 3px;
+            background: var(--color-border);
+            border-radius: 2px;
+        }
+
+        /* --- 播放器展开模式 (Overlay) --- */
+        .expanded-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--color-background);
+            z-index: 2000;
+            display: none; /* 默认隐藏 */
+            flex-direction: column;
+            padding: 40px;
+            animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .close-overlay {
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            cursor: pointer;
+            font-size: 24px;
+            opacity: 0.5;
+        }
+
+        .expanded-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 80px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .expanded-cover {
+            width: 400px;
+            height: 400px;
+            border-radius: 20px;
+            background: #EEE;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+            animation: breathe 4s ease-in-out infinite;
+        }
+
+        @keyframes breathe {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+
+        .expanded-info {
+            flex: 1;
+            max-width: 500px;
+        }
+
+        .expanded-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .expanded-artist {
+            font-size: 18px;
+            color: var(--color-text-tertiary);
+            margin-bottom: 40px;
+        }
+
+        .expanded-lyrics {
+            height: 300px;
+            overflow: hidden;
+            mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+            -webkit-mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+        }
+
+        .lyric-line {
+            padding: 12px 0;
+            font-size: 18px;
+            color: var(--color-text-tertiary);
+            transition: var(--transition);
+        }
+
+        .lyric-line.active {
+            color: var(--color-text-primary);
+            font-weight: 600;
+            font-size: 22px;
+        }
+
+        /* 辅助类 */
+        .icon-heart.active {
+            color: var(--color-accent);
+        }
+    </style>
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+        <div class="logo">
+            <div class="logo-icon"></div>
+            Music Start
+        </div>
+        
+        <div class="nav-item active">
+            <span>🏠</span> 发现
+        </div>
+        <div class="nav-item">
+            <span>🔍</span> 搜索
+        </div>
+
+        <div class="nav-label">我的音乐</div>
+        <div class="nav-item">
+            <span>❤️</span> 我的收藏
+        </div>
+        <div class="nav-item">
+            <span>🕒</span> 最近播放
+        </div>
+
+        <div class="nav-label">系统</div>
+        <div class="nav-item">
+            <span>👤</span> 个人中心
+        </div>
+        <div class="nav-item">
+            <span>⚙️</span> 设置
+        </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <!-- 初始首页状态: 极简搜索 -->
+        <div class="search-hero">
+            <div class="search-container">
+                <span class="search-icon-main">🔍</span>
+                <input type="text" class="search-input" placeholder="搜索歌曲、歌手、专辑..." autofocus>
+            </div>
+            <div class="search-hint">输入关键词并按下回车开始探索</div>
+        </div>
+
+        <!-- 搜索结果状态 (默认隐藏) -->
+        <div class="results-view" id="results">
+            <h2 class="section-title">搜索结果</h2>
+            <div class="music-grid">
+                <!-- 模拟卡片 -->
+                <div class="music-card">
+                    <div class="card-cover"></div>
+                    <div class="card-info">
+                        <div class="title">歌曲名称示例</div>
+                        <div class="artist">歌手名字</div>
+                    </div>
+                </div>
+                <!-- 更多卡片... -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部播放栏 (收起模式) -->
+    <div class="bottom-player">
+        <div class="player-left">
+            <div class="mini-cover" title="点击展开播放器"></div>
+            <div style="overflow: hidden;">
+                <div style="font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">七里香</div>
+                <div style="font-size: 11px; color: var(--color-text-tertiary);">周杰伦</div>
+            </div>
+            <div style="margin-left: 12px; cursor: pointer; font-size: 14px;" class="icon-heart active">❤️</div>
+        </div>
+
+        <div class="player-center">
+            <div class="controls">
+                <span class="control-btn" style="font-size: 14px;">🔀</span>
+                <span class="control-btn">⏮</span>
+                <span class="control-btn play-pause">▶</span>
+                <span class="control-btn">⏭</span>
+                <span class="control-btn" style="font-size: 14px;">🔁</span>
+            </div>
+            <div class="progress-wrapper">
+                <span>02:15</span>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill"></div>
+                </div>
+                <span>04:43</span>
+            </div>
+        </div>
+
+        <div class="player-right">
+            <span class="control-btn" style="font-size: 16px;">📜</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 14px;">🔊</span>
+                <div class="volume-bar">
+                    <div style="width: 70%; height: 100%; background: var(--color-text-primary); border-radius: 2px;"></div>
+                </div>
+            </div>
+            <span class="control-btn" style="font-size: 16px; margin-left: 8px;">展开 ↗</span>
+        </div>
+    </div>
+
+    <!-- 播放器展开全屏 Overlay (默认隐藏) -->
+    <div class="expanded-overlay">
+        <div class="close-overlay">↙ 收起</div>
+        <div class="expanded-content">
+            <div class="expanded-cover"></div>
+            <div class="expanded-info">
+                <h1 class="expanded-title">七里香</h1>
+                <p class="expanded-artist">周杰伦 · 七里香</p>
+                
+                <div class="expanded-lyrics">
+                    <div class="lyric-line">窗外的麻雀</div>
+                    <div class="lyric-line">在电线杆上多嘴</div>
+                    <div class="lyric-line active">你说这一句 很有夏天的感觉</div>
+                    <div class="lyric-line">手中的铅笔 在纸上来来回回</div>
+                    <div class="lyric-line">我用几行字形容你是我的谁</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 简单的交互演示脚本
+        const miniCover = document.querySelector('.mini-cover');
+        const expandBtn = document.querySelector('.player-right .control-btn:last-child');
+        const overlay = document.querySelector('.expanded-overlay');
+        const closeBtn = document.querySelector('.close-overlay');
+
+        const toggleOverlay = () => {
+            const isVisible = overlay.style.display === 'flex';
+            overlay.style.display = isVisible ? 'none' : 'flex';
+        };
+
+        miniCover.onclick = toggleOverlay;
+        expandBtn.onclick = toggleOverlay;
+        closeBtn.onclick = toggleOverlay;
+
+        // 模拟搜索按下回车
+        const searchInput = document.querySelector('.search-input');
+        const hero = document.querySelector('.search-hero');
+        const results = document.getElementById('results');
+
+        searchInput.onkeydown = (e) => {
+            if (e.key === 'Enter' && searchInput.value.trim()) {
+                hero.style.display = 'none';
+                results.style.display = 'block';
+            }
+        };
+    </script>
+</body>
+</html>

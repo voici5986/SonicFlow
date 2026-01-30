@@ -29,6 +29,7 @@ import {
 } from './utils/errorHandler';
 import SyncProvider from './contexts/SyncContext';
 import FavoritesProvider from './contexts/FavoritesContext';
+import { DownloadProvider } from './contexts/DownloadContext';
 import { clearExpiredCovers } from './services/storage';
 // 导入样式文件
 import './styles/AudioPlayer.css';
@@ -246,92 +247,126 @@ const AppContent = () => {
     }
   }, [results, setCurrentPlaylist]);
 
-  // 渲染首页内容
-  const renderHomePage = () => {
-    return (
-      <Container>
-        <Form onSubmit={handleSearch} className="mb-4">
-          <Row className="g-2 align-items-stretch">
-            <Col xs={12} md={6}>
-              <Form.Control
-                type="search"
-                enterKeyHint="search"
-                placeholder="输入歌曲、歌手或专辑名称"
-                value={query}
-                onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'query', value: e.target.value })}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    // 确保失去焦点，收起键盘
-                    e.target.blur();
-                    e.preventDefault();
-                    handleSearch();
-                  }
-                }}
-                style={{ height: '48px' }}
-              />
-            </Col>
-            <Col xs={6} md={2}>
-              <Form.Select
-                value={source}
-                onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'source', value: e.target.value })}
-                style={{ height: '48px' }}
-              >
-                {sources.map((src) => (
-                  <option key={src} value={src}>
-                    {src}
-                  </option>
-                ))}
-              </Form.Select>
-            </Col>
-            <Col xs={6} md={2}>
-              <Form.Select
-                value={quality}
-                onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'quality', value: parseInt(e.target.value) })}
-                style={{ height: '48px' }}
-              >
-                {qualities.map((q) => (
-                  <option key={q} value={q}>
-                    {q === 999 ? '无损' : `${q}kbps`}
-                  </option>
-                ))}
-              </Form.Select>
-            </Col>
-            <Col xs={12} md={2}>
-              <Button
-                type="submit"
-                variant="link"
-                className="w-100 search-submit-btn"
-                disabled={loading}
-                style={{
-                  backgroundColor: 'var(--color-background)',
-                  color: 'var(--color-text-primary)',
-                  borderRadius: 'var(--border-radius)',
-                  padding: '0',
-                  fontWeight: '600',
-                  textDecoration: 'none',
-                  border: '1px solid var(--color-border)',
-                  boxShadow: 'var(--shadow-sm)',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '48px'
-                }}
-              >
-                {loading ? <Spinner animation="border" size="sm" /> : '开始搜索'}
-              </Button>
-            </Col>
-          </Row>
-        </Form>
+  const deviceInfo = useDevice();
 
-        {results.length > 0 && (
-          <Row className="g-3">
-            {results.map((track) => (
-              <Col key={track.id} xs={12} md={6}>
-                <SearchResultItem track={track} searchResults={results} quality={quality} />
-              </Col>
-            ))}
-          </Row>
+  const renderHomePage = () => {
+    const isDesktop = !deviceInfo.isMobile;
+
+    const searchForm = (
+      <Form onSubmit={handleSearch} className={isDesktop ? 'home-search-form' : 'mb-4'}>
+        <Row className={`g-2 align-items-stretch ${isDesktop ? 'home-search-row' : ''}`}>
+          <Col xs={12} md={6}>
+            <Form.Control
+              type="search"
+              enterKeyHint="search"
+              placeholder="输入歌曲、歌手或专辑名称"
+              value={query}
+              onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'query', value: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.target.blur();
+                  e.preventDefault();
+                  handleSearch();
+                }
+              }}
+              style={{ height: '48px' }}
+            />
+          </Col>
+          <Col xs={6} md={2}>
+            <Form.Select
+              value={source}
+              onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'source', value: e.target.value })}
+              style={{ height: '48px' }}
+            >
+              {sources.map((src) => (
+                <option key={src} value={src}>
+                  {src}
+                </option>
+              ))}
+            </Form.Select>
+          </Col>
+          <Col xs={6} md={2}>
+            <Form.Select
+              value={quality}
+              onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'quality', value: parseInt(e.target.value) })}
+              style={{ height: '48px' }}
+            >
+              {qualities.map((q) => (
+                <option key={q} value={q}>
+                  {q === 999 ? '无损' : `${q}kbps`}
+                </option>
+              ))}
+            </Form.Select>
+          </Col>
+          <Col xs={12} md={2}>
+            <Button
+              type="submit"
+              variant="link"
+              className="w-100 search-submit-btn"
+              disabled={loading}
+              style={{
+                backgroundColor: 'var(--color-background)',
+                color: 'var(--color-text-primary)',
+                borderRadius: 'var(--border-radius)',
+                padding: '0',
+                fontWeight: '600',
+                textDecoration: 'none',
+                border: '1px solid var(--color-border)',
+                boxShadow: 'var(--shadow-sm)',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '48px'
+              }}
+            >
+              {loading ? <Spinner animation="border" size="sm" /> : '开始搜索'}
+            </Button>
+          </Col>
+        </Row>
+      </Form>
+    );
+
+    return (
+      <Container className={isDesktop ? 'home-desktop' : ''}>
+        {isDesktop ? (
+          <div className="home-search-hero">
+            <div className="home-search-title">
+              <div className="home-search-eyebrow">音乐搜索</div>
+              <h1 className="home-search-heading">找到你想听的声音</h1>
+              <p className="home-search-subtitle">输入歌曲、歌手或专辑名称开始搜索</p>
+            </div>
+            {searchForm}
+          </div>
+        ) : (
+          searchForm
+        )}
+
+        {results.length > 0 ? (
+          <div className={isDesktop ? 'home-results' : ''}>
+            <Row className={`g-3 ${isDesktop ? 'home-results-row' : ''}`}>
+              {results.map((track) => (
+                <Col key={track.id} xs={12} md={6} lg={4}>
+                  <SearchResultItem track={track} searchResults={results} quality={quality} />
+                </Col>
+              ))}
+            </Row>
+          </div>
+        ) : (
+          isDesktop && !loading && (
+            <div className="home-empty">
+              <div className="home-empty-card">
+                <div className="home-empty-title">开始你的搜索</div>
+                <div className="home-empty-desc">支持歌曲、歌手、专辑关键词</div>
+                <div className="home-empty-tags">
+                  <span>华语</span>
+                  <span>欧美</span>
+                  <span>日系</span>
+                  <span>独立</span>
+                </div>
+              </div>
+            </div>
+          )
         )}
       </Container>
     );
@@ -371,9 +406,6 @@ const AppContent = () => {
         return renderHomePage();
     }
   };
-
-  // 使用设备检测功能
-  const deviceInfo = useDevice();
 
   // 尝试锁定屏幕方向为竖屏（仅在移动设备和平板上）
   useEffect(() => {
@@ -427,17 +459,18 @@ const AppContent = () => {
 
   return (
     <DownloadContext.Provider value={downloadContextValue}>
-      <div className="app-container">
+      <div className={`app-container ${!deviceInfo.isMobile ? 'desktop-layout' : ''}`}>
         <OrientationPrompt />
         <Navigation
           activeTab={activeTab}
           onTabChange={handleTabChange}
         />
 
-
-        <Container fluid className="mt-4 pb-5">
-          {renderContent()}
-        </Container>
+        <div className={!deviceInfo.isMobile ? 'main-content' : ''}>
+          <Container fluid className={`${!deviceInfo.isMobile ? 'content-area' : ''} mt-4 pb-5`}>
+            {renderContent()}
+          </Container>
+        </div>
 
         <AudioPlayer />
 
@@ -455,7 +488,9 @@ const App = () => {
     <SyncProvider>
       <PlayerProvider>
         <FavoritesProvider>
-          <AppContent />
+          <DownloadProvider>
+            <AppContent />
+          </DownloadProvider>
         </FavoritesProvider>
       </PlayerProvider>
     </SyncProvider>

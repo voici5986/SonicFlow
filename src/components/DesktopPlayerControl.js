@@ -5,6 +5,7 @@ import { MdSkipPrevious, MdSkipNext } from 'react-icons/md';
 import DesktopAlbumCover from './DesktopAlbumCover';
 import HeartButton from './HeartButton';
 import { LyricToggleButton } from './PlayerSubComponents';
+import { useDownload } from '../contexts/DownloadContext';
 
 /**
  * 桌面端播放控制组件
@@ -24,6 +25,8 @@ const DesktopPlayerControl = ({
   renderPlayModeIcon,
   playerUrl
 }) => {
+  const { handleDownload } = useDownload();
+
   return (
     <div className="player-info-controls d-none d-md-flex">
       {/* 左侧：歌曲信息 */}
@@ -52,14 +55,8 @@ const DesktopPlayerControl = ({
           <Button variant="link" onClick={handlePrevious} className="control-icon-btn p-0 ms-3"><MdSkipPrevious size={28} /></Button>
           
           <Button variant="link" onClick={togglePlay} className="control-icon-btn accent-control mx-3 p-0">
-            <div className="play-pause-button" style={{ 
-              backgroundColor: 'var(--color-accent)', 
-              borderRadius: '50%', 
-              color: 'white',
-              width: '42px',
-              height: '42px'
-            }}>
-              {isPlaying ? <FaPause size={18} /> : <FaPlay size={18} className="ms-1" />}
+            <div className="play-pause-button">
+              {isPlaying ? <FaPause size={20} /> : <FaPlay size={20} className="play-icon" />}
             </div>
           </Button>
           
@@ -78,7 +75,7 @@ const DesktopPlayerControl = ({
           variant="link" 
           className="p-2 control-button ms-2" 
           title="下载歌曲"
-          onClick={() => window.open(currentTrack.url || playerUrl, '_blank')}
+          onClick={() => handleDownload(currentTrack)}
         >
           <FaDownload size={18} />
         </Button>

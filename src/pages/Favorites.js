@@ -782,8 +782,8 @@ const Favorites = () => {
         </Alert>
       ) : (
         <Row className="g-3">
-          {filteredFavorites.map((track) => (
-            <Col key={track.id} xs={12} md={6}>
+          {filteredFavorites.map((track, index) => (
+            <Col key={`${track.id}-${index}`} xs={12} md={6}>
               <Card 
                 className={`music-card ${currentTrack?.id === track.id ? 'is-active' : ''}`}
                 onClick={() => handleTrackPlay(track)}

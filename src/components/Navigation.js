@@ -2,8 +2,10 @@ import React from 'react';
 import useNavigationState from '../hooks/useNavigationState';
 import DesktopNavbar from './DesktopNavbar';
 import MobileBottomNav from './MobileBottomNav';
+import { useDevice } from '../contexts/DeviceContext';
 
 const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
+  const deviceInfo = useDevice();
   const {
     expanded,
     setExpanded,
@@ -16,16 +18,18 @@ const Navigation = ({ activeTab, onTabChange, onAuthClick }) => {
 
   return (
     <>
-      <DesktopNavbar
-        activeTab={activeTab}
-        expanded={expanded}
-        setExpanded={setExpanded}
-        scrolled={scrolled}
-        currentUser={currentUser}
-        handleNavItemClick={handleNavItemClick}
-        userInitial={userInitial}
-        navItems={navItems}
-      />
+      <div className={!deviceInfo.isMobile ? 'navigation-sidebar' : ''}>
+        <DesktopNavbar
+          activeTab={activeTab}
+          expanded={expanded}
+          setExpanded={setExpanded}
+          scrolled={scrolled}
+          currentUser={currentUser}
+          handleNavItemClick={handleNavItemClick}
+          userInitial={userInitial}
+          navItems={navItems}
+        />
+      </div>
       <MobileBottomNav
         activeTab={activeTab}
         handleNavItemClick={handleNavItemClick}
