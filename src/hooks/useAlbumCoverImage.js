@@ -13,7 +13,7 @@ const DEFAULT_COVER = '/default_cover.svg';
  * @param {boolean} forceFetch - 是否强制获取
  * @returns {Object} { imageUrl, isLoaded, forceLoadCover, handleImageError }
  */
-const useAlbumCoverImage = (track, imgSize = 300, lazy = false, forceFetch = false) => {
+const useAlbumCoverImage = (track, imgSize = 500, lazy = false, forceFetch = false) => {
   const { coverCache, fetchCover } = usePlayer();
   const [imageUrl, setImageUrl] = useState(DEFAULT_COVER);
   const [isLoaded, setIsLoaded] = useState(false);

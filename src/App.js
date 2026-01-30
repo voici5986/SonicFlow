@@ -330,7 +330,7 @@ const AppContent = () => {
     );
 
     return (
-      <Container className={isDesktop ? 'home-desktop' : ''}>
+      <Container className={isDesktop ? 'home-desktop' : 'my-4'}>
         {isDesktop ? (
           <div className="home-search-hero">
             <div className="home-search-title">

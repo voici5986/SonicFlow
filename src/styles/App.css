@@ -254,10 +254,19 @@
 
 /* 桌面端内容区内边距 */
 .desktop-layout .content-area {
-  padding: 32px 48px !important;
+  padding-top: 24px !important;
+  padding-right: 48px !important;
+  padding-bottom: 32px !important;
+  padding-left: 48px !important;
   max-width: 1400px;
   margin: 0 auto !important;
   width: 100%;
+}
+
+/* 在桌面端，由于外部 content-area 已提供 padding-top，
+   我们需要移除页面内部 Container 的额外 margin-top 以保持基准线一致 */
+.desktop-layout .content-area .container {
+  margin-top: 0 !important;
 }
 
 .desktop-layout .home-desktop {

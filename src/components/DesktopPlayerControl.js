@@ -31,7 +31,7 @@ const DesktopPlayerControl = ({
     <div className="player-info-controls d-none d-md-flex">
       {/* 左侧：歌曲信息 */}
       <div className="player-left-section">
-        <DesktopAlbumCover track={currentTrack} size="small" onClick={toggleLyric} />
+        <DesktopAlbumCover track={currentTrack} size="small" onClick={toggleLyric} imgSize={500} />
         <div className="track-info-container ms-3">
           <h6 className="mb-0 text-truncate track-name">{currentTrack.name}</h6>
           <small className="text-muted text-truncate track-artist">{currentTrack.artist}</small>

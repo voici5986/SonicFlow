@@ -32,7 +32,7 @@ const MobileMiniPlayer = ({
       {/* 收起模式：左侧大空间信息，右侧仅红心和播放 */}
       <Row className="align-items-center h-100 m-0">
         <Col xs={8} className="d-flex align-items-center p-0 overflow-hidden" onClick={toggleLyric} style={{ cursor: 'pointer' }}>
-          <MobileAlbumCover track={currentTrack} size="small" />
+          <MobileAlbumCover track={currentTrack} size="small" imgSize={500} />
           <div className="track-info-container flex-grow-1 ms-2" style={{ minWidth: 0, paddingRight: '10px' }}>
             <h6 className="mb-0 text-truncate track-name" style={{ width: '100%' }}>{currentTrack.name}</h6>
             <small className="text-muted text-truncate track-artist d-block" style={{ width: '100%' }}>{currentTrack.artist}</small>
