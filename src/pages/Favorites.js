@@ -677,44 +677,23 @@ const Favorites = () => {
           <span className="ms-3 badge" style={{ backgroundColor: 'var(--color-background-alt)', color: 'var(--color-text-tertiary)', fontWeight: '500' }}>{favorites.length}/{MAX_FAVORITES_ITEMS}</span>
         </div>
         <div className="d-flex justify-content-end">
-          <Button
-            variant="outline-success"
-            size="sm"
-            className="me-2 d-none d-md-inline-flex minimal-action-btn"
-            onClick={handleExport}
-            disabled={favorites.length === 0}
-          >
-            <FaFileExport className="me-1" /> 导出
-          </Button>
-          <Button
-            variant="outline-info"
-            size="sm"
-            className="d-none d-md-inline-flex minimal-action-btn"
-            onClick={() => fileInputRef.current.click()}
-          >
-            <FaFileImport className="me-1" /> 导入
-          </Button>
-
-          {/* 移动端显示的按钮组 */}
-          <div className="d-flex justify-content-end">
           <Dropdown>
-              <Dropdown.Toggle size="sm" id="dropdown-import-export" className="minimal-action-btn">
-                <FaExchangeAlt /> <span className="d-none d-sm-inline">导入导出</span>
-              </Dropdown.Toggle>
-              <Dropdown.Menu align="end">
-                <Dropdown.Item
-                  className="minimal-action-item"
-                  onClick={handleExport}
-                  disabled={favorites.length === 0}
-                >
-                  <FaFileExport className="me-2" /> 导出收藏
-                </Dropdown.Item>
-                <Dropdown.Item className="minimal-action-item" onClick={() => fileInputRef.current.click()}>
-                  <FaFileImport className="me-2" /> 导入收藏
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-          </div>
+            <Dropdown.Toggle size="sm" id="dropdown-import-export" className="minimal-action-btn">
+              <FaExchangeAlt /> <span className="ms-1">导入导出</span>
+            </Dropdown.Toggle>
+            <Dropdown.Menu align="end">
+              <Dropdown.Item
+                className="minimal-action-item"
+                onClick={handleExport}
+                disabled={favorites.length === 0}
+              >
+                <FaFileExport className="me-2" /> 导出收藏
+              </Dropdown.Item>
+              <Dropdown.Item className="minimal-action-item" onClick={() => fileInputRef.current.click()}>
+                <FaFileImport className="me-2" /> 导入收藏
+              </Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown>
         </div>
       </div>
 
@@ -766,14 +745,7 @@ const Favorites = () => {
         <div className="text-center my-5">
           <Spinner animation="border" />
         </div>
-      ) : favorites.length === 0 ? (
-        <Alert variant="light" className="text-center">
-          <p className="mb-0">暂无收藏歌曲</p>
-          <small className="text-muted">
-            您可以在搜索结果中点击❤️收藏歌曲，或者通过导入功能批量添加
-          </small>
-        </Alert>
-      ) : filteredFavorites.length === 0 ? (
+      ) : favorites.length === 0 ? null : filteredFavorites.length === 0 ? (
         <Alert variant="light" className="text-center">
           <p className="mb-0">没有匹配的收藏歌曲</p>
           <small className="text-muted">
@@ -783,7 +755,7 @@ const Favorites = () => {
       ) : (
         <Row className="g-3">
           {filteredFavorites.map((track, index) => (
-            <Col key={`${track.id}-${index}`} xs={12} md={6}>
+            <Col key={`${track.id}-${track.source}-${index}`} xs={12} md={6}>
               <Card 
                 className={`music-card ${currentTrack?.id === track.id ? 'is-active' : ''}`}
                 onClick={() => handleTrackPlay(track)}

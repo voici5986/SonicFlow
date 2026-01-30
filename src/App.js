@@ -332,9 +332,7 @@ const AppContent = () => {
         {isDesktop ? (
           <div className="home-search-hero">
             <div className="home-search-title">
-              <div className="home-search-eyebrow">音乐搜索</div>
               <h1 className="home-search-heading">找到你想听的声音</h1>
-              <p className="home-search-subtitle">输入歌曲、歌手或专辑名称开始搜索</p>
             </div>
             {searchForm}
           </div>
@@ -352,22 +350,7 @@ const AppContent = () => {
               ))}
             </Row>
           </div>
-        ) : (
-          isDesktop && !loading && (
-            <div className="home-empty">
-              <div className="home-empty-card">
-                <div className="home-empty-title">开始你的搜索</div>
-                <div className="home-empty-desc">支持歌曲、歌手、专辑关键词</div>
-                <div className="home-empty-tags">
-                  <span>华语</span>
-                  <span>欧美</span>
-                  <span>日系</span>
-                  <span>独立</span>
-                </div>
-              </div>
-            </div>
-          )
-        )}
+        ) : null}
       </Container>
     );
   };

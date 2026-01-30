@@ -94,42 +94,75 @@ const User = ({ onTabChange }) => {
             
             {/* 右侧：统计卡片 */}
             <Col lg={6} className="d-flex flex-column">
-              <div className="d-flex flex-column" style={{ gap: '12px' }}>
+              <div className="d-flex flex-column h-100" style={{ gap: '12px' }}>
                 {/* 统计卡片 */}
-                <Card className="stats-card border-0 shadow-sm" style={{ borderRadius: 'var(--border-radius)' }}>
+                <Card className="stats-card border-0 shadow-sm flex-grow-1" style={{ borderRadius: 'var(--border-radius)', backgroundColor: 'var(--color-background-alt)' }}>
                   <Card.Body className="d-flex flex-column stats-card-body p-4">
-                    <h5 className="mb-4 text-center">本地数据统计</h5>
-                    <div className="d-flex justify-content-around mb-4">
+                    <h5 className="mb-4 text-start fw-bold" style={{ color: 'var(--color-text-primary)' }}>本地数据统计</h5>
+                    <div className="d-flex flex-column gap-3 mb-auto">
                       <div 
-                        className="text-center cursor-pointer p-3 rounded hover-bg-light" 
+                        className="stats-item-notion d-flex align-items-center p-3 rounded-3" 
                         onClick={() => handleStatsCardClick('favorites')}
-                        style={{ cursor: 'pointer' }}
+                        style={{ 
+                          cursor: 'pointer',
+                          backgroundColor: 'var(--card-background)',
+                          border: '1px solid var(--color-border)',
+                          transition: 'var(--transition-fast)'
+                        }}
                       >
-                        <div className="text-primary mb-2" style={{ fontSize: '24px' }}>
-                          <FaHeart />
+                        <div className="stats-icon-wrapper me-3 d-flex align-items-center justify-content-center" 
+                             style={{ 
+                               width: '40px', 
+                               height: '40px', 
+                               borderRadius: '8px', 
+                               backgroundColor: 'rgba(209, 92, 92, 0.1)',
+                               color: 'var(--color-accent)'
+                             }}>
+                          <FaHeart size={18} />
                         </div>
-                        <div className="h4 mb-0">{favoritesCount}</div>
-                        <div className="text-muted small">收藏的歌曲</div>
+                        <div className="flex-grow-1">
+                          <div className="small text-muted mb-0">我的收藏</div>
+                          <div className="h5 mb-0 fw-bold">{favoritesCount} <span className="small fw-normal text-muted">首歌曲</span></div>
+                        </div>
                       </div>
                       
                       <div 
-                        className="text-center cursor-pointer p-3 rounded hover-bg-light" 
+                        className="stats-item-notion d-flex align-items-center p-3 rounded-3" 
                         onClick={() => handleStatsCardClick('history')}
-                        style={{ cursor: 'pointer' }}
+                        style={{ 
+                          cursor: 'pointer',
+                          backgroundColor: 'var(--card-background)',
+                          border: '1px solid var(--color-border)',
+                          transition: 'var(--transition-fast)'
+                        }}
                       >
-                        <div className="text-info mb-2" style={{ fontSize: '24px' }}>
-                          <FaHistory />
+                        <div className="stats-icon-wrapper me-3 d-flex align-items-center justify-content-center" 
+                             style={{ 
+                               width: '40px', 
+                               height: '40px', 
+                               borderRadius: '8px', 
+                               backgroundColor: 'rgba(47, 52, 55, 0.1)',
+                               color: 'var(--color-primary)'
+                             }}>
+                          <FaHistory size={18} />
                         </div>
-                        <div className="h4 mb-0">{historyCount}</div>
-                        <div className="text-muted small">历史记录</div>
+                        <div className="flex-grow-1">
+                          <div className="small text-muted mb-0">最近播放</div>
+                          <div className="h5 mb-0 fw-bold">{historyCount} <span className="small fw-normal text-muted">条记录</span></div>
+                        </div>
                       </div>
                     </div>
                     
-                    <ClearDataButton onClick={() => {}} />
+                    <div className="mt-3">
+                      <ClearDataButton />
+                    </div>
                     
-                    <div className="text-muted small mt-3 text-center">
-                      <p className="mb-1">登录后可以同步您的收藏和历史记录</p>
-                      <p className="mb-0">版本: {process.env.VITE_APP_VERSION}</p>
+                    <div className="text-muted small mt-4 text-start" style={{ borderTop: '1px solid var(--color-border)', paddingTop: '20px' }}>
+                      <p className="mb-2 d-flex align-items-center">
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--color-accent)', display: 'inline-block', marginRight: '8px' }}></span>
+                        登录后可以同步您的收藏和历史记录
+                      </p>
+                      <p className="mb-0 text-muted opacity-50">版本: {process.env.VITE_APP_VERSION || '1.0.0'}</p>
                     </div>
                   </Card.Body>
                 </Card>

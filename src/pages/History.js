@@ -159,11 +159,7 @@ const History = () => {
         <div className="text-center my-5">
           <Spinner animation="border" />
         </div>
-      ) : history.length === 0 ? (
-        <Alert variant="info" className="text-center">
-          <p className="mb-0">暂无播放历史记录</p>
-        </Alert>
-      ) : (
+      ) : history.length === 0 ? null : (
         <Row className="g-3">
           {history.map((item) => (
             <Col key={item.timestamp} xs={12} md={6}>
