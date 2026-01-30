@@ -1,0 +1,61 @@
+.app-header-desktop {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 240px; /* 与侧边栏宽度一致 */
+  height: 64px;
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 1000;
+  padding: 0 40px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  transition: left var(--transition-normal);
+}
+
+/* 如果侧边栏收缩，这里也要调整，但目前侧边栏是固定的 */
+
+.header-search-container {
+  flex: 0 1 400px;
+}
+
+.header-search-input-group {
+  background-color: var(--color-background-alt);
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  padding: 2px 8px;
+}
+
+.header-search-input-group:focus-within {
+  background-color: var(--card-background);
+  border-color: var(--color-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.header-user-profile {
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.header-user-profile:hover {
+  background-color: var(--color-background-alt);
+}
+
+.header-avatar-wrapper {
+  position: relative;
+}
+
+/* 适配桌面端主内容区的 padding-top */
+.desktop-layout .main-content {
+  padding-top: 64px;
+}
+
+@media (max-width: 991.98px) {
+  .app-header-desktop {
+    display: none !important;
+  }
+}

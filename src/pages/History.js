@@ -16,11 +16,45 @@ import { useAuth } from '../contexts/AuthContext';
 // 设置moment为中文
 moment.locale('zh-cn');
 
-const History = () => {
+const History = ({ globalSearchQuery }) => {
   const [history, setHistory] = useState([]);
+  const [filteredHistory, setFilteredHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [currentDownloadingTrack, setCurrentDownloadingTrack] = useState(null);
+
+  // 监听全局搜索
+  useEffect(() => {
+    if (globalSearchQuery !== undefined) {
+      performSearch(globalSearchQuery, history);
+    }
+  }, [globalSearchQuery, history]);
+
+  const performSearch = (query, currentHistory) => {
+    const trimmedQuery = query.trim().toLowerCase();
+    if (!trimmedQuery) {
+      setFilteredHistory(currentHistory);
+      return;
+    }
+
+    const filtered = currentHistory.filter(item => {
+      const song = item.song;
+      const nameMatch = song.name && song.name.toLowerCase().includes(trimmedQuery);
+      const albumMatch = song.album && song.album.toLowerCase().includes(trimmedQuery);
+      
+      let artistMatch = false;
+      if (typeof song.artist === 'string') {
+        artistMatch = song.artist.toLowerCase().includes(trimmedQuery);
+      } else if (Array.isArray(song.artists)) {
+        artistMatch = song.artists.some(a => 
+          (typeof a === 'string' ? a : a.name).toLowerCase().includes(trimmedQuery)
+        );
+      }
+      
+      return nameMatch || albumMatch || artistMatch;
+    });
+    setFilteredHistory(filtered);
+  };
   
   // 从PlayerContext获取状态和方法
   const { handlePlay, currentTrack, isPlaying } = usePlayer();
@@ -32,7 +66,7 @@ const History = () => {
   const handleTrackPlay = (track) => {
     console.log('从历史记录播放曲目:', track.id, track.name);
     // 创建纯歌曲列表作为播放列表
-    const songsList = history.map(item => item.song);
+    const songsList = filteredHistory.map(item => item.song);
     const trackIndex = songsList.findIndex(item => item.id === track.id);
     handlePlay(track, trackIndex >= 0 ? trackIndex : -1, songsList);
   };
@@ -43,6 +77,7 @@ const History = () => {
     try {
       const historyItems = await getHistory();
       setHistory(historyItems);
+      setFilteredHistory(historyItems);
     } catch (error) {
       console.error('加载历史记录失败:', error);
       toast.error('加载历史记录失败，请重试', { icon: '⚠️' });
@@ -159,9 +194,13 @@ const History = () => {
         <div className="text-center my-5">
           <Spinner animation="border" />
         </div>
-      ) : history.length === 0 ? null : (
+      ) : history.length === 0 ? null : filteredHistory.length === 0 ? (
+        <Alert variant="light" className="text-center">
+          没有匹配的历史记录
+        </Alert>
+      ) : (
         <Row className="g-3">
-          {history.map((item) => (
+          {filteredHistory.map((item) => (
             <Col key={item.timestamp} xs={12} md={6}>
               <Card 
                 className={`music-card ${currentTrack?.id === item.song.id ? 'is-active' : ''}`}

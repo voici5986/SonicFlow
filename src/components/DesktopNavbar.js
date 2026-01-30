@@ -49,57 +49,47 @@ const DesktopNavbar = ({
           <span className="brand-text" style={logoStyle}>SonicFlow</span>
         </Navbar.Brand>
 
-        {/* 用户头像/登录按钮 */}
-        <div className="order-lg-last ms-auto me-2 d-flex align-items-center">
-          {/* 用户头像按钮 */}
-          {currentUser ? (
-            <Nav.Link
-              active={activeTab === 'user'}
-              onClick={() => handleNavItemClick('user')}
-              className={`d-flex align-items-center justify-content-center nav-item ${activeTab === 'user' ? 'active' : ''}`}
-              style={{ width: '40px', height: '40px' }}
-            >
-              {currentUser.photoURL ? (
-                <img
-                  src={currentUser.photoURL}
-                  alt="Profile"
-                  className="rounded-circle shadow-sm"
-                  style={{ width: '32px', height: '32px', objectFit: 'cover' }}
-                />
-              ) : userInitial ? (
-                <div
-                  className="rounded-circle d-flex justify-content-center align-items-center shadow-sm"
-                  style={{ width: '32px', height: '32px', fontSize: '1rem', backgroundColor: 'var(--color-text-primary)', color: 'var(--card-background)' }}
-                >
-                  {userInitial}
-                </div>
-              ) : (
+        {/* 仅在移动端显示顶部的用户头像按钮 */}
+        {!isSidebar && (
+          <div className="order-lg-last ms-auto me-2 d-flex align-items-center">
+            {currentUser ? (
+              <Nav.Link
+                active={activeTab === 'user'}
+                onClick={() => handleNavItemClick('user')}
+                className={`d-flex align-items-center justify-content-center nav-item ${activeTab === 'user' ? 'active' : ''}`}
+                style={{ width: '40px', height: '40px' }}
+              >
+                {currentUser.photoURL ? (
+                  <img
+                    src={currentUser.photoURL}
+                    alt="Profile"
+                    className="rounded-circle shadow-sm"
+                    style={{ width: '32px', height: '32px', objectFit: 'cover' }}
+                  />
+                ) : userInitial ? (
+                  <div
+                    className="rounded-circle d-flex justify-content-center align-items-center shadow-sm"
+                    style={{ width: '32px', height: '32px', fontSize: '1rem', backgroundColor: 'var(--color-text-primary)', color: 'var(--card-background)' }}
+                  >
+                    {userInitial}
+                  </div>
+                ) : (
+                  <FaUser />
+                )}
+              </Nav.Link>
+            ) : (
+              <Button
+                variant="link"
+                size="sm"
+                className="d-flex align-items-center justify-content-center minimal-action-btn"
+                onClick={() => handleNavItemClick('user')}
+                style={{ width: '40px', height: '40px', borderRadius: '50%' }}
+              >
                 <FaUser />
-              )}
-            </Nav.Link>
-          ) : (
-            <Button
-              variant="link"
-              size="sm"
-              className="d-flex align-items-center justify-content-center minimal-action-btn"
-              onClick={() => handleNavItemClick('user')}
-              style={{ width: '40px', height: '40px', borderRadius: '50%' }}
-            >
-              <FaUser />
-            </Button>
-          )}
-
-          {isSidebar && (
-            <div className="user-info-sidebar">
-              <span className="user-name-sidebar">
-                {currentUser ? (currentUser.displayName || '已登录用户') : '未登录'}
-              </span>
-              <span className="user-status-sidebar">
-                {currentUser ? '在线' : '点击登录'}
-              </span>
-            </div>
-          )}
-        </div>
+              </Button>
+            )}
+          </div>
+        )}
 
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav" className={isSidebar ? "w-100 flex-column" : ""}>

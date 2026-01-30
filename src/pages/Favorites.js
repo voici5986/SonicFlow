@@ -11,7 +11,7 @@ import { searchMusic } from '../services/musicApiService';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useAuth } from '../contexts/AuthContext';
 
-const Favorites = () => {
+const Favorites = ({ globalSearchQuery }) => {
   // 从PlayerContext获取状态和方法
   const { handlePlay, currentTrack, isPlaying } = usePlayer();
 
@@ -34,6 +34,31 @@ const Favorites = () => {
   // 新增搜索相关状态
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredFavorites, setFilteredFavorites] = useState([]);
+
+  // 监听全局搜索
+  useEffect(() => {
+    if (globalSearchQuery !== undefined) {
+      setSearchQuery(globalSearchQuery);
+      performSearch(globalSearchQuery, favorites);
+    }
+  }, [globalSearchQuery, favorites]);
+
+  // 将搜索逻辑提取出来
+  const performSearch = (query, currentFavorites) => {
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
+      setFilteredFavorites(currentFavorites);
+      return;
+    }
+
+    const filtered = currentFavorites.filter(track => {
+      if (isMatch(track.name, trimmedQuery) || isMatch(track.album, trimmedQuery)) {
+        return true;
+      }
+      return isArtistMatch(track, trimmedQuery);
+    });
+    setFilteredFavorites(filtered);
+  };
 
   // 定义loadFavorites函数在useEffect之前
   const loadFavorites = async () => {
@@ -125,35 +150,6 @@ const Favorites = () => {
       setDownloading(false);
       setCurrentDownloadingTrack(null);
     }
-  };
-
-  // 搜索过滤功能 - 基于诊断结果的全新实现
-  const handleSearch = (e) => {
-    const query = e.target.value.trim();
-    setSearchQuery(query);
-
-    if (!query) {
-      setFilteredFavorites(favorites);
-      return;
-    }
-
-    console.log(`开始搜索: "${query}"`);
-    console.log(`查询编码: ${Array.from(query).map(c => c.charCodeAt(0).toString(16)).join(' ')}`);
-
-    // 查找所有匹配的收藏项目
-    const filtered = favorites.filter(track => {
-      // 检查简单字段
-      if (isMatch(track.name, query) ||
-        isMatch(track.album, query)) {
-        return true;
-      }
-
-      // 检查艺术家 - 处理多种可能的数据结构
-      return isArtistMatch(track, query);
-    });
-
-    console.log(`找到 ${filtered.length} 个匹配结果`);
-    setFilteredFavorites(filtered);
   };
 
   // 递归搜索任何值是否匹配查询词
@@ -676,8 +672,8 @@ const Favorites = () => {
           <h1 className="mb-0">我的收藏</h1>
           <span className="ms-3 badge" style={{ backgroundColor: 'var(--color-background-alt)', color: 'var(--color-text-tertiary)', fontWeight: '500' }}>{favorites.length}/{MAX_FAVORITES_ITEMS}</span>
         </div>
-        <div className="d-flex justify-content-end">
-          <Dropdown>
+        <div className="d-flex align-items-center gap-2">
+          <Dropdown align="end">
             <Dropdown.Toggle size="sm" id="dropdown-import-export" className="minimal-action-btn">
               <FaExchangeAlt /> <span className="ms-1">导入导出</span>
             </Dropdown.Toggle>
@@ -699,38 +695,6 @@ const Favorites = () => {
 
       {/* 添加登录提醒 */}
       {renderLoginReminder()}
-
-      {/* 添加搜索框 */}
-      {favorites.length > 0 && (
-        <InputGroup className="mb-4">
-          <InputGroup.Text>
-            <FaSearch />
-          </InputGroup.Text>
-          <Form.Control
-            placeholder="搜索歌名或艺术家..."
-            value={searchQuery}
-            onChange={handleSearch}
-          />
-          {searchQuery && (
-            <Button
-              className="minimal-action-btn"
-              onClick={() => {
-                setSearchQuery('');
-                setFilteredFavorites(favorites);
-              }}
-            >
-              清除
-            </Button>
-          )}
-        </InputGroup>
-      )}
-
-      {/* 显示搜索结果统计 */}
-      {searchQuery && (
-        <div className="mb-3 text-muted">
-          找到 {filteredFavorites.length} 个匹配结果 {filteredFavorites.length === 0 && '(无匹配内容)'}
-        </div>
-      )}
 
       {/* 隐藏的文件输入框，用于导入功能 */}
       <input

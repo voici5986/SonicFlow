@@ -11,6 +11,7 @@ import OrientationPrompt from './components/OrientationPrompt';
 import InstallPWA from './components/InstallPWA';
 import UpdateNotification from './components/UpdateNotification';
 import AudioPlayer from './components/AudioPlayer';
+import Header from './components/Header';
 import { useAuth } from './contexts/AuthContext';
 import { useDevice } from './contexts/DeviceContext';
 import PlayerProvider, { usePlayer } from './contexts/PlayerContext';
@@ -34,6 +35,7 @@ import { clearExpiredCovers } from './services/storage';
 // 导入样式文件
 import './styles/AudioPlayer.css';
 import './styles/Orientation.css';
+import './styles/Header.css';
 
 // 懒加载页面组件
 const Favorites = React.lazy(() => import('./pages/Favorites'));
@@ -370,13 +372,13 @@ const AppContent = () => {
       case 'favorites':
         return (
           <Suspense fallback={loadingFallback}>
-            <Favorites />
+            <Favorites globalSearchQuery={query} />
           </Suspense>
         );
       case 'history':
         return (
           <Suspense fallback={loadingFallback}>
-            <History />
+            <History globalSearchQuery={query} />
           </Suspense>
         );
       case 'user':
@@ -444,13 +446,26 @@ const AppContent = () => {
     <DownloadContext.Provider value={downloadContextValue}>
       <div className={`app-container ${!deviceInfo.isMobile ? 'desktop-layout' : ''}`}>
         <OrientationPrompt />
+        <Header 
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          searchQuery={query}
+          onSearchChange={(val) => dispatch({ type: 'SET_FIELD', field: 'query', value: val })}
+          onSearchSubmit={(e) => {
+            handleSearch(e);
+            if (activeTab !== 'home') {
+              handleTabChange('home');
+            }
+          }}
+          loading={loading}
+        />
         <Navigation
           activeTab={activeTab}
           onTabChange={handleTabChange}
         />
 
         <div className={!deviceInfo.isMobile ? 'main-content' : ''}>
-          <Container fluid className={`${!deviceInfo.isMobile ? 'content-area' : ''} mt-4 pb-5`}>
+          <Container fluid className={`${!deviceInfo.isMobile ? 'content-area' : ''} pb-5`}>
             {renderContent()}
           </Container>
         </div>
