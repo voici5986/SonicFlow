@@ -13,11 +13,14 @@ export const useAudioPlayerViewState = () => {
     coverCache,
     currentPlaylist,
     playMode,
+    playedSeconds,
+    totalSeconds,
     togglePlay,
     toggleLyric,
     handlePrevious,
     handleNext,
     handleTogglePlayMode,
+    seekTo,
     lyricsContainerRef,
     parseLyric
   } = usePlayer();
@@ -53,21 +56,44 @@ export const useAudioPlayerViewState = () => {
       title: currentTrack.name,
       artist: currentTrack.artist,
       album: currentTrack.album || '',
-      artwork: [{
-        src: coverCache[`${currentTrack.source}_${currentTrack.pic_id}_300`] || '/default_cover.svg',
-        sizes: '300x300',
-        type: 'image/png'
-      }]
+      artwork: [
+        {
+          src: coverCache[`${currentTrack.source}_${currentTrack.pic_id}_500`] || 
+               coverCache[`${currentTrack.source}_${currentTrack.pic_id}_300`] || 
+               '/default_cover.svg',
+          sizes: '500x500',
+          type: 'image/png'
+        }
+      ]
     });
 
     navigator.mediaSession.setActionHandler('play', togglePlay);
     navigator.mediaSession.setActionHandler('pause', togglePlay);
+    navigator.mediaSession.setActionHandler('seekto', (details) => {
+      if (details.seekTime !== undefined) {
+        seekTo(details.seekTime);
+      }
+    });
 
     if (currentPlaylist.length > 1) {
       navigator.mediaSession.setActionHandler('previoustrack', handlePrevious);
       navigator.mediaSession.setActionHandler('nexttrack', handleNext);
     }
-  }, [currentTrack, coverCache, currentPlaylist, togglePlay, handlePrevious, handleNext]);
+  }, [currentTrack, coverCache, currentPlaylist, togglePlay, handlePrevious, handleNext, seekTo]);
+
+  useEffect(() => {
+    if ('mediaSession' in navigator && totalSeconds > 0) {
+      try {
+        navigator.mediaSession.setPositionState({
+          duration: totalSeconds,
+          playbackRate: 1.0,
+          position: Math.min(playedSeconds, totalSeconds)
+        });
+      } catch (error) {
+        console.error('[MediaSession] setPositionState failed:', error);
+      }
+    }
+  }, [playedSeconds, totalSeconds]);
 
   useEffect(() => {
     if ('mediaSession' in navigator) {

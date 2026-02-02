@@ -294,7 +294,7 @@ export const getLyrics = async (track) => {
  * @param {number} size - 封面尺寸（只支持300和500）
  * @returns {Promise<string>} - 封面URL或默认封面路径
  */
-export const getCoverImage = async (source, picId, size = 300) => {
+export const getCoverImage = async (source, picId, size = 500) => {
   try {
     // 验证参数
     if (!picId || picId === 'undefined' || picId === 'null') {
@@ -303,7 +303,7 @@ export const getCoverImage = async (source, picId, size = 300) => {
 
     // 验证size参数
     if (size !== 300 && size !== 500) {
-      size = 300;
+      size = 500;
     }
 
     const cacheKey = `${source}_${picId}_${size}`;
@@ -326,7 +326,7 @@ export const getCoverImage = async (source, picId, size = 300) => {
 /**
  * 强制获取封面图片 (仅限播放等核心场景按需使用，以节省API额度)
  */
-export const forceGetCoverImage = async (source, picId, size = 300) => {
+export const forceGetCoverImage = async (source, picId, size = 500) => {
   try {
     const cacheKey = `${source}_${picId}_${size}`;
     const cachedUrl = getMemoryCache(CACHE_TYPES.COVER_IMAGES, cacheKey);
@@ -371,8 +371,8 @@ export const playMusic = async (track, quality = 999, forceRefresh = false) => {
     // 将播放任务交给状态管理器（底层分发到 AudioEngine）
     audioStateManager.loadTrack(track, url);
 
-    // 后台异步补全封面
-    forceGetCoverImage(track.source, track.pic_id).catch(() => { });
+    // 后台异步补全 500 尺寸高清封面
+    forceGetCoverImage(track.source, track.pic_id, 500).catch(() => { });
 
     return {
       url,

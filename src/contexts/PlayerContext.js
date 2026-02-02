@@ -198,6 +198,9 @@ export const PlayerProvider = ({ children }) => {
       if (!forceRefresh) {
         addToHistory(track);
       }
+
+      // 核心流程：仅请求并补全 500 尺寸的高清封面
+      fetchCover(track.source, track.pic_id, 500).catch(() => {});
     } catch (error) {
       console.error('[PlayerContext] handlePlay error:', error);
     }
@@ -242,7 +245,7 @@ export const PlayerProvider = ({ children }) => {
   }, []);
 
   // 获取封面的统一方法
-  const fetchCover = useCallback(async (source, picId, size = 300) => {
+  const fetchCover = useCallback(async (source, picId, size = 500) => {
     const cacheKey = `${source}_${picId}_${size}`;
     
     // 1. 检查内存缓存
