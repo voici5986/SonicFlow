@@ -24,6 +24,7 @@
   --color-text-muted: #9B9A97;
   --color-background: #FAFAF9;
   --color-background-alt: #F7F6F4;
+  --color-hover-notion: #F1F1F0;
   --color-border: #E9E9E9;
   --color-border-active: #2F3437;
   
@@ -546,7 +547,7 @@
 }
 
 .login-prompt-container:hover {
-  background-color: #EFEFEE; /* 稍深一点的 Notion 背景色 */
+  background-color: var(--color-hover-notion);
 }
 
 .login-prompt-desc {

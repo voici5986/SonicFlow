@@ -42,7 +42,7 @@
 }
 
 .header-user-profile:hover {
-  background-color: var(--color-background-alt);
+  background-color: var(--color-hover-notion);
 }
 
 .header-avatar-wrapper {

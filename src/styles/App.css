@@ -234,15 +234,15 @@
 }
 
 .music-card:hover {
-  background-color: var(--card-hover-background) !important;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  background-color: var(--color-hover-notion) !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
 .music-card.is-active {
   border-color: var(--color-primary) !important;
-  background-color: var(--card-hover-background) !important;
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
+  background-color: var(--color-hover-notion) !important;
+  box-shadow: none !important;
 }
 
 .text-primary {

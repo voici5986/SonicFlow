@@ -169,13 +169,13 @@
 }
 
 .navigation-sidebar .nav-link:hover {
-  background-color: var(--color-border) !important;
+  background-color: var(--color-hover-notion) !important;
   color: var(--color-text-primary) !important;
   transform: none !important;
 }
 
 .navigation-sidebar .nav-link.active {
-  background-color: var(--color-border) !important;
+  background-color: var(--color-hover-notion) !important;
   color: var(--color-text-primary) !important;
   font-weight: 600 !important;
 }
