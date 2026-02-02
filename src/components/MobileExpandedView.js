@@ -1,5 +1,4 @@
 import React from 'react';
-import { Button } from 'react-bootstrap';
 import { FaTimes } from 'react-icons/fa';
 import MobileAlbumCover from './MobileAlbumCover';
 import { LyricLine } from './PlayerSubComponents';
@@ -34,7 +33,7 @@ const MobileExpandedView = ({
         transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)'
       }}
     >
-      <Button variant="link" onClick={toggleLyric} className="close-lyrics-btn"><FaTimes /></Button>
+      <button onClick={toggleLyric} className="close-lyrics-btn" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'inherit' }}><FaTimes /></button>
       
       <div className="expanded-main-wrapper" onClick={() => {
         if (window.innerWidth <= 768) setShowMobileLyrics(!showMobileLyrics);

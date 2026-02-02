@@ -1,5 +1,4 @@
 import React from 'react';
-import { Navbar, Nav, Container, Button } from 'react-bootstrap';
 import { FaUser } from 'react-icons/fa';
 import { useDevice } from '../contexts/DeviceContext';
 
@@ -27,14 +26,11 @@ const DesktopNavbar = ({
   };
 
   return (
-    <Navbar
-      expand={isSidebar ? true : "lg"}
-      expanded={isSidebar ? true : expanded}
-      onToggle={isSidebar ? undefined : setExpanded}
-      className={`nav-animated ${scrolled ? 'scrolled' : ''} ${isSidebar ? 'flex-column h-100 align-items-start border-0' : ''}`}
+    <nav
+      className={`navbar navbar-expand-lg nav-animated ${scrolled ? 'scrolled' : ''} ${isSidebar ? 'flex-column h-100 align-items-start border-0' : ''}`}
     >
-      <Container fluid>
-        <Navbar.Brand className="d-flex align-items-center">
+      <div className={`container-fluid ${isSidebar ? 'flex-column align-items-start px-0' : ''} h-100`}>
+        <div className={`navbar-brand d-flex align-items-center ${isSidebar ? 'mb-4 ps-3' : ''}`}>
           <img
             src="/logo.svg"
             alt="SonicFlow Logo"
@@ -47,17 +43,16 @@ const DesktopNavbar = ({
             }}
           />
           <span className="brand-text" style={logoStyle}>SonicFlow</span>
-        </Navbar.Brand>
+        </div>
 
         {/* 仅在移动端显示顶部的用户头像按钮 */}
         {!isSidebar && (
           <div className="order-lg-last ms-auto me-2 d-flex align-items-center">
             {currentUser ? (
-              <Nav.Link
-                active={activeTab === 'user'}
+              <div
                 onClick={() => handleNavItemClick('user')}
-                className={`d-flex align-items-center justify-content-center nav-item ${activeTab === 'user' ? 'active' : ''}`}
-                style={{ width: '40px', height: '40px' }}
+                className={`d-flex align-items-center justify-content-center nav-link nav-item ${activeTab === 'user' ? 'active' : ''}`}
+                style={{ width: '40px', height: '40px', cursor: 'pointer' }}
               >
                 {currentUser.photoURL ? (
                   <img
@@ -76,41 +71,51 @@ const DesktopNavbar = ({
                 ) : (
                   <FaUser />
                 )}
-              </Nav.Link>
+              </div>
             ) : (
-              <Button
-                variant="link"
-                size="sm"
+              <button
                 className="d-flex align-items-center justify-content-center minimal-action-btn"
                 onClick={() => handleNavItemClick('user')}
-                style={{ width: '40px', height: '40px', borderRadius: '50%' }}
+                style={{ width: '40px', height: '40px', borderRadius: '50%', padding: 0 }}
               >
                 <FaUser />
-              </Button>
+              </button>
             )}
           </div>
         )}
 
-        <Navbar.Toggle aria-controls="basic-navbar-nav" />
-        <Navbar.Collapse id="basic-navbar-nav" className={isSidebar ? "w-100 flex-column" : ""}>
-          <Nav className={isSidebar ? "flex-column w-100" : "mx-auto"}>
+        {!isSidebar && (
+          <button
+            className="navbar-toggler"
+            type="button"
+            onClick={() => setExpanded(!expanded)}
+            aria-controls="basic-navbar-nav"
+            aria-expanded={expanded}
+            aria-label="Toggle navigation"
+          >
+            <span className="navbar-toggler-icon"></span>
+          </button>
+        )}
+
+        <div className={`collapse navbar-collapse ${isSidebar ? "w-100 flex-column show" : (expanded ? "show" : "")}`} id="basic-navbar-nav">
+          <div className={`navbar-nav ${isSidebar ? "flex-column w-100" : "mx-auto"}`}>
             {navItems.map(item => {
               const Icon = item.icon;
               return (
-                <Nav.Link
+                <div
                   key={item.id}
-                  active={activeTab === item.id}
                   onClick={() => handleNavItemClick(item.id)}
-                  className={`d-flex align-items-center ${isSidebar ? '' : 'mx-2 mx-md-4'} nav-item ${activeTab === item.id ? 'active' : ''}`}
+                  className={`nav-link d-flex align-items-center ${isSidebar ? '' : 'mx-2 mx-md-4'} nav-item ${activeTab === item.id ? 'active' : ''}`}
+                  style={{ cursor: 'pointer' }}
                 >
                   <span className={`${isSidebar ? 'me-3' : 'me-1'} nav-icon`}><Icon /></span> {item.title}
-                </Nav.Link>
+                </div>
               );
             })}
-          </Nav>
-        </Navbar.Collapse>
-      </Container>
-    </Navbar>
+          </div>
+        </div>
+      </div>
+    </nav>
   );
 };
 

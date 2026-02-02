@@ -1,5 +1,4 @@
 import React from 'react';
-import { Row, Col, Button } from 'react-bootstrap';
 import { FaPlay, FaPause, FaRandom, FaRedoAlt, FaSyncAlt } from 'react-icons/fa';
 import { MdSkipPrevious, MdSkipNext } from 'react-icons/md';
 import MobileAlbumCover from './MobileAlbumCover';
@@ -30,23 +29,23 @@ const MobileMiniPlayer = ({
   return (
     <div className="d-md-none h-100 w-100" style={{ position: 'relative' }}>
       {/* 收起模式：左侧大空间信息，右侧仅红心和播放 */}
-      <Row className="align-items-center h-100 m-0">
-        <Col xs={8} className="d-flex align-items-center p-0 overflow-hidden" onClick={toggleLyric} style={{ cursor: 'pointer' }}>
+      <div className="row align-items-center h-100 m-0">
+        <div className="col-8 d-flex align-items-center p-0 overflow-hidden" onClick={toggleLyric} style={{ cursor: 'pointer' }}>
           <MobileAlbumCover track={currentTrack} size="small" imgSize={500} />
           <div className="track-info-container flex-grow-1 ms-2" style={{ minWidth: 0, paddingRight: '10px' }}>
             <h6 className="mb-0 text-truncate track-name" style={{ width: '100%' }}>{currentTrack.name}</h6>
             <small className="text-muted text-truncate track-artist d-block" style={{ width: '100%' }}>{currentTrack.artist}</small>
           </div>
-        </Col>
-        <Col xs={3} className="d-flex justify-content-end align-items-center p-0" style={{ paddingRight: '12px !important' }}>
+        </div>
+        <div className="col-3 d-flex justify-content-end align-items-center p-0" style={{ paddingRight: '12px !important' }}>
           <div className="d-flex align-items-center pe-1.8">
             <HeartButton track={currentTrack} size={24} variant="link" className="control-button accent-control me-4 p-0" />
-            <Button variant="link" onClick={togglePlay} className="control-icon-btn accent-control p-0">
+            <button onClick={togglePlay} className="control-icon-btn accent-control p-0" style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>
               {isPlaying ? <FaPause size={24} /> : <FaPlay size={24} />}
-            </Button>
+            </button>
           </div>
-        </Col>
-      </Row>
+        </div>
+      </div>
 
       {/* 展开模式下的内容：通过 mobile-expanded-content CSS 控制显示隐藏 */}
       {lyricExpanded && (
@@ -65,24 +64,24 @@ const MobileMiniPlayer = ({
 
             <div className="d-flex align-items-center justify-content-between px-4">
               <div style={{ width: '40px', display: 'flex', justifyContent: 'center' }}>
-                <Button 
-                  variant="link" 
+                <button 
                   onClick={handleTogglePlayMode} 
                   className="control-icon-btn p-0"
                   title={getPlayModeTitle()}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
                 >
                   {renderPlayModeIcon()}
-                </Button>
+                </button>
               </div>
               
               <div style={{ width: '40px', display: 'flex', justifyContent: 'center' }}>
-                <Button variant="link" onClick={handlePrevious} className="control-icon-btn p-0">
+                <button onClick={handlePrevious} className="control-icon-btn p-0" style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>
                   <MdSkipPrevious size={32} />
-                </Button>
+                </button>
               </div>
               
               <div style={{ width: '64px', display: 'flex', justifyContent: 'center' }}>
-                <Button variant="link" onClick={togglePlay} className="control-icon-btn accent-control p-0">
+                <button onClick={togglePlay} className="control-icon-btn accent-control p-0" style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>
                   <div className="play-pause-button" style={{ 
                     backgroundColor: 'transparent', 
                     borderRadius: '0', 
@@ -96,24 +95,30 @@ const MobileMiniPlayer = ({
                   }}>
                     {isPlaying ? <FaPause size={48} /> : <FaPlay size={48} className="ms-1" />}
                   </div>
-                </Button>
+                </button>
               </div>
               
               <div style={{ width: '40px', display: 'flex', justifyContent: 'center' }}>
-                <Button variant="link" onClick={handleNext} className="control-icon-btn p-0">
+                <button onClick={handleNext} className="control-icon-btn p-0" style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>
                   <MdSkipNext size={32} />
-                </Button>
+                </button>
               </div>
               
               <div style={{ width: '40px', display: 'flex', justifyContent: 'center' }}>
-                <HeartButton track={currentTrack} size={28} variant="link" className="p-0 control-button accent-control" />
+                <button 
+                  onClick={() => setShowMobileLyrics(!showMobileLyrics)} 
+                  className={`control-icon-btn p-0 ${showMobileLyrics ? 'text-primary' : ''}`}
+                  title="歌词"
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
+                >
+                  <FaSyncAlt size={20} className={showMobileLyrics ? 'fa-spin' : ''} />
+                </button>
               </div>
             </div>
             
             {/* 收起按钮：作为 Flex 序列的最后一项，保持统一间距 */}
             <div className="d-flex justify-content-center mt-2">
-              <Button 
-                variant="link" 
+              <button 
                 onClick={toggleLyric} 
                 className="p-0 text-muted opacity-75 no-focus-outline"
                 aria-label="收起播放器"
@@ -124,11 +129,12 @@ const MobileMiniPlayer = ({
                   border: 'none',
                   boxShadow: 'none',
                   outline: 'none',
-                  background: 'none'
+                  background: 'none',
+                  cursor: 'pointer'
                 }}
               >
                 <FaChevronDown size={20} />
-              </Button>
+              </button>
             </div>
           </div>
         </div>

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Modal, ListGroup, Badge, Row, Col } from 'react-bootstrap';
-import { FaTrash, FaSync, FaInfoCircle, FaImage } from 'react-icons/fa';
+import { FaTrash, FaSync, FaInfoCircle, FaImage, FaTimes } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { clearMemoryCache, CACHE_TYPES } from '../services/memoryCache';
 
@@ -120,106 +119,119 @@ const CacheManager = () => {
 
   return (
     <>
-      <Button 
-        variant="outline-secondary" 
-        size="sm" 
+      <button 
         onClick={handleShow}
-        className="d-flex align-items-center"
+        className="d-flex align-items-center minimal-action-btn"
+        style={{ padding: '4px 12px', fontSize: '0.85rem' }}
       >
         <FaSync className="me-1" /> 缓存管理
-      </Button>
+      </button>
 
-      <Modal show={show} onHide={handleClose}>
-        <Modal.Header closeButton>
-          <Modal.Title>缓存管理</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {loading ? (
-            <div className="text-center p-4">
-              <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">加载中...</span>
-              </div>
-              <p className="mt-2">正在处理...</p>
+      {show && (
+        <div className="modal-overlay-custom" onClick={handleClose}>
+          <div className="modal-container-custom" onClick={e => e.stopPropagation()}>
+            <div className="modal-header-custom">
+              <h5 className="modal-title-custom">缓存管理</h5>
+              <button className="modal-close-custom" onClick={handleClose}>
+                <FaTimes size={18} />
+              </button>
             </div>
-          ) : (
-            <>
-              <div className="mb-4">
-                <h5>存储使用情况</h5>
-                {cacheStats && (
-                  <div className="mb-3">
-                    <div className="d-flex justify-content-between mb-1">
-                      <span>已使用: {cacheStats.used}</span>
-                      <span>总容量: {cacheStats.total}</span>
-                    </div>
-                    <div className="progress">
-                      <div 
-                        className="progress-bar" 
-                        role="progressbar" 
-                        style={{ width: `${cacheStats.percent}%` }}
-                        aria-valuenow={cacheStats.percent} 
-                        aria-valuemin="0" 
-                        aria-valuemax="100"
-                      >
-                        {cacheStats.percent}%
+            <div className="modal-body-custom">
+              {loading ? (
+                <div className="text-center p-4">
+                  <span className="spinner-custom" style={{ width: '2rem', height: '2rem' }}></span>
+                  <p className="mt-2">正在处理...</p>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-4">
+                    <h5>存储使用情况</h5>
+                    {cacheStats && (
+                      <div className="mb-3">
+                        <div className="d-flex justify-content-between mb-1">
+                          <span>已使用: {cacheStats.used}</span>
+                          <span>总容量: {cacheStats.total}</span>
+                        </div>
+                        <div className="progress-custom">
+                          <div 
+                            className="progress-bar-custom" 
+                            role="progressbar" 
+                            style={{ width: `${cacheStats.percent}%` }}
+                            aria-valuenow={cacheStats.percent} 
+                            aria-valuemin="0" 
+                            aria-valuemax="100"
+                          >
+                            {cacheStats.percent}%
+                          </div>
+                        </div>
                       </div>
+                    )}
+                    
+                    <div className="alert-custom alert-info-custom d-flex align-items-center">
+                      <FaInfoCircle className="me-2" />
+                      <small>已切换到内存级缓存，刷新页面或关闭浏览器后缓存会被清除</small>
                     </div>
                   </div>
-                )}
-                
-                <div className="alert alert-info d-flex align-items-center">
-                  <FaInfoCircle className="me-2" />
-                  <small>已切换到内存级缓存，刷新页面或关闭浏览器后缓存会被清除</small>
-                </div>
-              </div>
 
-              <h5>内存缓存类型</h5>
-              <ListGroup className="mb-3">
-                {Object.values(CACHE_TYPES).map((type) => (
-                  <ListGroup.Item 
-                    key={type}
-                    className="d-flex justify-content-between align-items-center"
-                  >
-                    <div>
-                      {getCacheTypeName(type)}
-                      <Badge bg="secondary" className="ms-2">
-                        {type === CACHE_TYPES.SEARCH_RESULTS && '5分钟'}
-                        {type === CACHE_TYPES.COVER_IMAGES && '30分钟'}
-                        {type === CACHE_TYPES.AUDIO_METADATA && '10分钟'}
-                        {type === CACHE_TYPES.LYRICS && '30分钟'}
-                        {type === CACHE_TYPES.AUDIO_URLS && '10分钟'}
-                      </Badge>
-                    </div>
-                    <Button 
-                      variant="outline-danger" 
-                      size="sm"
-                      onClick={() => handleClearCache(type)}
+                  <h5>内存缓存类型</h5>
+                  <ul className="list-group-custom mb-3">
+                    {Object.values(CACHE_TYPES).map((type) => (
+                      <li 
+                        key={type}
+                        className="list-group-item-custom d-flex justify-content-between align-items-center"
+                      >
+                        <div>
+                          {getCacheTypeName(type)}
+                          <span className="badge-custom ms-2" style={{ fontSize: '0.75rem', padding: '2px 8px' }}>
+                            {type === CACHE_TYPES.SEARCH_RESULTS && '5分钟'}
+                            {type === CACHE_TYPES.COVER_IMAGES && '30分钟'}
+                            {type === CACHE_TYPES.AUDIO_METADATA && '10分钟'}
+                            {type === CACHE_TYPES.LYRICS && '30分钟'}
+                            {type === CACHE_TYPES.AUDIO_URLS && '10分钟'}
+                          </span>
+                        </div>
+                        <button 
+                          className="minimal-action-btn text-danger border-danger-subtle"
+                          style={{ padding: '2px 10px', fontSize: '0.8rem' }}
+                          onClick={() => handleClearCache(type)}
+                        >
+                          <FaTrash /> 清理
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  
+                  <div className="d-grid gap-2">
+                    <button 
+                      className="btn-primary-custom"
+                      style={{ backgroundColor: 'var(--color-danger)', border: 'none', padding: '10px' }}
+                      onClick={handleClearAllCache}
                     >
-                      <FaTrash /> 清理
-                    </Button>
-                  </ListGroup.Item>
-                ))}
-              </ListGroup>
-              
-              <div className="d-grid gap-2">
-                <Button 
-                  variant="danger" 
-                  onClick={handleClearAllCache}
-                >
-                  <FaTrash className="me-1" /> 清理所有缓存
-                </Button>
-              </div>
-            </>
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleClose}>
-            关闭
-          </Button>
-          <Button variant="primary" onClick={fetchCacheStats} disabled={loading}>
-            <FaSync className="me-1" /> 刷新统计
-          </Button>
-        </Modal.Footer>
-      </Modal>
+                      <FaTrash className="me-1" /> 清理所有缓存
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="modal-footer-custom">
+              <button 
+                className="minimal-action-btn" 
+                onClick={handleClose}
+                style={{ padding: '8px 20px' }}
+              >
+                关闭
+              </button>
+              <button 
+                className="btn-primary-custom"
+                onClick={handleClearAllCache}
+                style={{ padding: '8px 20px' }}
+              >
+                清理全部缓存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

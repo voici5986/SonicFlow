@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Button, Spinner, Alert } from 'react-bootstrap';
 import { FaPlay, FaPause, FaDownload, FaTrash } from 'react-icons/fa';
 import { getHistory, clearHistory } from '../services/storage';
 import { toast } from 'react-toastify';
@@ -16,7 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 // 设置moment为中文
 moment.locale('zh-cn');
 
-const History = ({ globalSearchQuery }) => {
+const History = ({ globalSearchQuery, onTabChange }) => {
   const [history, setHistory] = useState([]);
   const [filteredHistory, setFilteredHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -157,13 +156,23 @@ const History = ({ globalSearchQuery }) => {
               <p className="login-prompt-desc mb-0">同步播放历史，在任何设备继续音乐旅程。</p>
             </div>
             <div className="login-prompt-action">
-              <Button 
-                href="#/auth"
-                className="ms-md-3 minimal-action-btn"
-                style={{ minWidth: '100px' }}
+              <button 
+                onClick={() => onTabChange('user')}
+                className="ms-md-3 minimal-action-btn text-decoration-none text-center"
+                style={{ 
+                  minWidth: '80px',
+                  padding: '6px 12px',
+                  fontSize: '0.85rem',
+                  borderRadius: 'var(--border-radius-md)',
+                  backgroundColor: 'var(--color-primary)',
+                  color: 'white',
+                  fontWeight: '500',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
               >
                 立即登录
-              </Button>
+              </button>
             </div>
           </div>
         </div>
@@ -173,17 +182,17 @@ const History = ({ globalSearchQuery }) => {
   };
 
   return (
-    <Container className="my-4">
+    <div className="history-page page-content-wrapper">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1>播放历史</h1>
         {history.length > 0 && (
-          <Button 
-            size="sm"
+          <button 
             className="minimal-action-btn"
             onClick={handleClearHistory}
+            style={{ padding: '4px 12px', fontSize: '0.85rem' }}
           >
             <FaTrash className="me-1" /> 清空历史
-          </Button>
+          </button>
         )}
       </div>
       
@@ -192,38 +201,44 @@ const History = ({ globalSearchQuery }) => {
       
       {loading ? (
         <div className="text-center my-5">
-          <Spinner animation="border" />
+          <span className="spinner-custom"></span>
         </div>
       ) : history.length === 0 ? null : filteredHistory.length === 0 ? (
-        <Alert variant="light" className="text-center">
+        <div className="alert-light text-center py-4 rounded" style={{ backgroundColor: 'var(--color-background-alt)', border: '1px solid var(--color-border)' }}>
           没有匹配的历史记录
-        </Alert>
+        </div>
       ) : (
-        <Row className="g-3">
-          {filteredHistory.map((item) => (
-            <Col key={item.timestamp} xs={12} md={6}>
-              <Card 
-                className={`music-card ${currentTrack?.id === item.song.id ? 'is-active' : ''}`}
-                onClick={() => handleTrackPlay(item.song)}
-              >
-                <div className="music-card-row">
-                  <div className="music-card-info">
-                    <h6>{item.song.name}</h6>
-                    <small>{item.song.artist}</small>
+        <div className="history-grid row g-3">
+          {filteredHistory.map((item, index) => {
+            const track = item.song;
+            return (
+              <div key={`${track.id}-${index}`} className="col-12 col-md-6">
+                <div 
+                  className={`music-card ${currentTrack?.id === track.id ? 'is-active' : ''}`}
+                  onClick={() => handleTrackPlay(track)}
+                >
+                  <div className="music-card-row">
+                    <div className="music-card-info">
+                      <div className="d-flex align-items-center">
+                        <h6 className="mb-0 text-truncate">{track.name}</h6>
+                        <span className="ms-2 badge-time">{formatCompactTimestamp(item.timestamp)}</span>
+                      </div>
+                      <small className="text-truncate">{track.artist}</small>
+                    </div>
+
+                    <MusicCardActions 
+                      track={track}
+                      isDownloading={downloading && currentDownloadingTrack?.id === track.id}
+                      onDownload={handleDownload}
+                    />
                   </div>
-                  
-                  <MusicCardActions 
-                    track={item.song}
-                    isDownloading={downloading && currentDownloadingTrack?.id === item.song.id}
-                    onDownload={handleDownload}
-                  />
                 </div>
-              </Card>
-            </Col>
-          ))}
-        </Row>
+              </div>
+            );
+          })}
+        </div>
       )}
-    </Container>
+    </div>
   );
 };
 

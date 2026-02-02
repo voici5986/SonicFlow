@@ -1,4 +1,4 @@
-import { useReducer, useEffect, useCallback } from 'react';
+import { useReducer, useCallback, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { searchMusic } from '../services/musicApiService';
 import { 
@@ -8,7 +8,6 @@ import {
   checkNetworkStatus, 
   validateSearchParams 
 } from '../utils/errorHandler';
-import useNetworkStatus from './useNetworkStatus';
 
 const searchInitialState = {
   query: '',
@@ -34,59 +33,23 @@ function searchReducer(state, action) {
   }
 }
 
-const useSearch = () => {
+export const useSearch = (isOnline) => {
   const [state, dispatch] = useReducer(searchReducer, searchInitialState);
-  const { query, results, source, quality, loading, error } = state;
-
-  const { isOnline } = useNetworkStatus({
-    showToasts: false,
-    dispatchEvents: false
-  });
-
-  // 监听收藏状态变化，同步更新搜索结果中的心形图标
-  useEffect(() => {
-    const handleFavoritesChanged = () => {
-      // 强制触发一次重新渲染以刷新 SearchResultItem 内部的 HeartButton
-      dispatch({ type: 'SEARCH_SUCCESS', payload: [...results] });
-    };
-
-    window.addEventListener('favorites_changed', handleFavoritesChanged);
-    return () => window.removeEventListener('favorites_changed', handleFavoritesChanged);
-  }, [results]);
-
-  const setField = useCallback((field, value) => {
-    dispatch({ type: 'SET_FIELD', field, value });
-  }, []);
+  const { query, results, source, quality, loading } = state;
 
   const handleSearch = useCallback(async (e) => {
-    if (e) {
-      e.preventDefault();
-    }
+    if (e) e.preventDefault();
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Search triggered with query:', query);
-    }
-
-    // 检查网络状态
-    if (!checkNetworkStatus(isOnline, '搜索音乐')) {
-      return;
-    }
-
-    // 验证搜索参数
-    if (!validateSearchParams(query)) {
-      return;
-    }
+    if (!checkNetworkStatus(isOnline, '搜索音乐')) return;
+    if (!validateSearchParams(query)) return;
 
     dispatch({ type: 'SEARCH_START' });
     try {
       const searchResults = await searchMusic(query, source, 20, 1);
-
-      // 不再预先获取封面图片，只在需要时获取（例如播放时）
       const resultsWithoutCovers = searchResults.map(track => ({ ...track }));
 
       dispatch({ type: 'SEARCH_SUCCESS', payload: resultsWithoutCovers });
 
-      // 如果没有结果，显示提示
       if (resultsWithoutCovers.length === 0) {
         toast.info(`未找到"${query}"的相关结果`);
       }
@@ -96,26 +59,34 @@ const useSearch = () => {
         const { addSearchHistory } = await import('../services/storage');
         addSearchHistory(query, source);
       } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('添加搜索历史失败:', error);
-        }
+        console.error('添加搜索历史失败:', error);
       }
-
     } catch (error) {
       dispatch({ type: 'SEARCH_FAILURE', payload: error });
-      handleError(
-        error,
-        ErrorTypes.SEARCH,
-        ErrorSeverity.ERROR,
-        '搜索失败，请重试'
-      );
+      handleError(error, ErrorTypes.SEARCH, ErrorSeverity.ERROR, '搜索失败，请重试');
     }
   }, [query, source, isOnline]);
 
+  // 监听收藏状态变化，同步更新搜索结果（触发重绘）
+  useEffect(() => {
+    const handleFavoritesChanged = () => {
+      dispatch({ type: 'SEARCH_SUCCESS', payload: [...results] });
+    };
+
+    window.addEventListener('favorites_changed', handleFavoritesChanged);
+    return () => window.removeEventListener('favorites_changed', handleFavoritesChanged);
+  }, [results]);
+
+  const setQuery = useCallback((val) => dispatch({ type: 'SET_FIELD', field: 'query', value: val }), []);
+  const setSource = useCallback((val) => dispatch({ type: 'SET_FIELD', field: 'source', value: val }), []);
+  const setQuality = useCallback((val) => dispatch({ type: 'SET_FIELD', field: 'quality', value: parseInt(val) }), []);
+
   return {
     ...state,
-    setField,
-    handleSearch
+    handleSearch,
+    setQuery,
+    setSource,
+    setQuality
   };
 };
 

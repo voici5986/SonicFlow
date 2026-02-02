@@ -59,10 +59,15 @@ export const DownloadProvider = ({ children }) => {
     }
   }, [downloading, isOnline]);
 
+  const isTrackDownloading = useCallback((trackId) => {
+    return downloading && currentDownloadingTrack?.id === trackId;
+  }, [downloading, currentDownloadingTrack]);
+
   const value = {
     downloading,
     currentDownloadingTrack,
-    handleDownload
+    handleDownload,
+    isTrackDownloading
   };
 
   return (

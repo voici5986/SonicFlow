@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Modal } from 'react-bootstrap';
-import { FaTrash } from 'react-icons/fa';
+import { FaTrash, FaTimes } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { clearMemoryCache } from '../services/memoryCache';
 import {
@@ -100,94 +99,96 @@ const ClearDataButton = ({ onClick }) => {
 
   return (
     <>
-      <div 
-        className="stats-item-notion d-flex align-items-center p-3 rounded-3" 
+      <button 
+        className="minimal-action-btn text-danger d-flex align-items-center justify-content-center"
         onClick={handleShow}
         style={{ 
-          cursor: 'pointer',
-          backgroundColor: 'var(--card-background)',
-          border: '1px dashed var(--color-danger)',
-          transition: 'var(--transition-fast)',
-          opacity: 0.8
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(231, 76, 60, 0.05)';
-          e.currentTarget.style.opacity = 1;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'var(--card-background)';
-          e.currentTarget.style.opacity = 0.8;
+          padding: '8px 16px', 
+          borderRadius: 'var(--border-radius-md)',
+          backgroundColor: 'rgba(231, 76, 60, 0.1)',
+          border: '1px solid rgba(231, 76, 60, 0.2)',
+          fontSize: '0.9rem',
+          fontWeight: '500',
+          transition: 'all 0.2s ease',
+          height: '40px'
         }}
       >
-        <div className="stats-icon-wrapper me-3 d-flex align-items-center justify-content-center" 
-             style={{ 
-               width: '40px', 
-               height: '40px', 
-               borderRadius: '8px', 
-               backgroundColor: 'rgba(231, 76, 60, 0.1)',
-               color: 'var(--color-danger)'
-             }}>
-          <FaTrash size={16} />
-        </div>
-        <div className="flex-grow-1 text-start">
-          <div className="small text-danger fw-bold mb-0">管理本地数据</div>
-          <div className="small text-muted mb-0">清除缓存或重置同步</div>
-        </div>
-      </div>
+        <FaTrash className="me-2" /> 清除数据
+      </button>
 
-      <Modal show={showModal} onHide={handleClose} centered className="notion-modal">
-        <Modal.Header closeButton className="border-0 pb-0">
-          <Modal.Title className="h5 fw-bold">清除本地数据</Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="py-4">
-          <p className="text-muted small mb-4">请选择要从当前设备移除的数据：</p>
-          
-          <div className="d-flex flex-column gap-2">
-            {[
-              { id: 'clearFavorites', key: 'favorites', label: '收藏的歌曲' },
-              { id: 'clearHistory', key: 'history', label: '播放历史' },
-              { id: 'clearSearchHistory', key: 'searchHistory', label: '搜索历史' },
-              { id: 'clearCache', key: 'cache', label: '缓存数据 (封面、结果等)' },
-              { id: 'clearSyncTimestamp', key: 'syncTimestamp', label: '同步状态 (重置云端同步)' },
-            ].map(option => (
-              <div key={option.id} className="form-check custom-checkbox-notion p-2 rounded" style={{ transition: 'background 0.2s' }}>
-                <input
-                  type="checkbox"
-                  className="form-check-input ms-0 me-3"
-                  id={option.id}
-                  checked={selectedOptions[option.key]}
-                  onChange={() => handleOptionChange(option.key)}
-                  style={{ cursor: 'pointer' }}
-                />
-                <label className="form-check-label small" htmlFor={option.id} style={{ cursor: 'pointer', color: 'var(--color-text-secondary)' }}>
-                  {option.label}
-                </label>
+      {showModal && (
+        <div className="modal-overlay-custom" onClick={handleClose}>
+          <div className="modal-container-custom" onClick={e => e.stopPropagation()}>
+            <div className="modal-header-custom border-0 pb-0">
+              <h5 className="modal-title-custom fw-bold">清除本地数据</h5>
+              <button className="modal-close-custom" onClick={handleClose}>
+                <FaTimes size={18} />
+              </button>
+            </div>
+            <div className="modal-body-custom py-4">
+              <p className="text-muted small mb-4">请选择要从当前设备移除的数据：</p>
+              
+              <div className="d-flex flex-column gap-2">
+                {[
+                  { id: 'clearFavorites', key: 'favorites', label: '收藏的歌曲' },
+                  { id: 'clearHistory', key: 'history', label: '播放历史' },
+                  { id: 'clearSearchHistory', key: 'searchHistory', label: '搜索历史' },
+                  { id: 'clearCache', key: 'cache', label: '缓存数据 (封面、结果等)' },
+                  { id: 'clearSyncTimestamp', key: 'syncTimestamp', label: '同步状态 (重置云端同步)' },
+                ].map(option => (
+                  <div 
+                    key={option.id} 
+                    className="form-check custom-checkbox-notion p-2 rounded d-flex align-items-center" 
+                    style={{ 
+                      transition: 'background 0.2s',
+                      backgroundColor: 'var(--color-background-alt)',
+                      marginBottom: '4px',
+                      border: '1px solid var(--color-border)'
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      className="form-check-input ms-0 me-3 mt-0"
+                      id={option.id}
+                      checked={selectedOptions[option.key]}
+                      onChange={() => handleOptionChange(option.key)}
+                      style={{ 
+                        cursor: 'pointer',
+                        width: '18px',
+                        height: '18px',
+                        flexShrink: 0
+                      }}
+                    />
+                    <label className="form-check-label small mb-0 w-100" htmlFor={option.id} style={{ cursor: 'pointer', color: 'var(--color-text-secondary)' }}>
+                      {option.label}
+                    </label>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          <div className="mt-4 p-3 rounded" style={{ backgroundColor: 'rgba(231, 76, 60, 0.05)', border: '1px solid rgba(231, 76, 60, 0.1)' }}>
-            <div className="d-flex align-items-start text-danger">
-              <div className="small fw-bold">注意:</div>
-              <div className="ms-2 small">此操作无法撤销。清除后的本地数据将无法恢复。</div>
+              <div className="mt-4 p-3 rounded" style={{ backgroundColor: 'rgba(231, 76, 60, 0.05)', border: '1px solid rgba(231, 76, 60, 0.1)' }}>
+                <div className="d-flex align-items-start text-danger">
+                  <div className="small fw-bold" style={{ whiteSpace: 'nowrap' }}>注意:</div>
+                  <div className="ms-2 small">此操作无法撤销。清除后的本地数据将无法恢复。</div>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer-custom border-0 pt-0">
+              <button className="minimal-action-btn" onClick={handleClose} style={{ padding: '8px 16px' }}>
+                取消
+              </button>
+              <button 
+                className="minimal-action-btn bg-danger text-white border-0" 
+                onClick={handleClearData}
+                disabled={loading || !Object.values(selectedOptions).some(v => v)}
+                style={{ padding: '8px 20px', borderRadius: 'var(--border-radius-md)' }}
+              >
+                {loading ? <span className="spinner-custom" style={{ width: '1rem', height: '1rem' }}></span> : '确认清除'}
+              </button>
             </div>
           </div>
-        </Modal.Body>
-        <Modal.Footer className="border-0 pt-0">
-          <Button variant="link" className="text-muted text-decoration-none small" onClick={handleClose} disabled={loading}>
-            取消
-          </Button>
-          <Button
-            variant="danger"
-            className="px-4 py-2 small fw-bold"
-            onClick={handleClearData}
-            disabled={loading || !Object.values(selectedOptions).some(value => value)}
-            style={{ borderRadius: '8px' }}
-          >
-            {loading ? '正在处理...' : '确认清除'}
-          </Button>
-        </Modal.Footer>
-      </Modal>
+        </div>
+      )}
     </>
   );
 };

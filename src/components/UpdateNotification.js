@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Toast, Button } from 'react-bootstrap';
-import { FaSync } from 'react-icons/fa';
+import { FaSync, FaTimes } from 'react-icons/fa';
 import { sendMessageToSW } from '../utils/serviceWorkerRegistration';
 
 /**
@@ -65,34 +64,39 @@ const UpdateNotification = ({ registration }) => {
         position: 'fixed', 
         bottom: '100px', 
         right: '20px', 
-        zIndex: 'var(--z-index-modal)',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-        border: 'none'
+        zIndex: 'var(--z-index-modal)'
       }}
     >
-      <Toast 
-        show={showUpdateToast} 
-        onClose={() => setShowUpdateToast(false)}
-        className="bg-info text-white"
-      >
-        <Toast.Header className="bg-info text-white">
-          <strong className="me-auto">应用更新</strong>
-        </Toast.Header>
-        <Toast.Body>
+      <div className="toast-custom toast-info-custom">
+        <div className="toast-header-custom">
+          <span>应用更新</span>
+          <button 
+            onClick={() => setShowUpdateToast(false)}
+            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: '0' }}
+          >
+            <FaTimes />
+          </button>
+        </div>
+        <div className="toast-body-custom">
           <p className="mb-2">发现新版本！更新以获取最新功能和修复。</p>
           <div className="d-flex justify-content-end">
-            <Button 
-              variant="light" 
-              size="sm" 
+            <button 
               onClick={handleUpdateClick}
-              className="d-flex align-items-center"
+              className="d-flex align-items-center btn-primary-custom"
+              style={{ 
+                padding: '6px 16px', 
+                fontSize: '0.85rem', 
+                backgroundColor: 'var(--color-background)', 
+                color: 'var(--color-primary)', 
+                border: '1px solid var(--color-primary)' 
+              }}
             >
               <FaSync className="me-1" />
               <span>立即更新</span>
-            </Button>
+            </button>
           </div>
-        </Toast.Body>
-      </Toast>
+        </div>
+      </div>
     </div>
   );
 };

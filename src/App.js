@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, Suspense, useReducer } from 'react';
-import { Container, Row, Col, Form, Button, Card, Spinner } from 'react-bootstrap';
 import { FaPlay, FaPause, FaDownload } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import AlbumCover from './components/AlbumCover';
@@ -30,8 +29,10 @@ import {
 } from './utils/errorHandler';
 import SyncProvider from './contexts/SyncContext';
 import FavoritesProvider from './contexts/FavoritesContext';
-import { DownloadProvider } from './contexts/DownloadContext';
+import { DownloadProvider, useDownload } from './contexts/DownloadContext';
 import { clearExpiredCovers } from './services/storage';
+import useSearch from './hooks/useSearch';
+import SearchResultItem from './components/SearchResultItem';
 // 导入样式文件
 import './styles/AudioPlayer.css';
 import './styles/Orientation.css';
@@ -43,67 +44,7 @@ const History = React.lazy(() => import('./pages/History'));
 const User = React.lazy(() => import('./pages/User'));
 
 
-// 搜索状态管理
-const searchInitialState = {
-  query: '',
-  results: [],
-  source: 'netease',
-  quality: 999,
-  loading: false,
-  error: null,
-};
-
-function searchReducer(state, action) {
-  switch (action.type) {
-    case 'SET_FIELD':
-      return { ...state, [action.field]: action.value };
-    case 'SEARCH_START':
-      return { ...state, loading: true, error: null };
-    case 'SEARCH_SUCCESS':
-      return { ...state, loading: false, results: action.payload };
-    case 'SEARCH_FAILURE':
-      return { ...state, loading: false, error: action.payload };
-    default:
-      return state;
-  }
-}
-
-// 下载上下文
-const DownloadContext = React.createContext();
-const useDownloadContext = () => React.useContext(DownloadContext);
-
-// 搜索结果项组件
-  const SearchResultItem = ({ track, searchResults, quality }) => {
-    const { handlePlay, currentTrack, isPlaying } = usePlayer();
-    const { downloading, handleDownload } = useDownloadContext();
-  
-    // 添加单独的播放处理函数
-    const handleTrackPlay = (track) => {
-      console.log('从搜索结果播放曲目:', track.id, track.name, '音质:', quality);
-      // 使用当前搜索结果作为播放列表
-      const trackIndex = searchResults.findIndex(item => item.id === track.id);
-      handlePlay(track, trackIndex >= 0 ? trackIndex : -1, searchResults, quality);
-    };
-
-  return (
-    <Card 
-      className={`music-card ${currentTrack?.id === track.id ? 'is-active' : ''}`}
-      onClick={() => handleTrackPlay(track)}
-    >
-      <div className="music-card-row">
-        <div className="music-card-info">
-          <h6>{track.name}</h6>
-          <small>{track.artist}</small>
-        </div>
-        <MusicCardActions 
-          track={track}
-          isDownloading={downloading}
-          onDownload={handleDownload}
-        />
-      </div>
-    </Card>
-  );
-};
+// 搜索结果项组件 - 已迁移至 components/SearchResultItem.js
 
 const AppContent = () => {
   const [activeTab, setActiveTab] = useState('home');
@@ -125,24 +66,21 @@ const AppContent = () => {
     manualCheck: false
   });
 
-  // 搜索相关状态
-  const [searchState, dispatch] = useReducer(searchReducer, searchInitialState);
-  const { query, results, source, quality, loading } = searchState;
+  // 使用自定义Hook管理搜索逻辑
+  const { 
+    query, 
+    results, 
+    source, 
+    quality, 
+    loading, 
+    handleSearch, 
+    setQuery, 
+    setSource, 
+    setQuality 
+  } = useSearch(isOnline);
 
-  // 监听收藏状态变化，同步更新搜索结果中的心形图标
-  useEffect(() => {
-    const handleFavoritesChanged = () => {
-      // 强制触发一次重新渲染以刷新 SearchResultItem 内部的 HeartButton
-      dispatch({ type: 'SEARCH_SUCCESS', payload: [...results] });
-    };
-
-    window.addEventListener('favorites_changed', handleFavoritesChanged);
-    return () => window.removeEventListener('favorites_changed', handleFavoritesChanged);
-  }, [results]);
-
-  // 下载相关状态
-  const [downloading, setDownloading] = useState(false);
-  const [currentDownloadingTrack, setCurrentDownloadingTrack] = useState(null);
+  // 下载相关状态 - 使用全局 Context
+  const { downloading, currentDownloadingTrack, handleDownload } = useDownload();
 
   // 可选音乐源
   const sources = [
@@ -154,93 +92,6 @@ const AppContent = () => {
 
   // 从PlayerContext获取封面相关方法
   const { setCurrentPlaylist } = usePlayer();
-
-  // 搜索处理函数
-  const handleSearch = useCallback(async (e) => {
-    if (e) {
-      e.preventDefault();
-    }
-
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Search triggered with query:', query);
-    }
-
-    // 检查网络状态
-    if (!checkNetworkStatus(isOnline, '搜索音乐')) {
-      return;
-    }
-
-    // 验证搜索参数
-    if (!validateSearchParams(query)) {
-      return;
-    }
-
-    dispatch({ type: 'SEARCH_START' });
-    try {
-      const searchResults = await searchMusic(query, source, 20, 1);
-
-      // 不再预先获取封面图片，只在需要时获取（例如播放时）
-      // 这样可以显著减少API调用次数
-      const resultsWithoutCovers = searchResults.map(track => ({ ...track }));
-
-      dispatch({ type: 'SEARCH_SUCCESS', payload: resultsWithoutCovers });
-
-      // 如果没有结果，显示提示
-      if (resultsWithoutCovers.length === 0) {
-        toast.info(`未找到"${query}"的相关结果`);
-      }
-
-      // 添加到搜索历史
-      try {
-        const { addSearchHistory } = await import('./services/storage');
-        addSearchHistory(query, source);
-      } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('添加搜索历史失败:', error);
-        }
-      }
-
-    } catch (error) {
-      dispatch({ type: 'SEARCH_FAILURE', payload: error });
-      handleError(
-        error,
-        ErrorTypes.SEARCH,
-        ErrorSeverity.ERROR,
-        '搜索失败，请重试'
-      );
-    }
-  }, [query, source, isOnline]);
-
-  // 处理下载
-  const handleDownload = useCallback(async (track) => {
-    // 检查是否正在下载
-    if (!checkDownloadStatus(downloading)) {
-      return;
-    }
-
-    // 检查网络状态
-    if (!checkNetworkStatus(isOnline, '下载音乐')) {
-      return;
-    }
-
-    try {
-      setDownloading(true);
-      setCurrentDownloadingTrack(track);
-
-      await downloadTrack(track, quality);
-
-    } catch (error) {
-      handleError(
-        error,
-        ErrorTypes.DOWNLOAD,
-        ErrorSeverity.ERROR,
-        '下载失败，请重试'
-      );
-    } finally {
-      setDownloading(false);
-      setCurrentDownloadingTrack(null);
-    }
-  }, [downloading, isOnline, quality]);
 
   // 当搜索结果变化时，同步更新播放列表
   useEffect(() => {
@@ -254,106 +105,90 @@ const AppContent = () => {
   const renderHomePage = () => {
     const isDesktop = !deviceInfo.isMobile;
 
-    const searchForm = (
-      <Form onSubmit={handleSearch} className={isDesktop ? 'home-search-form' : 'mb-4'}>
-        <Row className={`g-2 align-items-stretch ${isDesktop ? 'home-search-row' : ''}`}>
-          <Col xs={12} md={6}>
-            <Form.Control
-              type="search"
-              enterKeyHint="search"
-              placeholder="输入歌曲、歌手或专辑名称"
-              value={query}
-              onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'query', value: e.target.value })}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.target.blur();
-                  e.preventDefault();
-                  handleSearch();
-                }
-              }}
-              style={{ height: '48px' }}
-            />
-          </Col>
-          <Col xs={6} md={2}>
-            <Form.Select
-              value={source}
-              onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'source', value: e.target.value })}
-              style={{ height: '48px' }}
-            >
-              {sources.map((src) => (
-                <option key={src} value={src}>
-                  {src}
-                </option>
-              ))}
-            </Form.Select>
-          </Col>
-          <Col xs={6} md={2}>
-            <Form.Select
-              value={quality}
-              onChange={(e) => dispatch({ type: 'SET_FIELD', field: 'quality', value: parseInt(e.target.value) })}
-              style={{ height: '48px' }}
-            >
-              {qualities.map((q) => (
-                <option key={q} value={q}>
-                  {q === 999 ? '无损' : `${q}kbps`}
-                </option>
-              ))}
-            </Form.Select>
-          </Col>
-          <Col xs={12} md={2}>
-            <Button
-              type="submit"
-              variant="link"
-              className="w-100 search-submit-btn"
-              disabled={loading}
-              style={{
-                backgroundColor: 'var(--color-background)',
-                color: 'var(--color-text-primary)',
-                borderRadius: 'var(--border-radius)',
-                padding: '0',
-                fontWeight: '600',
-                textDecoration: 'none',
-                border: '1px solid var(--color-border)',
-                boxShadow: 'var(--shadow-sm)',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '48px'
-              }}
-            >
-              {loading ? <Spinner animation="border" size="sm" /> : '开始搜索'}
-            </Button>
-          </Col>
-        </Row>
-      </Form>
-    );
-
     return (
-      <Container className={isDesktop ? 'home-desktop' : 'my-4'}>
+      <div className={`page-content-wrapper ${isDesktop ? 'home-desktop' : ''}`}>
         {isDesktop ? (
-          <div className="home-search-hero">
-            <div className="home-search-title">
-              <h1 className="home-search-heading">找到你想听的声音</h1>
-            </div>
-            {searchForm}
+          <div className="home-search-filter-bar mb-4">
+            <form onSubmit={handleSearch} className="home-filter-form">
+              <div className="d-flex align-items-center gap-3">
+                <div className="filter-group d-flex align-items-center">
+                  <span className="text-muted small me-2">音源:</span>
+                  <select 
+                    className="form-select-custom" 
+                    value={source} 
+                    onChange={(e) => setSource(e.target.value)} 
+                    style={{ height: '38px', width: '120px', fontSize: '0.85rem' }}
+                  >
+                    {sources.map((src) => (<option key={src} value={src}>{src}</option>))}
+                  </select>
+                </div>
+                <div className="filter-group d-flex align-items-center">
+                  <span className="text-muted small me-2">音质:</span>
+                  <select 
+                    className="form-select-custom" 
+                    value={quality} 
+                    onChange={(e) => setQuality(e.target.value)} 
+                    style={{ height: '38px', width: '120px', fontSize: '0.85rem' }}
+                  >
+                    {qualities.map((q) => (<option key={q} value={q}>{q === 999 ? '无损' : `${q}kbps`}</option>))}
+                  </select>
+                </div>
+                <button 
+                  type="submit" 
+                  className="search-submit-btn" 
+                  disabled={loading} 
+                  style={{ height: '38px', padding: '0 24px', fontSize: '0.85rem' }}
+                >
+                  {loading ? <span className="spinner-custom" style={{ width: '1rem', height: '1rem' }}></span> : '开始搜索'}
+                </button>
+              </div>
+            </form>
           </div>
         ) : (
-          searchForm
+          /* 移动端搜索框 */
+          <form onSubmit={handleSearch} className="mb-4">
+            <div className="row g-2 align-items-stretch">
+              <div className="col-12 col-md-6">
+                <input
+                  type="search"
+                  className="form-control-custom"
+                  placeholder="输入歌曲、歌手或专辑名称"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  style={{ height: '48px' }}
+                />
+              </div>
+              <div className="col-6 col-md-2">
+                <select className="form-select-custom" value={source} onChange={(e) => setSource(e.target.value)} style={{ height: '48px' }}>
+                  {sources.map((src) => (<option key={src} value={src}>{src}</option>))}
+                </select>
+              </div>
+              <div className="col-6 col-md-2">
+                <select className="form-select-custom" value={quality} onChange={(e) => setQuality(e.target.value)} style={{ height: '48px' }}>
+                  {qualities.map((q) => (<option key={q} value={q}>{q === 999 ? '无损' : `${q}kbps`}</option>))}
+                </select>
+              </div>
+              <div className="col-12 col-md-2">
+                <button type="submit" className="w-100 search-submit-btn" disabled={loading} style={{ height: '48px' }}>
+                  {loading ? <span className="spinner-custom" style={{ width: '1.2rem', height: '1.2rem' }}></span> : '开始搜索'}
+                </button>
+              </div>
+            </div>
+          </form>
         )}
 
         {results.length > 0 ? (
           <div className={isDesktop ? 'home-results' : ''}>
-            <Row className={`g-3 ${isDesktop ? 'home-results-row' : ''}`}>
+            <div className={`row g-3 ${isDesktop ? 'home-results-row' : ''}`}>
               {results.map((track) => (
-                <Col key={track.id} xs={12} md={6} lg={4}>
+                <div key={track.id} className="col-12 col-md-6 col-lg-4">
                   <SearchResultItem track={track} searchResults={results} quality={quality} />
-                </Col>
+                </div>
               ))}
-            </Row>
+            </div>
           </div>
         ) : null}
-      </Container>
+      </div>
     );
   };
 
@@ -361,7 +196,7 @@ const AppContent = () => {
   const renderContent = () => {
     const loadingFallback = (
       <div className="text-center my-5">
-        <Spinner animation="border" variant="primary" />
+        <span className="spinner-custom" style={{ width: '2.5rem', height: '2.5rem' }}></span>
         <p className="mt-3">加载中...</p>
       </div>
     );
@@ -372,13 +207,13 @@ const AppContent = () => {
       case 'favorites':
         return (
           <Suspense fallback={loadingFallback}>
-            <Favorites globalSearchQuery={query} />
+            <Favorites globalSearchQuery={query} onTabChange={handleTabChange} />
           </Suspense>
         );
       case 'history':
         return (
           <Suspense fallback={loadingFallback}>
-            <History globalSearchQuery={query} />
+            <History globalSearchQuery={query} onTabChange={handleTabChange} />
           </Suspense>
         );
       case 'user':
@@ -435,48 +270,39 @@ const AppContent = () => {
       });
   }, []);
 
-  // 下载上下文值
-  const downloadContextValue = {
-    downloading,
-    currentDownloadingTrack,
-    handleDownload
-  };
-
   return (
-    <DownloadContext.Provider value={downloadContextValue}>
-      <div className={`app-container ${!deviceInfo.isMobile ? 'desktop-layout' : ''}`}>
-        <OrientationPrompt />
-        <Header 
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          searchQuery={query}
-          onSearchChange={(val) => dispatch({ type: 'SET_FIELD', field: 'query', value: val })}
-          onSearchSubmit={(e) => {
-            handleSearch(e);
-            if (activeTab !== 'home') {
-              handleTabChange('home');
-            }
-          }}
-          loading={loading}
-        />
-        <Navigation
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-        />
+    <div className={`app-container ${!deviceInfo.isMobile ? 'desktop-layout' : ''}`}>
+      <OrientationPrompt />
+      <Header 
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        searchQuery={query}
+        onSearchChange={setQuery}
+        onSearchSubmit={(e) => {
+          handleSearch(e);
+          if (activeTab !== 'home') {
+            handleTabChange('home');
+          }
+        }}
+        loading={loading}
+      />
+      <Navigation
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+      />
 
-        <div className={!deviceInfo.isMobile ? 'main-content' : ''}>
-          <Container fluid className={`${!deviceInfo.isMobile ? 'content-area' : ''} pb-5`}>
-            {renderContent()}
-          </Container>
+      <div className={!deviceInfo.isMobile ? 'main-content' : 'main-content'}>
+        <div className={!deviceInfo.isMobile ? 'content-area' : 'content-area'}>
+          {renderContent()}
         </div>
-
-        <AudioPlayer />
-
-        <InstallPWA />
-        <UpdateNotification />
-        {process.env.NODE_ENV === 'development' && <DeviceDebugger />}
       </div>
-    </DownloadContext.Provider>
+
+      <AudioPlayer />
+
+      <InstallPWA />
+      <UpdateNotification />
+      {process.env.NODE_ENV === 'development' && <DeviceDebugger />}
+    </div>
   );
 };
 

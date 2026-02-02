@@ -1,5 +1,4 @@
 import React from 'react';
-import { Form, InputGroup } from 'react-bootstrap';
 import { FaSearch, FaUser } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
 import { useDevice } from '../contexts/DeviceContext';
@@ -43,21 +42,21 @@ const Header = ({
   return (
     <header className="app-header-desktop d-none d-lg-flex">
       <div className="header-search-container">
-        <Form onSubmit={onSearchSubmit} className="w-100">
-          <InputGroup className="header-search-input-group">
-            <InputGroup.Text className="bg-transparent border-0 pe-0">
+        <form onSubmit={onSearchSubmit} className="w-100">
+          <div className="input-group-custom header-search-input-group" style={{ flexWrap: 'nowrap' }}>
+            <span className="input-group-text-custom bg-transparent border-0 pe-0 d-flex align-items-center justify-content-center">
               <FaSearch className="text-muted" size={14} />
-            </InputGroup.Text>
-            <Form.Control
+            </span>
+            <input
               type="search"
               placeholder={getPlaceholder()}
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="bg-transparent border-0 shadow-none text-sm"
-              style={{ fontSize: '0.9rem' }}
+              className="form-control-custom bg-transparent border-0 shadow-none text-sm"
+              style={{ fontSize: '0.9rem', height: '100%', outline: 'none' }}
             />
-          </InputGroup>
-        </Form>
+          </div>
+        </form>
       </div>
 
       <div className="header-user-container ms-auto">

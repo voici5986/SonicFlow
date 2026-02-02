@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Spinner } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
 import { getFavorites, getHistory, clearHistory, clearSearchHistory, resetPendingChanges } from '../services/storage';
 import { clearSyncTimestamp } from '../services/syncService';
@@ -268,7 +267,7 @@ const UserProfile = ({ onTabChange }) => {
           <div className="card-label">多端数据同步</div>
           <div className="card-number" style={{ fontSize: '14px', fontWeight: 'normal', color: 'var(--color-text-muted)' }}>
              {syncStatus.loading ? (
-                <Spinner animation="border" size="sm" />
+                <span className="spinner-custom" style={{ width: '1rem', height: '1rem' }}></span>
              ) : (
                 getSyncStatusText().replace('上次同步 ', '')
              )}

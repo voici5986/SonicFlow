@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Toast, ToastContainer } from 'react-bootstrap';
 import { FaDownload, FaTimes } from 'react-icons/fa';
 import { useDevice } from '../contexts/DeviceContext';
 
@@ -96,54 +95,45 @@ const InstallPWA = () => {
   if (isInstalled || !deferredPrompt) {
     return null;
   }
-  
+
+  if (!showInstallToast) {
+    return null;
+  }
+
   return (
-    <ToastContainer position="bottom-center" className="p-3" style={{ zIndex: 'var(--z-index-toast)' }}>
-      <Toast 
-        show={showInstallToast} 
-        onClose={handleDismiss}
-        className="bg-white border-primary"
-        style={{ maxWidth: '350px' }}
-      >
-        <Toast.Header closeButton={false}>
-          <img 
-            src="/logo192.png" 
-            className="rounded me-2" 
-            alt="SonicFlow Logo"
-            height="20"
-          />
-          <strong className="me-auto">安装SonicFlow</strong>
-          <Button 
-            variant="link" 
-            size="sm" 
-            className="p-0 ms-2" 
+    <div 
+      style={{ 
+        position: 'fixed', 
+        bottom: '100px', 
+        right: '20px', 
+        zIndex: 'var(--z-index-modal)'
+      }}
+    >
+      <div className="toast-custom">
+        <div className="toast-header-custom">
+          <span>安装 SonicFlow</span>
+          <button 
             onClick={handleDismiss}
-            aria-label="关闭"
+            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: '0' }}
           >
             <FaTimes />
-          </Button>
-        </Toast.Header>
-        <Toast.Body>
-          <div className="mb-2">
-            {deviceType === 'mobile' ? 
-              '将SonicFlow安装到您的主屏幕，获得更好的使用体验！' :
-              '将SonicFlow安装为桌面应用，随时享受音乐！'
-            }
-          </div>
-          <div className="d-flex justify-content-end mt-2">
-            <Button 
-              variant="primary" 
-              size="sm" 
+          </button>
+        </div>
+        <div className="toast-body-custom">
+          <p className="mb-2">安装 SonicFlow 到主屏幕，获得更好的使用体验和离线访问功能。</p>
+          <div className="d-flex justify-content-end">
+            <button 
               onClick={handleInstallClick}
-              className="d-flex align-items-center"
+              className="d-flex align-items-center btn-primary-custom"
+              style={{ padding: '6px 16px', fontSize: '0.85rem' }}
             >
               <FaDownload className="me-1" />
               <span>立即安装</span>
-            </Button>
+            </button>
           </div>
-        </Toast.Body>
-      </Toast>
-    </ToastContainer>
+        </div>
+      </div>
+    </div>
   );
 };
 

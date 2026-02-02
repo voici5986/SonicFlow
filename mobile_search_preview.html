@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>移动端全局搜索预览</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --color-primary: #3498db;
+            --color-background: #f8f9fa;
+            --color-background-alt: #ffffff;
+            --color-text: #2c3e50;
+            --color-text-muted: #7f8c8d;
+            --color-border: #edf2f7;
+            --border-radius-md: 12px;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--color-background);
+            color: var(--color-text);
+            display: flex;
+            justify-content: center;
+        }
+
+        /* 模拟手机容器 */
+        .mobile-container {
+            width: 375px;
+            height: 667px;
+            background: var(--color-background);
+            border: 8px solid #333;
+            border-radius: 30px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+            margin-top: 20px;
+        }
+
+        /* 顶部全局搜索栏 */
+        .header-search {
+            position: sticky;
+            top: 0;
+            background: var(--color-background-alt);
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--color-border);
+            z-index: 100;
+        }
+
+        .search-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-input-wrapper i {
+            position: absolute;
+            left: 12px;
+            color: var(--color-text-muted);
+            font-size: 14px;
+        }
+
+        .global-search-input {
+            width: 100%;
+            padding: 10px 12px 10px 36px;
+            border: 1px solid var(--color-border);
+            border-radius: 20px;
+            background: var(--color-background);
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .global-search-input:focus {
+            border-color: var(--color-primary);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        /* 页面内容区 */
+        .content {
+            padding: 16px;
+            height: calc(100% - 70px);
+            overflow-y: auto;
+        }
+
+        /* 搜索页内的筛选栏 */
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+
+        .filter-item {
+            flex: 1;
+            min-width: 100px;
+            background: var(--color-background-alt);
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius-md);
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .filter-label {
+            font-size: 10px;
+            color: var(--color-text-muted);
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .filter-select {
+            border: none;
+            background: transparent;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--color-text);
+            outline: none;
+            padding: 0;
+            width: 100%;
+        }
+
+        /* 模拟结果列表 */
+        .results-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .track-card {
+            background: var(--color-background-alt);
+            border-radius: var(--border-radius-md);
+            padding: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .track-cover {
+            width: 48px;
+            height: 48px;
+            background: #eee;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ccc;
+        }
+
+        .track-info {
+            flex: 1;
+        }
+
+        .track-name {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0 0 4px 0;
+        }
+
+        .track-artist {
+            font-size: 12px;
+            color: var(--color-text-muted);
+            margin: 0;
+        }
+
+        .play-btn {
+            color: var(--color-primary);
+            font-size: 18px;
+        }
+
+        /* 底部导航模拟 */
+        .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 60px;
+            background: var(--color-background-alt);
+            border-top: 1px solid var(--color-border);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--color-text-muted);
+            font-size: 10px;
+        }
+
+        .nav-item.active {
+            color: var(--color-primary);
+        }
+
+        .nav-item i {
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-container">
+        <!-- 顶部全局搜索栏 -->
+        <div class="header-search">
+            <div class="search-input-wrapper">
+                <i class="fas fa-search"></i>
+                <input type="text" class="global-search-input" placeholder="搜索歌曲、歌手、专辑..." value="周杰伦">
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- 搜索页内的筛选栏 -->
+            <div class="filter-bar">
+                <div class="filter-item">
+                    <span class="filter-label">音源平台</span>
+                    <select class="filter-select">
+                        <option>网易云音乐</option>
+                        <option>酷狗音乐</option>
+                        <option>QQ音乐</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <span class="filter-label">优先音质</span>
+                    <select class="filter-select">
+                        <option>无损</option>
+                        <option>320kbps</option>
+                        <option>128kbps</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 搜索结果列表 -->
+            <div class="results-title">
+                <span>搜索结果</span>
+                <span style="font-size: 12px; color: var(--color-text-muted); font-weight: normal;">找到 120 个结果</span>
+            </div>
+
+            <div class="track-card">
+                <div class="track-cover"><i class="fas fa-music"></i></div>
+                <div class="track-info">
+                    <p class="track-name">晴天</p>
+                    <p class="track-artist">周杰伦 · 叶惠美</p>
+                </div>
+                <div class="play-btn"><i class="fas fa-play-circle"></i></div>
+            </div>
+
+            <div class="track-card">
+                <div class="track-cover"><i class="fas fa-music"></i></div>
+                <div class="track-info">
+                    <p class="track-name">七里香</p>
+                    <p class="track-artist">周杰伦 · 七里香</p>
+                </div>
+                <div class="play-btn"><i class="fas fa-play-circle"></i></div>
+            </div>
+
+            <div class="track-card">
+                <div class="track-cover"><i class="fas fa-music"></i></div>
+                <div class="track-info">
+                    <p class="track-name">一路向北</p>
+                    <p class="track-artist">周杰伦 · J III MP3</p>
+                </div>
+                <div class="play-btn"><i class="fas fa-play-circle"></i></div>
+            </div>
+            
+            <div class="track-card">
+                <div class="track-cover"><i class="fas fa-music"></i></div>
+                <div class="track-info">
+                    <p class="track-name">夜曲</p>
+                    <p class="track-artist">周杰伦 · 十一月的萧邦</p>
+                </div>
+                <div class="play-btn"><i class="fas fa-play-circle"></i></div>
+            </div>
+        </div>
+
+        <!-- 底部导航模拟 -->
+        <div class="bottom-nav">
+            <div class="nav-item active">
+                <i class="fas fa-search"></i>
+                <span>搜索</span>
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-heart"></i>
+                <span>收藏</span>
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-history"></i>
+                <span>历史</span>
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-user"></i>
+                <span>我的</span>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

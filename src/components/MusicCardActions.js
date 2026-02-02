@@ -1,5 +1,4 @@
 import React from 'react';
-import { Button, Spinner } from 'react-bootstrap';
 import { FaDownload, FaTrash } from 'react-icons/fa';
 import HeartButton from './HeartButton';
 
@@ -30,23 +29,20 @@ const MusicCardActions = ({
 
         {/* 删除按钮 - 如果明确需要独立删除按钮则显示 */}
         {showDelete && onDelete && (
-          <Button
-            variant="outline-danger"
-            size="sm"
-            className="me-1"
+          <button
+            className="me-1 btn-outline-danger"
             onClick={(e) => {
               e.stopPropagation();
               onDelete(track);
             }}
           >
             <FaTrash />
-          </Button>
+          </button>
         )}
 
         {/* 下载按钮 - 统一下载状态反馈 */}
-        <Button
-          variant="outline-success"
-          size="sm"
+        <button
+          className="btn-outline-success"
           onClick={(e) => {
             e.stopPropagation();
             onDownload(track);
@@ -54,11 +50,11 @@ const MusicCardActions = ({
           disabled={isDownloading}
         >
           {isDownloading ? (
-            <Spinner animation="border" size="sm" />
+            <span className="spinner-custom" style={{ width: '1rem', height: '1rem' }}></span>
           ) : (
             <FaDownload />
           )}
-        </Button>
+        </button>
     </div>
   );
 };

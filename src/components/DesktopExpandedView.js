@@ -1,5 +1,4 @@
 import React from 'react';
-import { Button } from 'react-bootstrap';
 import { FaTimes } from 'react-icons/fa';
 import DesktopAlbumCover from './DesktopAlbumCover';
 import { LyricLine } from './PlayerSubComponents';
@@ -20,14 +19,14 @@ const DesktopExpandedView = ({
   return (
     <div className="player-expanded-view desktop-expanded-view">
       {/* 关闭按钮 */}
-      <Button 
-        variant="link" 
+      <button 
         onClick={toggleLyric} 
         className="close-lyrics-btn"
         title="收起播放器"
+        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'inherit' }}
       >
         <FaTimes />
-      </Button>
+      </button>
       
       <div className="expanded-main-wrapper">
         {/* 左侧：封面信息区 */}

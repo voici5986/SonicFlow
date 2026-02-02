@@ -1,5 +1,4 @@
 import React from 'react';
-import { Button } from 'react-bootstrap';
 
 /**
  * 歌词切换按钮组件
@@ -7,12 +6,12 @@ import { Button } from 'react-bootstrap';
  */
 export const LyricToggleButton = ({ expanded, onToggle, className = '', variant = 'link', iconOnly = true, customIcon = null }) => {
   return (
-    <Button
-      variant={variant}
+    <button
       onClick={onToggle}
       className={`${className} control-button`}
       aria-label={expanded ? "收起歌词" : "展开歌词"}
       title={expanded ? "收起歌词" : "展开歌词"}
+      style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
     >
       {customIcon ? (
         customIcon
@@ -27,7 +26,7 @@ export const LyricToggleButton = ({ expanded, onToggle, className = '', variant 
       ) : (
         expanded ? "收起歌词" : "展开歌词"
       )}
-    </Button>
+    </button>
   );
 };
 
@@ -145,15 +144,15 @@ export const PlayerControlButton = ({
   children
 }) => {
   return (
-    <Button
-      variant="link"
+    <button
       onClick={onClick}
       disabled={disabled}
       className={`control-button control-icon-btn ${className}`}
       aria-label={ariaLabel}
       title={title}
+      style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
     >
       {children}
-    </Button>
+    </button>
   );
 };

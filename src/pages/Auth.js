@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
 import LoginForm from '../components/LoginForm';
 import RegisterForm from '../components/RegisterForm';
 
@@ -20,9 +19,9 @@ const Auth = ({ onAuthSuccess, closeModal }) => {
   };
   
   return (
-    <Container>
-      <Row className="justify-content-center">
-        <Col md={8} lg={6}>
+    <div className="container">
+      <div className="row justify-content-center">
+        <div className="col-md-8 col-lg-6">
           {isLogin ? (
             <LoginForm 
               onToggleForm={toggleForm} 
@@ -34,9 +33,9 @@ const Auth = ({ onAuthSuccess, closeModal }) => {
               onRegisterSuccess={handleAuthSuccess} 
             />
           )}
-        </Col>
-      </Row>
-    </Container>
+        </div>
+      </div>
+    </div>
   );
 };
 

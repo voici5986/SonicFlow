@@ -1,23 +1,30 @@
 import React from 'react';
-import { Card } from 'react-bootstrap';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useDownload } from '../contexts/DownloadContext';
 import MusicCardActions from './MusicCardActions';
 
 const SearchResultItem = ({ track, searchResults, quality }) => {
   const { handlePlay, currentTrack } = usePlayer();
-  const { downloading, handleDownload } = useDownload();
+  const { isTrackDownloading, handleDownload } = useDownload();
+
+  // 获取全局音质设置，如果没传则默认使用 999
+  const activeQuality = quality || 999;
 
   // 添加单独的播放处理函数
   const handleTrackPlay = (track) => {
-    console.log('从搜索结果播放曲目:', track.id, track.name, '音质:', quality);
+    console.log('从搜索结果播放曲目:', track.id, track.name, '音质:', activeQuality);
     // 使用当前搜索结果作为播放列表
     const trackIndex = searchResults.findIndex(item => item.id === track.id);
-    handlePlay(track, trackIndex >= 0 ? trackIndex : -1, searchResults, quality);
+    handlePlay(track, trackIndex >= 0 ? trackIndex : -1, searchResults, activeQuality);
+  };
+
+  const onDownloadClick = (e) => {
+    e.stopPropagation();
+    handleDownload(track, activeQuality);
   };
 
   return (
-    <Card 
+    <div 
       className={`music-card ${currentTrack?.id === track.id ? 'is-active' : ''}`}
       onClick={() => handleTrackPlay(track)}
     >
@@ -28,11 +35,11 @@ const SearchResultItem = ({ track, searchResults, quality }) => {
         </div>
         <MusicCardActions 
           track={track}
-          isDownloading={downloading}
-          onDownload={handleDownload}
+          isDownloading={isTrackDownloading(track.id)}
+          onDownload={onDownloadClick}
         />
       </div>
-    </Card>
+    </div>
   );
 };
 

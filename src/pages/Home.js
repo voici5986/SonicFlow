@@ -1,5 +1,4 @@
 import React from 'react';
-import { Container, Row, Col, Form, Button, Spinner } from 'react-bootstrap';
 import SearchResultItem from '../components/SearchResultItem';
 
 const Home = ({ 
@@ -18,15 +17,16 @@ const Home = ({
   const qualities = [128, 192, 320, 740, 999];
 
   return (
-    <Container>
-      <Form onSubmit={handleSearch} className="mb-4">
-        <Row className="g-2 align-items-stretch">
-          <Col xs={12} md={6}>
-            <Form.Control
+    <div className="page-content-wrapper">
+      <form onSubmit={handleSearch} className="mb-4">
+        <div className="row g-2 align-items-stretch">
+          <div className="col-12 col-md-6">
+            <input
               type="search"
               enterKeyHint="search"
               placeholder="输入歌曲、歌手或专辑名称"
               value={query}
+              className="form-control-custom"
               onChange={(e) => setField('query', e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -38,10 +38,11 @@ const Home = ({
               }}
               style={{ height: '48px' }}
             />
-          </Col>
-          <Col xs={6} md={2}>
-            <Form.Select
+          </div>
+          <div className="col-6 col-md-2">
+            <select
               value={source}
+              className="form-select-custom"
               onChange={(e) => setField('source', e.target.value)}
               style={{ height: '48px' }}
             >
@@ -50,11 +51,12 @@ const Home = ({
                   {src}
                 </option>
               ))}
-            </Form.Select>
-          </Col>
-          <Col xs={6} md={2}>
-            <Form.Select
+            </select>
+          </div>
+          <div className="col-6 col-md-2">
+            <select
               value={quality}
+              className="form-select-custom"
               onChange={(e) => setField('quality', parseInt(e.target.value))}
               style={{ height: '48px' }}
             >
@@ -63,12 +65,11 @@ const Home = ({
                   {q === 999 ? '无损' : `${q}kbps`}
                 </option>
               ))}
-            </Form.Select>
-          </Col>
-          <Col xs={12} md={2}>
-            <Button
+            </select>
+          </div>
+          <div className="col-12 col-md-2">
+            <button
               type="submit"
-              variant="link"
               className="w-100 search-submit-btn"
               disabled={loading}
               style={{
@@ -84,25 +85,26 @@ const Home = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                height: '48px'
+                height: '48px',
+                cursor: loading ? 'not-allowed' : 'pointer'
               }}
             >
-              {loading ? <Spinner animation="border" size="sm" /> : '开始搜索'}
-            </Button>
-          </Col>
-        </Row>
-      </Form>
+              {loading ? <span className="spinner-custom" style={{ width: '1.2rem', height: '1.2rem' }}></span> : '开始搜索'}
+            </button>
+          </div>
+        </div>
+      </form>
 
       {results.length > 0 && (
-        <Row className="g-3">
+        <div className="row g-3">
           {results.map((track) => (
-            <Col key={track.id} xs={12} md={6}>
+            <div key={track.id} className="col-12 col-md-6 col-lg-4">
               <SearchResultItem track={track} searchResults={results} quality={quality} />
-            </Col>
+            </div>
           ))}
-        </Row>
+        </div>
       )}
-    </Container>
+    </div>
   );
 };
 

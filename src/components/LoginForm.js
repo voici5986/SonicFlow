@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
 import { useDebounce } from '../utils/throttleDebounce';
 import { FaEnvelope, FaLock, FaWaveSquare } from 'react-icons/fa';
@@ -128,10 +127,10 @@ const LoginForm = ({ onToggleForm, onLoginSuccess }) => {
 
       <h3 className="text-center mb-4 d-none d-lg-block">登录账号</h3>
       
-      {error && <Alert variant="danger">{error}</Alert>}
-      {resetEmailSent && <Alert variant="success">重置密码邮件已发送，请查收</Alert>}
+      {error && <div className="alert-custom alert-danger-custom">{error}</div>}
+      {resetEmailSent && <div className="alert-custom alert-success-custom">重置密码邮件已发送，请查收</div>}
       
-      <Form onSubmit={handleSubmit} data-testid="login-form">
+      <form onSubmit={handleSubmit} data-testid="login-form">
         <div className="form-group">
           <div className="input-wrapper">
             <div className="input-icon">
@@ -178,13 +177,7 @@ const LoginForm = ({ onToggleForm, onLoginSuccess }) => {
           className="btn-auth btn-primary-auth"
         >
           {loading ? (
-            <Spinner
-              as="span"
-              animation="border"
-              size="sm"
-              role="status"
-              aria-hidden="true"
-            />
+            <span className="spinner-custom" style={{ width: '1.2rem', height: '1.2rem' }}></span>
           ) : "立即登录"}
         </button>
 
@@ -217,7 +210,7 @@ const LoginForm = ({ onToggleForm, onLoginSuccess }) => {
             </button>
           </div>
         </div>
-      </Form>
+      </form>
     </div>
   );
 };

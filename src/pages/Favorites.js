@@ -1,22 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Container, Row, Col, Card, Button, Spinner, Modal, Form, Alert, Dropdown, InputGroup } from 'react-bootstrap';
-import { FaPlay, FaPause, FaDownload, FaTrash, FaFileExport, FaFileImport, FaExchangeAlt, FaSearch } from 'react-icons/fa';
+import { FaPlay, FaPause, FaDownload, FaTrash, FaFileExport, FaFileImport, FaExchangeAlt, FaSearch, FaTimes } from 'react-icons/fa';
 import AlbumCover from '../components/AlbumCover';
 import HeartButton from '../components/HeartButton';
 import MusicCardActions from '../components/MusicCardActions';
 import { getFavorites, toggleFavorite, saveFavorites, MAX_FAVORITES_ITEMS } from '../services/storage';
 import { toast } from 'react-toastify';
-import { downloadTrack } from '../services/downloadService';
 import { searchMusic } from '../services/musicApiService';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useDownload } from '../contexts/DownloadContext';
 
-const Favorites = ({ globalSearchQuery }) => {
+const Favorites = ({ globalSearchQuery, onTabChange }) => {
   // 从PlayerContext获取状态和方法
   const { handlePlay, currentTrack, isPlaying } = usePlayer();
 
   // 从AuthContext获取用户状态
   const { currentUser } = useAuth();
+
+  // 从DownloadContext获取下载状态和方法
+  const { isTrackDownloading, handleDownload } = useDownload();
 
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,10 +28,6 @@ const Favorites = ({ globalSearchQuery }) => {
   const [importProgress, setImportProgress] = useState(0);
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef(null);
-
-  // 添加单首歌曲下载状态
-  const [downloading, setDownloading] = useState(false);
-  const [currentDownloadingTrack, setCurrentDownloadingTrack] = useState(null);
 
   // 新增搜索相关状态
   const [searchQuery, setSearchQuery] = useState('');
@@ -123,34 +121,7 @@ const Favorites = ({ globalSearchQuery }) => {
     }
   };
 
-  const handleDownload = async (track) => {
-    try {
-      console.log('使用内部下载逻辑');
 
-      // 设置下载状态
-      setDownloading(true);
-      setCurrentDownloadingTrack(track);
-
-      // 使用下载服务模块
-      await downloadTrack(
-        track,
-        320, // 使用320kbps音质
-        null, // 下载开始回调
-        () => {
-          // 下载结束回调
-          setDownloading(false);
-          setCurrentDownloadingTrack(null);
-        }
-      );
-    } catch (error) {
-      console.error('下载失败:', error);
-      toast.error('下载失败，请稍后重试', {
-        icon: '❌'
-      });
-      setDownloading(false);
-      setCurrentDownloadingTrack(null);
-    }
-  };
 
   // 递归搜索任何值是否匹配查询词
   const searchInValue = (value, query) => {
@@ -470,6 +441,7 @@ const Favorites = ({ globalSearchQuery }) => {
         }
 
         setImportData(data);
+        setShowImportModal(true); // 选择文件后显示模态框
 
         // 初始化导入状态
         setImportStatus(data.favorites.map(() => ({ status: 'pending', message: '等待导入' })));
@@ -642,13 +614,23 @@ const Favorites = ({ globalSearchQuery }) => {
               <p className="login-prompt-desc mb-0">同步收藏，在任何设备访问您喜爱的音乐。</p>
             </div>
             <div className="login-prompt-action">
-              <Button
-                href="#/auth"
-                className="ms-md-3 minimal-action-btn"
-                style={{ minWidth: '100px' }}
+              <button
+                onClick={() => onTabChange('user')}
+                className="ms-md-3 minimal-action-btn d-inline-block text-decoration-none text-center"
+                style={{ 
+                  minWidth: '80px',
+                  padding: '6px 12px',
+                  fontSize: '0.85rem',
+                  borderRadius: 'var(--border-radius-md)',
+                  backgroundColor: 'var(--color-primary)',
+                  color: 'white',
+                  fontWeight: '500',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
               >
                 立即登录
-              </Button>
+              </button>
             </div>
           </div>
         </div>
@@ -665,36 +647,80 @@ const Favorites = ({ globalSearchQuery }) => {
     handlePlay(track, trackIndex >= 0 ? trackIndex : -1, filteredFavorites);
   };
 
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
-    <Container className="my-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
+    <div className="favorites-page page-content-wrapper">
+      <div className="favorites-header d-flex justify-content-between align-items-center mb-4">
         <div className="d-flex align-items-center">
           <h1 className="mb-0">我的收藏</h1>
-          <span className="ms-3 badge" style={{ backgroundColor: 'var(--color-background-alt)', color: 'var(--color-text-tertiary)', fontWeight: '500' }}>{favorites.length}/{MAX_FAVORITES_ITEMS}</span>
+          <span className="ms-3 badge-custom">{favorites.length}/{MAX_FAVORITES_ITEMS}</span>
         </div>
         <div className="d-flex align-items-center gap-2">
-          <Dropdown align="end">
-            <Dropdown.Toggle size="sm" id="dropdown-import-export" className="minimal-action-btn">
+          <div className="dropdown-custom" ref={dropdownRef}>
+            <button 
+              className="minimal-action-btn"
+              onClick={() => setShowDropdown(!showDropdown)}
+              style={{ padding: '8px 16px', height: '40px' }}
+            >
               <FaExchangeAlt /> <span className="ms-1">导入导出</span>
-            </Dropdown.Toggle>
-            <Dropdown.Menu align="end">
-              <Dropdown.Item
-                className="minimal-action-item"
-                onClick={handleExport}
+            </button>
+            <div className={`dropdown-menu-custom ${showDropdown ? 'show' : ''}`} style={{ right: 0 }}>
+              <button
+                className="dropdown-item-custom"
+                onClick={() => {
+                  handleExport();
+                  setShowDropdown(false);
+                }}
                 disabled={favorites.length === 0}
               >
                 <FaFileExport className="me-2" /> 导出收藏
-              </Dropdown.Item>
-              <Dropdown.Item className="minimal-action-item" onClick={() => fileInputRef.current.click()}>
+              </button>
+              <button 
+                className="dropdown-item-custom" 
+                onClick={() => {
+                  fileInputRef.current.click();
+                  setShowDropdown(false);
+                }}
+              >
                 <FaFileImport className="me-2" /> 导入收藏
-              </Dropdown.Item>
-            </Dropdown.Menu>
-          </Dropdown>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* 添加登录提醒 */}
       {renderLoginReminder()}
+
+      {/* 收藏夹内部搜索栏 - 仅在移动端显示 */}
+      <div className="input-group-custom mb-3 d-lg-none">
+        <span className="input-group-text-custom">
+          <FaSearch />
+        </span>
+        <input
+          type="text"
+          className="form-control-custom"
+          placeholder="搜索收藏夹中的歌曲..."
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            performSearch(e.target.value, favorites);
+          }}
+          style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
+        />
+      </div>
 
       {/* 隐藏的文件输入框，用于导入功能 */}
       <input
@@ -707,20 +733,20 @@ const Favorites = ({ globalSearchQuery }) => {
 
       {loading ? (
         <div className="text-center my-5">
-          <Spinner animation="border" />
+          <span className="spinner-custom"></span>
         </div>
       ) : favorites.length === 0 ? null : filteredFavorites.length === 0 ? (
-        <Alert variant="light" className="text-center">
+        <div className="alert-light text-center py-4 rounded" style={{ backgroundColor: 'var(--color-background-alt)', border: '1px solid var(--color-border)' }}>
           <p className="mb-0">没有匹配的收藏歌曲</p>
           <small className="text-muted">
             尝试使用不同的关键词搜索
           </small>
-        </Alert>
+        </div>
       ) : (
-        <Row className="g-3">
+        <div className="favorites-grid row g-3">
           {filteredFavorites.map((track, index) => (
-            <Col key={`${track.id}-${track.source}-${index}`} xs={12} md={6}>
-              <Card 
+            <div key={`${track.id}-${track.source}-${index}`} className="col-12 col-md-6">
+              <div 
                 className={`music-card ${currentTrack?.id === track.id ? 'is-active' : ''}`}
                 onClick={() => handleTrackPlay(track)}
               >
@@ -732,65 +758,110 @@ const Favorites = ({ globalSearchQuery }) => {
 
                   <MusicCardActions 
                     track={track}
-                    isDownloading={downloading && currentDownloadingTrack?.id === track.id}
+                    isDownloading={isTrackDownloading(track.id)}
                     onDownload={handleDownload}
                   />
                 </div>
-              </Card>
-            </Col>
+              </div>
+            </div>
           ))}
-        </Row>
+        </div>
       )}
 
       {/* 导入模态框 */}
-      <Modal show={showImportModal} onHide={handleCloseImport} backdrop="static" size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>导入收藏</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {importData && (
-            <>
-              <Alert variant="info">
-                <div>检测到 {importData.favorites.length} 首歌曲</div>
-                <div>数据版本: {importData.version || '1.0'}</div>
-                <div>导出时间: {new Date(importData.timestamp).toLocaleString()}</div>
-              </Alert>
-
-              <ProgressBar
-                now={importProgress}
-                label={`${importProgress}%`}
-                className="mb-3"
-              />
-
-              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                {importStatus.map((status, index) => (
-                  <div key={index} className={`mb-1 ${status.success ? 'text-success' : 'text-danger'}`}>
-                    {status.success ? '✓' : '✗'} {status.name} - {status.artist} ({status.message})
+      {showImportModal && (
+        <div className="modal-overlay-custom" onClick={handleCloseImport}>
+          <div className="modal-container-custom" style={{ maxWidth: '800px' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header-custom">
+              <h5 className="modal-title-custom">导入收藏</h5>
+              <button className="modal-close-custom" onClick={handleCloseImport}>
+                <FaTimes size={18} />
+              </button>
+            </div>
+            <div className="modal-body-custom">
+              {importData && (
+                <>
+                  <div className="alert-custom alert-info-custom mb-3" style={{ 
+                    padding: '12px', 
+                    borderRadius: 'var(--border-radius-md)', 
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    border: '1px solid rgba(52, 152, 219, 0.2)',
+                    fontSize: '0.9rem'
+                  }}>
+                    <div className="fw-bold mb-1">检测到 {importData.favorites.length} 首歌曲</div>
+                    <div className="text-muted small">数据版本: {importData.version || '1.0'} | 导出时间: {new Date(importData.timestamp).toLocaleString()}</div>
                   </div>
-                ))}
-              </div>
-            </>
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleCloseImport} disabled={isImporting}>
-            关闭
-          </Button>
-          <Button
-            variant="primary"
-            onClick={startImport}
-            disabled={!importData || isImporting}
-          >
-            {isImporting ? (
-              <>
-                <Spinner animation="border" size="sm" className="me-1" />
-                导入中...
-              </>
-            ) : '开始导入'}
-          </Button>
-        </Modal.Footer>
-      </Modal>
-    </Container>
+
+                  <div className="progress-custom mb-3" style={{ height: '12px', backgroundColor: 'var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
+                    <div 
+                      className="progress-bar-custom" 
+                      style={{ 
+                        width: `${importProgress}%`,
+                        height: '100%',
+                        backgroundColor: 'var(--color-primary)',
+                        transition: 'width 0.3s ease'
+                      }}
+                    >
+                    </div>
+                  </div>
+                  <div className="text-end small text-muted mb-3">{importProgress}%</div>
+
+                  <div style={{ maxHeight: '350px', overflowY: 'auto', padding: '10px', backgroundColor: 'var(--color-background-alt)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--color-border)' }}>
+                    {importData.favorites.map((track, index) => {
+                      const status = importStatus[index] || { status: 'pending', message: '等待导入' };
+                      let statusColor = 'text-muted';
+                      let statusIcon = '○';
+                      
+                      if (status.status === 'success') {
+                        statusColor = 'text-success';
+                        statusIcon = '✓';
+                      } else if (status.status === 'exists' || status.status === 'duplicate') {
+                        statusColor = 'text-info';
+                        statusIcon = 'i';
+                      } else if (status.status === 'fail' || status.status === 'error') {
+                        statusColor = 'text-danger';
+                        statusIcon = '✕';
+                      }
+
+                      return (
+                        <div key={index} className={`d-flex align-items-center mb-2 small ${statusColor}`}>
+                          <span className="me-2 fw-bold" style={{ minWidth: '15px' }}>{statusIcon}</span>
+                          <span className="text-truncate" style={{ maxWidth: '70%' }}>{track.name} - {track.artist}</span>
+                          <span className="ms-auto flex-shrink-0 opacity-75">{status.message}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="modal-footer-custom">
+              <button 
+                className="minimal-action-btn" 
+                onClick={handleCloseImport} 
+                disabled={isImporting}
+                style={{ borderRadius: 'var(--border-radius)', padding: '8px 16px' }}
+              >
+                关闭
+              </button>
+              <button
+                className="btn-primary-custom"
+                onClick={startImport}
+                disabled={!importData || isImporting}
+                style={{ borderRadius: 'var(--border-radius)', padding: '8px 24px' }}
+              >
+                {isImporting ? (
+                  <>
+                    <span className="spinner-custom me-1" style={{ width: '1rem', height: '1rem' }}></span>
+                    导入中...
+                  </>
+                ) : '开始导入'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

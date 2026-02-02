@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { FaHeart, FaRegHeart } from 'react-icons/fa';
-import { Button } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import { useFavorites } from '../contexts/FavoritesContext';
 
@@ -43,20 +42,28 @@ const HeartButton = ({ track, className = '', size = 'sm', onToggle, variant = '
   const buttonSize = typeof size === 'string' ? size : 'sm';
 
   return (
-    <Button
-      variant={variant}
-      size={buttonSize}
+    <button
       className={className}
       onClick={handleToggleFavorite}
       disabled={isToggling}
       title={isFav ? '取消收藏' : '收藏'}
+      style={{
+        background: 'transparent',
+        border: 'none',
+        padding: '4px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: isToggling ? 'not-allowed' : 'pointer',
+        color: isFav ? 'var(--color-accent)' : 'var(--color-text-tertiary)'
+      }}
     >
       {isFav ? (
         <FaHeart size={iconSize} />
       ) : (
         <FaRegHeart size={iconSize} />
       )}
-    </Button>
+    </button>
   );
 };
 

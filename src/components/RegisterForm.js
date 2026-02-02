@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
 import { useDebounce } from '../utils/throttleDebounce';
 import { FaUser, FaEnvelope, FaLock, FaWaveSquare } from 'react-icons/fa';
@@ -114,9 +113,9 @@ const RegisterForm = ({ onToggleForm, onRegisterSuccess }) => {
 
       <h3 className="text-center mb-4 d-none d-lg-block">创建账号</h3>
       
-      {error && <Alert variant="danger">{error}</Alert>}
+      {error && <div className="alert-custom alert-danger-custom">{error}</div>}
       
-      <Form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit}>
         <div className="form-group">
           <div className="input-wrapper">
             <div className="input-icon">
@@ -206,13 +205,7 @@ const RegisterForm = ({ onToggleForm, onRegisterSuccess }) => {
           disabled={loading || !accountFeatureAvailable}
         >
           {loading ? (
-            <Spinner
-              as="span"
-              animation="border"
-              size="sm"
-              role="status"
-              aria-hidden="true"
-            />
+            <span className="spinner-custom" style={{ width: '1.2rem', height: '1.2rem' }}></span>
           ) : "立即注册"}
         </button>
         
@@ -227,7 +220,7 @@ const RegisterForm = ({ onToggleForm, onRegisterSuccess }) => {
             立即登录
           </button>
         </div>
-      </Form>
+      </form>
     </div>
   );
 };

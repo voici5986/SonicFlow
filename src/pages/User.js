@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card } from 'react-bootstrap';
 import UserProfile from '../components/UserProfile';
 import LoginForm from '../components/LoginForm';
 import RegisterForm from '../components/RegisterForm';
@@ -59,9 +58,9 @@ const User = ({ onTabChange }) => {
   if (currentUser) {
     return (
       <div className="user-page-container">
-        <Container className="py-3">
+        <div className="py-3 px-3">
           <UserProfile onTabChange={onTabChange} />
-        </Container>
+        </div>
       </div>
     );
   }
@@ -71,12 +70,12 @@ const User = ({ onTabChange }) => {
   // 桌面端视图：显示两栏布局
   return (
     <div className="user-page-container">
-      <Container className="py-3">
+      <div className="py-3 px-3">
         {/* 桌面端布局 */}
         <div className="d-none d-lg-block">
-          <Row className="equal-height-row g-3">
+          <div className="row equal-height-row g-3">
             {/* 左侧：登录/注册表单 */}
-            <Col lg={6} className="d-flex">
+            <div className="col-lg-6 d-flex">
               <div className="flex-grow-1">
                 {isLogin ? (
                   <LoginForm 
@@ -90,104 +89,86 @@ const User = ({ onTabChange }) => {
                   />
                 )}
               </div>
-            </Col>
+            </div>
             
             {/* 右侧：统计卡片 */}
-            <Col lg={6} className="d-flex flex-column">
+            <div className="col-lg-6 d-flex flex-column">
               <div className="d-flex flex-column h-100" style={{ gap: '12px' }}>
                 {/* 统计卡片 */}
-                <Card className="stats-card border-0 shadow-sm flex-grow-1" style={{ borderRadius: 'var(--border-radius)', backgroundColor: 'var(--color-background-alt)' }}>
-                  <Card.Body className="d-flex flex-column stats-card-body p-4">
-                    <h5 className="mb-4 text-start fw-bold" style={{ color: 'var(--color-text-primary)' }}>本地数据统计</h5>
-                    <div className="d-flex flex-column gap-3 mb-auto">
-                      <div 
-                        className="stats-item-notion d-flex align-items-center p-3 rounded-3" 
-                        onClick={() => handleStatsCardClick('favorites')}
-                        style={{ 
-                          cursor: 'pointer',
-                          backgroundColor: 'var(--card-background)',
-                          border: '1px solid var(--color-border)',
-                          transition: 'var(--transition-fast)'
-                        }}
-                      >
-                        <div className="stats-icon-wrapper me-3 d-flex align-items-center justify-content-center" 
-                             style={{ 
-                               width: '40px', 
-                               height: '40px', 
-                               borderRadius: '8px', 
-                               backgroundColor: 'rgba(209, 92, 92, 0.1)',
-                               color: 'var(--color-accent)'
-                             }}>
-                          <FaHeart size={18} />
-                        </div>
-                        <div className="flex-grow-1">
-                          <div className="small text-muted mb-0">我的收藏</div>
-                          <div className="h5 mb-0 fw-bold">{favoritesCount} <span className="small fw-normal text-muted">首歌曲</span></div>
+                <div className="stats-card border-0 shadow-sm flex-grow-1" style={{ borderRadius: 'var(--border-radius)', backgroundColor: 'var(--color-background-alt)', overflow: 'hidden' }}>
+                  <div className="d-flex flex-column stats-card-body p-4">
+                    <div className="stats-header mb-4">
+                      <h4 className="fw-bold mb-0">本地统计</h4>
+                      <p className="text-muted small mb-0">数据仅存储在当前设备</p>
+                    </div>
+                    
+                    <div className="row g-4 flex-grow-1">
+                      <div className="col-6">
+                        <div 
+                          className="stats-item p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center clickable"
+                          onClick={() => handleStatsCardClick('favorites')}
+                          style={{ 
+                            borderRadius: '12px', 
+                            backgroundColor: 'rgba(255, 107, 107, 0.05)',
+                            transition: 'all 0.2s ease',
+                            border: '1px solid rgba(255, 107, 107, 0.1)'
+                          }}
+                        >
+                          <FaHeart className="text-danger mb-2" size={24} />
+                          <div className="stats-value h3 fw-bold mb-0 text-danger">{favoritesCount}</div>
+                          <div className="stats-label text-muted small">收藏</div>
                         </div>
                       </div>
-                      
-                      <div 
-                        className="stats-item-notion d-flex align-items-center p-3 rounded-3" 
-                        onClick={() => handleStatsCardClick('history')}
-                        style={{ 
-                          cursor: 'pointer',
-                          backgroundColor: 'var(--card-background)',
-                          border: '1px solid var(--color-border)',
-                          transition: 'var(--transition-fast)'
-                        }}
-                      >
-                        <div className="stats-icon-wrapper me-3 d-flex align-items-center justify-content-center" 
-                             style={{ 
-                               width: '40px', 
-                               height: '40px', 
-                               borderRadius: '8px', 
-                               backgroundColor: 'rgba(47, 52, 55, 0.1)',
-                               color: 'var(--color-primary)'
-                             }}>
-                          <FaHistory size={18} />
-                        </div>
-                        <div className="flex-grow-1">
-                          <div className="small text-muted mb-0">最近播放</div>
-                          <div className="h5 mb-0 fw-bold">{historyCount} <span className="small fw-normal text-muted">条记录</span></div>
+                      <div className="col-6">
+                        <div 
+                          className="stats-item p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center clickable"
+                          onClick={() => handleStatsCardClick('history')}
+                          style={{ 
+                            borderRadius: '12px', 
+                            backgroundColor: 'rgba(77, 171, 245, 0.05)',
+                            transition: 'all 0.2s ease',
+                            border: '1px solid rgba(77, 171, 245, 0.1)'
+                          }}
+                        >
+                          <FaHistory className="text-primary mb-2" size={24} />
+                          <div className="stats-value h3 fw-bold mb-0 text-primary">{historyCount}</div>
+                          <div className="stats-label text-muted small">历史</div>
                         </div>
                       </div>
                     </div>
-                    
-                    <div className="mt-3">
-                      <ClearDataButton />
+                  </div>
+                </div>
+                
+                {/* 数据清理卡片 */}
+                <div className="p-3 shadow-sm" style={{ borderRadius: 'var(--border-radius)', backgroundColor: 'var(--color-background-alt)', border: '1px solid var(--color-border)' }}>
+                  <div className="d-flex align-items-center justify-content-between">
+                    <div>
+                      <h6 className="mb-1 fw-bold">隐私与存储</h6>
+                      <p className="text-muted small mb-0">清除所有本地缓存、收藏和历史记录</p>
                     </div>
-                    
-                    <div className="text-muted small mt-4 text-start" style={{ borderTop: '1px solid var(--color-border)', paddingTop: '20px' }}>
-                      <p className="mb-2 d-flex align-items-center">
-                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--color-accent)', display: 'inline-block', marginRight: '8px' }}></span>
-                        登录后可以同步您的收藏和历史记录
-                      </p>
-                      <p className="mb-0 text-muted opacity-50">版本: {process.env.VITE_APP_VERSION || '1.0.0'}</p>
-                    </div>
-                  </Card.Body>
-                </Card>
+                    <ClearDataButton />
+                  </div>
+                </div>
               </div>
-            </Col>
-          </Row>
-        </div>
-
-        {/* 移动端/平板端布局 - 居中单栏 */}
-        <div className="d-lg-none">
-          <div className="auth-form-wrapper mx-auto" style={{ maxWidth: '450px' }}>
-            {isLogin ? (
-              <LoginForm 
-                onToggleForm={toggleForm} 
-                onLoginSuccess={handleAuthSuccess} 
-              />
-            ) : (
-              <RegisterForm 
-                onToggleForm={toggleForm} 
-                onRegisterSuccess={handleAuthSuccess} 
-              />
-            )}
+            </div>
           </div>
         </div>
-      </Container>
+
+        {/* 移动端布局 */}
+        <div className="d-block d-lg-none">
+          {isLogin ? (
+            <LoginForm 
+              onToggleForm={toggleForm} 
+              onLoginSuccess={handleAuthSuccess} 
+            />
+          ) : (
+            <RegisterForm 
+              onToggleForm={toggleForm} 
+              onRegisterSuccess={handleAuthSuccess} 
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 };
