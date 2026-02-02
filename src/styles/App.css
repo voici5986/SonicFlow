@@ -256,7 +256,7 @@
 .desktop-layout .content-area {
   padding-top: 24px !important;
   padding-right: 48px !important;
-  padding-bottom: 32px !important;
+  padding-bottom: calc(var(--player-height-collapsed) + 40px) !important; /* 动态适配播放器高度 + 额外留白 */
   padding-left: 48px !important;
   max-width: 1400px;
   margin: 0 auto !important;
