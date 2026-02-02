@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaPlay, FaPause, FaDownload, FaTrash } from 'react-icons/fa';
-import { getHistory, clearHistory } from '../services/storage';
+import { getHistory } from '../services/storage';
 import { toast } from 'react-toastify';
 import moment from 'moment';
 import 'moment/locale/zh-cn';
@@ -100,19 +100,6 @@ const History = ({ globalSearchQuery, onTabChange }) => {
     return () => window.removeEventListener('favorites_changed', handleFavoritesChanged);
   }, []);
 
-  const handleClearHistory = async () => {
-    if (window.confirm('确定要清空全部历史记录吗？此操作不可恢复。')) {
-      try {
-        await clearHistory();
-        setHistory([]);
-        toast.success('历史记录已清空', { icon: '✅' });
-      } catch (error) {
-        console.error('清空历史记录失败:', error);
-        toast.error('操作失败，请重试', { icon: '⚠️' });
-      }
-    }
-  };
-
   const formatCompactTimestamp = (timestamp) => {
     const date = new Date(timestamp);
     return moment(date).format('MM-DD  HH:mm');
@@ -183,18 +170,7 @@ const History = ({ globalSearchQuery, onTabChange }) => {
 
   return (
     <div className="history-page page-content-wrapper">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1>播放历史</h1>
-        {history.length > 0 && (
-          <button 
-            className="minimal-action-btn"
-            onClick={handleClearHistory}
-            style={{ padding: '4px 12px', fontSize: '0.85rem' }}
-          >
-            <FaTrash className="me-1" /> 清空历史
-          </button>
-        )}
-      </div>
+      {/* 移除标题栏，功能已迁移至账号页 */}
       
       {/* 添加登录提醒 */}
       {renderLoginReminder()}

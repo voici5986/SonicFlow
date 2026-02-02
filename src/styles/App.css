@@ -155,8 +155,6 @@
 
 .minimal-action-btn:hover:not(:disabled) {
   background: var(--color-background-alt) !important;
-  border-color: var(--color-border-active) !important;
-  color: var(--color-text-primary) !important;
 }
 
 .btn-primary-custom {
@@ -327,6 +325,36 @@
   white-space: nowrap;
 }
 
+/* Notion 风格交互卡片 (用于登录页统计等) */
+.stats-card-interactive {
+  border-radius: 10px !important;
+  background-color: var(--color-background) !important;
+  border: 1px solid transparent !important; /* 默认无边框 */
+  transition: background 0.15s ease, transform 0.12s ease !important;
+  cursor: pointer;
+}
+
+.stats-card-interactive:hover {
+  background-color: var(--color-background-alt) !important;
+  /* 移除边框高亮和浮动阴影，仅背景色变化 */
+  border-color: transparent !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.stats-card-interactive:active {
+  background-color: var(--color-background-alt) !important;
+  transform: scale(0.98) !important;
+}
+
+.stats-card-interactive .stats-icon {
+  transition: none; /* 移除图标缩放 */
+}
+
+.stats-card-interactive:hover .stats-icon {
+  transform: none;
+}
+
 /* 统一的空状态/提醒框样式 */
 .alert-light {
   background-color: var(--color-background-alt);
@@ -354,7 +382,7 @@
 .desktop-layout .content-area {
   padding-top: 32px !important;
   padding-right: 48px !important;
-  padding-bottom: calc(var(--player-height-collapsed) + 60px) !important;
+  padding-bottom: calc(var(--player-height-collapsed) + 40px) !important;
   padding-left: 48px !important;
   max-width: 1400px;
   margin: 0 auto !important;
@@ -364,7 +392,7 @@
 /* 移动端内容区内边距 */
 @media (max-width: 768px) {
   .content-area {
-    padding: 16px 16px 80px 16px !important;
+    padding: 16px 16px 0px 16px !important;
   }
 }
 

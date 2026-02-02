@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { FaPlay, FaPause, FaDownload, FaTrash, FaFileExport, FaFileImport, FaExchangeAlt, FaSearch, FaTimes } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { FaPause, FaDownload } from 'react-icons/fa';
 import AlbumCover from '../components/AlbumCover';
 import HeartButton from '../components/HeartButton';
 import MusicCardActions from '../components/MusicCardActions';
@@ -22,12 +22,6 @@ const Favorites = ({ globalSearchQuery, onTabChange }) => {
 
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [importData, setImportData] = useState(null);
-  const [importStatus, setImportStatus] = useState([]);
-  const [importProgress, setImportProgress] = useState(0);
-  const [isImporting, setIsImporting] = useState(false);
-  const fileInputRef = useRef(null);
 
   // 新增搜索相关状态
   const [searchQuery, setSearchQuery] = useState('');
@@ -647,71 +641,12 @@ const Favorites = ({ globalSearchQuery, onTabChange }) => {
     handlePlay(track, trackIndex >= 0 ? trackIndex : -1, filteredFavorites);
   };
 
-  const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   return (
     <div className="favorites-page page-content-wrapper">
-      <div className="favorites-header d-flex justify-content-between align-items-center mb-4">
-        <div className="d-flex align-items-center">
-          <h1 className="mb-0">我的收藏</h1>
-          <span className="ms-3 badge-custom">{favorites.length}/{MAX_FAVORITES_ITEMS}</span>
-        </div>
-        <div className="d-flex align-items-center gap-2">
-          <div className="dropdown-custom" ref={dropdownRef}>
-            <button 
-              className="minimal-action-btn"
-              onClick={() => setShowDropdown(!showDropdown)}
-              style={{ padding: '8px 16px', height: '40px' }}
-            >
-              <FaExchangeAlt /> <span className="ms-1">导入导出</span>
-            </button>
-            <div className={`dropdown-menu-custom ${showDropdown ? 'show' : ''}`} style={{ right: 0 }}>
-              <button
-                className="dropdown-item-custom"
-                onClick={() => {
-                  handleExport();
-                  setShowDropdown(false);
-                }}
-                disabled={favorites.length === 0}
-              >
-                <FaFileExport className="me-2" /> 导出收藏
-              </button>
-              <button 
-                className="dropdown-item-custom" 
-                onClick={() => {
-                  fileInputRef.current.click();
-                  setShowDropdown(false);
-                }}
-              >
-                <FaFileImport className="me-2" /> 导入收藏
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
+      {/* 移除标题栏，功能已迁移至账号页 */}
+      
       {/* 添加登录提醒 */}
       {renderLoginReminder()}
-
-      {/* 隐藏的文件输入框，用于导入功能 */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        style={{ display: 'none' }}
-        accept=".json"
-        onChange={handleFileSelect}
-      />
 
       {loading ? (
         <div className="text-center my-5">
@@ -747,100 +682,6 @@ const Favorites = ({ globalSearchQuery, onTabChange }) => {
               </div>
             </div>
           ))}
-        </div>
-      )}
-
-      {/* 导入模态框 */}
-      {showImportModal && (
-        <div className="modal-overlay-custom" onClick={handleCloseImport}>
-          <div className="modal-container-custom" style={{ maxWidth: '800px' }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header-custom">
-              <h5 className="modal-title-custom">导入收藏</h5>
-              <button className="modal-close-custom" onClick={handleCloseImport}>
-                <FaTimes size={18} />
-              </button>
-            </div>
-            <div className="modal-body-custom">
-              {importData && (
-                <>
-                  <div className="alert-custom alert-info-custom mb-3" style={{ 
-                    padding: '12px', 
-                    borderRadius: 'var(--border-radius-md)', 
-                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                    border: '1px solid rgba(52, 152, 219, 0.2)',
-                    fontSize: '0.9rem'
-                  }}>
-                    <div className="fw-bold mb-1">检测到 {importData.favorites.length} 首歌曲</div>
-                    <div className="text-muted small">数据版本: {importData.version || '1.0'} | 导出时间: {new Date(importData.timestamp).toLocaleString()}</div>
-                  </div>
-
-                  <div className="progress-custom mb-3" style={{ height: '12px', backgroundColor: 'var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
-                    <div 
-                      className="progress-bar-custom" 
-                      style={{ 
-                        width: `${importProgress}%`,
-                        height: '100%',
-                        backgroundColor: 'var(--color-primary)',
-                        transition: 'width 0.3s ease'
-                      }}
-                    >
-                    </div>
-                  </div>
-                  <div className="text-end small text-muted mb-3">{importProgress}%</div>
-
-                  <div style={{ maxHeight: '350px', overflowY: 'auto', padding: '10px', backgroundColor: 'var(--color-background-alt)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--color-border)' }}>
-                    {importData.favorites.map((track, index) => {
-                      const status = importStatus[index] || { status: 'pending', message: '等待导入' };
-                      let statusColor = 'text-muted';
-                      let statusIcon = '○';
-                      
-                      if (status.status === 'success') {
-                        statusColor = 'text-success';
-                        statusIcon = '✓';
-                      } else if (status.status === 'exists' || status.status === 'duplicate') {
-                        statusColor = 'text-info';
-                        statusIcon = 'i';
-                      } else if (status.status === 'fail' || status.status === 'error') {
-                        statusColor = 'text-danger';
-                        statusIcon = '✕';
-                      }
-
-                      return (
-                        <div key={index} className={`d-flex align-items-center mb-2 small ${statusColor}`}>
-                          <span className="me-2 fw-bold" style={{ minWidth: '15px' }}>{statusIcon}</span>
-                          <span className="text-truncate" style={{ maxWidth: '70%' }}>{track.name} - {track.artist}</span>
-                          <span className="ms-auto flex-shrink-0 opacity-75">{status.message}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-            </div>
-            <div className="modal-footer-custom">
-              <button 
-                className="minimal-action-btn" 
-                onClick={handleCloseImport} 
-                disabled={isImporting}
-                style={{ borderRadius: 'var(--border-radius)', padding: '8px 16px' }}
-              >
-                关闭
-              </button>
-              <button
-                className="btn-primary-custom"
-                onClick={startImport}
-                disabled={!importData || isImporting}
-                style={{ borderRadius: 'var(--border-radius)', padding: '8px 24px' }}
-              >
-                {isImporting ? (
-                  <>
-                    <span className="spinner-custom me-1" style={{ width: '1rem', height: '1rem' }}></span>
-                    导入中...
-                  </>
-                ) : '开始导入'}
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>

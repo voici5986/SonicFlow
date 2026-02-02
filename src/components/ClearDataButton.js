@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 import { FaTrash, FaTimes } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { clearMemoryCache } from '../services/memoryCache';
@@ -11,7 +12,16 @@ import {
 import { clearSyncTimestamp } from '../services/syncService';
 import { useAuth } from '../contexts/AuthContext';
 
-const ClearDataButton = ({ onClick }) => {
+const ClearDataButton = ({ 
+  onClick, 
+  showAsMenuItem = false, 
+  text = "清除数据", 
+  icon = <FaTrash className="me-2" />,
+  className = "",
+  style = {},
+  variant = "danger", // 'danger' or 'normal'
+  children
+}) => {
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedOptions, setSelectedOptions] = useState({
@@ -25,7 +35,8 @@ const ClearDataButton = ({ onClick }) => {
   const { currentUser } = useAuth();
 
   const handleClose = () => setShowModal(false);
-  const handleShow = () => {
+  const handleShow = (e) => {
+    if (e) e.stopPropagation();
     if (onClick) onClick();
     setShowModal(true);
   };
@@ -97,28 +108,40 @@ const ClearDataButton = ({ onClick }) => {
     }
   };
 
-  return (
-    <>
-      <button 
-        className="minimal-action-btn text-danger d-flex align-items-center justify-content-center"
-        onClick={handleShow}
-        style={{ 
-          padding: '8px 16px', 
-          borderRadius: 'var(--border-radius-md)',
-          backgroundColor: 'rgba(231, 76, 60, 0.1)',
-          border: '1px solid rgba(231, 76, 60, 0.2)',
-          fontSize: '0.9rem',
-          fontWeight: '500',
-          transition: 'all 0.2s ease',
-          height: '40px'
-        }}
-      >
-        <FaTrash className="me-2" /> 清除数据
-      </button>
+  // 模态框渲染逻辑 (解耦遮罩和内容，使用 Portal 挂载到 body)
+  const renderModal = () => {
+    if (!showModal) return null;
 
-      {showModal && (
-        <div className="modal-overlay-custom" onClick={handleClose}>
-          <div className="modal-container-custom" onClick={e => e.stopPropagation()}>
+    const modalContent = (
+      <>
+        {/* 背景遮罩 - 独立层 */}
+        <div 
+          className="modal-overlay-custom" 
+          onClick={handleClose} 
+          style={{ zIndex: 10000 }}
+        />
+        
+        {/* 弹窗内容 - 独立层，确保不响应父级点击 */}
+        <div 
+          className="modal-container-wrapper-custom" 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10001,
+            pointerEvents: 'none' // 让容器本身不响应点击，只响应子元素
+          }}
+        >
+          <div 
+            className="modal-container-custom" 
+            onClick={e => e.stopPropagation()}
+            style={{ pointerEvents: 'auto' }} // 恢复子元素的交互
+          >
             <div className="modal-header-custom border-0 pb-0">
               <h5 className="modal-title-custom fw-bold">清除本地数据</h5>
               <button className="modal-close-custom" onClick={handleClose}>
@@ -178,17 +201,94 @@ const ClearDataButton = ({ onClick }) => {
                 取消
               </button>
               <button 
-                className="minimal-action-btn bg-danger text-white border-0" 
+                className="btn-danger-notion text-white border-0" 
                 onClick={handleClearData}
                 disabled={loading || !Object.values(selectedOptions).some(v => v)}
-                style={{ padding: '8px 20px', borderRadius: 'var(--border-radius-md)' }}
+                style={{ 
+                  padding: '8px 20px', 
+                  borderRadius: 'var(--border-radius-md)',
+                  backgroundColor: 'var(--bs-danger)',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.9rem'
+                }}
+                onMouseEnter={(e) => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.backgroundColor = '#d32f2f';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.backgroundColor = 'var(--bs-danger)';
+                  }
+                }}
               >
                 {loading ? <span className="spinner-custom" style={{ width: '1rem', height: '1rem' }}></span> : '确认清除'}
               </button>
             </div>
           </div>
         </div>
-      )}
+      </>
+    );
+
+    return ReactDOM.createPortal(modalContent, document.body);
+  };
+
+  // 如果提供了 children，则使用自定义触发器
+  if (children) {
+    return (
+      <>
+        {React.cloneElement(children, { onClick: handleShow })}
+        {renderModal()}
+      </>
+    );
+  }
+
+  // 下拉菜单模式
+  if (showAsMenuItem) {
+    return (
+      <>
+        <div className={`dropdown-item ${variant === 'danger' ? 'danger' : ''} ${className}`} onClick={handleShow} style={style}>
+          {icon} {text}
+        </div>
+        {renderModal()}
+      </>
+    );
+  }
+
+  // 默认按钮模式
+  return (
+    <>
+      <button 
+        className={`minimal-action-btn ${variant === 'danger' ? 'text-danger' : ''} d-flex align-items-center justify-content-center ${className}`}
+        onClick={handleShow}
+        style={{ 
+          padding: '8px 16px', 
+          borderRadius: '10px',
+          backgroundColor: 'transparent',
+          border: 'none',
+          fontSize: '15px',
+          fontWeight: '500',
+          transition: 'background 0.15s ease, transform 0.12s ease',
+          height: '40px',
+          color: variant === 'danger' ? '#EB5757' : 'inherit',
+          ...style
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'var(--color-background-alt)';
+          if (variant === 'danger') e.currentTarget.style.color = '#EB5757';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'transparent';
+          if (variant === 'danger') e.currentTarget.style.color = '#EB5757';
+        }}
+      >
+        {icon} {text}
+      </button>
+      {renderModal()}
     </>
   );
 };
