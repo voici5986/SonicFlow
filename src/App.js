@@ -107,32 +107,32 @@ const AppContent = () => {
 
     return (
       <div className={`page-content-wrapper ${isDesktop ? 'home-desktop' : ''}`}>
-        {isDesktop ? (
-          <div className="home-search-filter-bar mb-4">
-            <form onSubmit={handleSearch} className="home-filter-form">
-              <div className="d-flex align-items-center gap-3">
-                <div className="filter-group d-flex align-items-center">
-                  <span className="text-muted small me-2">音源:</span>
-                  <select 
-                    className="form-select-custom" 
-                    value={source} 
-                    onChange={(e) => setSource(e.target.value)} 
-                    style={{ height: '38px', width: '120px', fontSize: '0.85rem' }}
-                  >
-                    {sources.map((src) => (<option key={src} value={src}>{src}</option>))}
-                  </select>
-                </div>
-                <div className="filter-group d-flex align-items-center">
-                  <span className="text-muted small me-2">音质:</span>
-                  <select 
-                    className="form-select-custom" 
-                    value={quality} 
-                    onChange={(e) => setQuality(e.target.value)} 
-                    style={{ height: '38px', width: '120px', fontSize: '0.85rem' }}
-                  >
-                    {qualities.map((q) => (<option key={q} value={q}>{q === 999 ? '无损' : `${q}kbps`}</option>))}
-                  </select>
-                </div>
+        <div className="home-search-filter-bar mb-4">
+          <form onSubmit={handleSearch} className="home-filter-form">
+            <div className="d-flex align-items-center flex-wrap gap-3">
+              <div className="filter-group d-flex align-items-center">
+                <span className="text-muted small me-2">音源:</span>
+                <select 
+                  className="form-select-custom" 
+                  value={source} 
+                  onChange={(e) => setSource(e.target.value)} 
+                  style={{ height: '38px', width: isDesktop ? '120px' : 'auto', fontSize: '0.85rem', flex: isDesktop ? 'none' : 1 }}
+                >
+                  {sources.map((src) => (<option key={src} value={src}>{src}</option>))}
+                </select>
+              </div>
+              <div className="filter-group d-flex align-items-center">
+                <span className="text-muted small me-2">音质:</span>
+                <select 
+                  className="form-select-custom" 
+                  value={quality} 
+                  onChange={(e) => setQuality(e.target.value)} 
+                  style={{ height: '38px', width: isDesktop ? '120px' : 'auto', fontSize: '0.85rem', flex: isDesktop ? 'none' : 1 }}
+                >
+                  {qualities.map((q) => (<option key={q} value={q}>{q === 999 ? '无损' : `${q}kbps`}</option>))}
+                </select>
+              </div>
+              {isDesktop && (
                 <button 
                   type="submit" 
                   className="search-submit-btn" 
@@ -141,41 +141,10 @@ const AppContent = () => {
                 >
                   {loading ? <span className="spinner-custom" style={{ width: '1rem', height: '1rem' }}></span> : '开始搜索'}
                 </button>
-              </div>
-            </form>
-          </div>
-        ) : (
-          /* 移动端搜索框 */
-          <form onSubmit={handleSearch} className="mb-4">
-            <div className="row g-2 align-items-stretch">
-              <div className="col-12 col-md-6">
-                <input
-                  type="search"
-                  className="form-control-custom"
-                  placeholder="输入歌曲、歌手或专辑名称"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  style={{ height: '48px' }}
-                />
-              </div>
-              <div className="col-6 col-md-2">
-                <select className="form-select-custom" value={source} onChange={(e) => setSource(e.target.value)} style={{ height: '48px' }}>
-                  {sources.map((src) => (<option key={src} value={src}>{src}</option>))}
-                </select>
-              </div>
-              <div className="col-6 col-md-2">
-                <select className="form-select-custom" value={quality} onChange={(e) => setQuality(e.target.value)} style={{ height: '48px' }}>
-                  {qualities.map((q) => (<option key={q} value={q}>{q === 999 ? '无损' : `${q}kbps`}</option>))}
-                </select>
-              </div>
-              <div className="col-12 col-md-2">
-                <button type="submit" className="w-100 search-submit-btn" disabled={loading} style={{ height: '48px' }}>
-                  {loading ? <span className="spinner-custom" style={{ width: '1.2rem', height: '1.2rem' }}></span> : '开始搜索'}
-                </button>
-              </div>
+              )}
             </div>
           </form>
-        )}
+        </div>
 
         {results.length > 0 ? (
           <div className={isDesktop ? 'home-results' : ''}>

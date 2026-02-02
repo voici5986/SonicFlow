@@ -704,24 +704,6 @@ const Favorites = ({ globalSearchQuery, onTabChange }) => {
       {/* 添加登录提醒 */}
       {renderLoginReminder()}
 
-      {/* 收藏夹内部搜索栏 - 仅在移动端显示 */}
-      <div className="input-group-custom mb-3 d-lg-none">
-        <span className="input-group-text-custom">
-          <FaSearch />
-        </span>
-        <input
-          type="text"
-          className="form-control-custom"
-          placeholder="搜索收藏夹中的歌曲..."
-          value={searchQuery}
-          onChange={(e) => {
-            setSearchQuery(e.target.value);
-            performSearch(e.target.value, favorites);
-          }}
-          style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
-        />
-      </div>
-
       {/* 隐藏的文件输入框，用于导入功能 */}
       <input
         type="file"
