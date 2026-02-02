@@ -602,31 +602,11 @@ const Favorites = ({ globalSearchQuery, onTabChange }) => {
   const renderLoginReminder = () => {
     if (!currentUser) {
       return (
-        <div className="login-prompt-container">
-          <div className="d-flex align-items-center login-prompt-content">
-            <div className="flex-grow-1">
-              <p className="login-prompt-desc mb-0">同步收藏，在任何设备访问您喜爱的音乐。</p>
-            </div>
-            <div className="login-prompt-action">
-              <button
-                onClick={() => onTabChange('user')}
-                className="ms-md-3 minimal-action-btn d-inline-block text-decoration-none text-center"
-                style={{ 
-                  minWidth: '80px',
-                  padding: '6px 12px',
-                  fontSize: '0.85rem',
-                  borderRadius: 'var(--border-radius-md)',
-                  backgroundColor: 'var(--color-primary)',
-                  color: 'white',
-                  fontWeight: '500',
-                  border: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                立即登录
-              </button>
-            </div>
-          </div>
+        <div 
+          className="login-prompt-container" 
+          onClick={() => onTabChange('user')}
+        >
+          <p className="login-prompt-desc">立即登录，在任何设备继续音乐旅程</p>
         </div>
       );
     }

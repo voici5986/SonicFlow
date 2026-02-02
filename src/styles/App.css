@@ -380,7 +380,7 @@
 
 /* 桌面端内容区内边距 */
 .desktop-layout .content-area {
-  padding-top: 32px !important;
+  padding-top: 12px !important;
   padding-right: 48px !important;
   padding-bottom: calc(var(--player-height-collapsed) + 40px) !important;
   padding-left: 48px !important;
@@ -392,7 +392,7 @@
 /* 移动端内容区内边距 */
 @media (max-width: 768px) {
   .content-area {
-    padding: 16px 16px 0px 16px !important;
+    padding: 12px 16px 0px 16px !important;
   }
 }
 
