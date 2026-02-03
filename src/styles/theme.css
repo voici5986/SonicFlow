@@ -529,6 +529,39 @@
   display: flex !important;
 }
 
+/* 身份验证通用样式 */
+.text-accent {
+  color: var(--color-accent) !important;
+  font-weight: 500;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+  font-size: 14px;
+}
+
+.text-accent:hover {
+  background-color: var(--color-hover-notion);
+}
+
+.text-link {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+  font-size: 14px;
+}
+
+.text-link:hover {
+  background-color: var(--color-hover-notion);
+}
+
 /* ===== 通用组件样式 ===== */
 
 /* 登录提示按钮 (Notion 风格) */

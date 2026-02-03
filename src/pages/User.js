@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import UserProfile from '../components/UserProfile';
-import LoginForm from '../components/LoginForm';
-import RegisterForm from '../components/RegisterForm';
+import AuthContainer from '../components/AuthContainer';
 import ClearDataButton from '../components/ClearDataButton';
 import { useAuth } from '../contexts/AuthContext';
 import { getFavorites, getHistory } from '../services/storage';
@@ -10,7 +9,6 @@ import '../styles/User.mobile.css'; // 引入新的移动端优先样式
 
 const User = ({ onTabChange }) => {
   const { currentUser } = useAuth();
-  const [isLogin, setIsLogin] = useState(true);
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [historyCount, setHistoryCount] = useState(0);
   
@@ -36,11 +34,6 @@ const User = ({ onTabChange }) => {
       window.removeEventListener('local:data_cleared', handleDataCleared);
     };
   }, []);
-  
-  // 处理表单切换
-  const toggleForm = () => {
-    setIsLogin(!isLogin);
-  };
   
   // 处理登录/注册成功
   const handleAuthSuccess = () => {
@@ -74,17 +67,7 @@ const User = ({ onTabChange }) => {
           {/* 左侧：登录/注册表单 */}
           <div className="col-lg-6 d-flex">
             <div className="flex-grow-1">
-              {isLogin ? (
-                <LoginForm 
-                  onToggleForm={toggleForm} 
-                  onLoginSuccess={handleAuthSuccess} 
-                />
-              ) : (
-                <RegisterForm 
-                  onToggleForm={toggleForm} 
-                  onRegisterSuccess={handleAuthSuccess} 
-                />
-              )}
+              <AuthContainer onAuthSuccess={handleAuthSuccess} />
             </div>
           </div>
           
@@ -141,17 +124,7 @@ const User = ({ onTabChange }) => {
 
       {/* 移动端布局 */}
       <div className="d-block d-lg-none">
-        {isLogin ? (
-          <LoginForm 
-            onToggleForm={toggleForm} 
-            onLoginSuccess={handleAuthSuccess} 
-          />
-        ) : (
-          <RegisterForm 
-            onToggleForm={toggleForm} 
-            onRegisterSuccess={handleAuthSuccess} 
-          />
-        )}
+        <AuthContainer onAuthSuccess={handleAuthSuccess} />
       </div>
     </div>
   );

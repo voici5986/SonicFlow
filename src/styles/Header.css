@@ -97,9 +97,9 @@
 }
 
 .mobile-search-input:focus {
-  border-color: var(--color-primary);
+  border-color: var(--color-border);
   background-color: var(--card-background);
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 /* 移动端主内容区适配 Header 高度 */
