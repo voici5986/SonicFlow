@@ -33,6 +33,7 @@ import { DownloadProvider, useDownload } from './contexts/DownloadContext';
 import { clearExpiredCovers } from './services/storage';
 import useSearch from './hooks/useSearch';
 import SearchResultItem from './components/SearchResultItem';
+import SearchService from './services/SearchService';
 // 导入样式文件
 import './styles/AudioPlayer.css';
 import './styles/Orientation.css';
@@ -79,6 +80,34 @@ const AppContent = () => {
     setQuality 
   } = useSearch(isOnline);
 
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [localSuggestions, setLocalSuggestions] = useState({ favorites: [], history: [] });
+  const [localSuggestionsLoading, setLocalSuggestionsLoading] = useState(false);
+  const [searchHistory, setSearchHistory] = useState([]);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const suggestionLimit = 5;
+
+  // 获取搜索历史
+  useEffect(() => {
+    const fetchSearchHistory = async () => {
+      try {
+        const { getSearchHistory } = await import('./services/storage');
+        const history = await getSearchHistory();
+        setSearchHistory(history || []);
+      } catch (error) {
+        console.error('获取搜索历史失败:', error);
+      }
+    };
+
+    if (suggestionsOpen && !query.trim()) {
+      fetchSearchHistory();
+    }
+
+    const handleCleared = () => setSearchHistory([]);
+    window.addEventListener('search_history_cleared', handleCleared);
+    return () => window.removeEventListener('search_history_cleared', handleCleared);
+  }, [suggestionsOpen, query]);
+
   // 下载相关状态 - 使用全局 Context
   const { downloading, currentDownloadingTrack, handleDownload } = useDownload();
 
@@ -91,7 +120,7 @@ const AppContent = () => {
   const qualities = [128, 192, 320, 740, 999];
 
   // 从PlayerContext获取封面相关方法
-  const { setCurrentPlaylist } = usePlayer();
+  const { setCurrentPlaylist, handlePlay: playTrack } = usePlayer();
 
   // 当搜索结果变化时，同步更新播放列表
   useEffect(() => {
@@ -101,6 +130,151 @@ const AppContent = () => {
   }, [results, setCurrentPlaylist]);
 
   const deviceInfo = useDevice();
+
+  const getTrackArtist = (track) => {
+    if (!track) return '';
+    if (Array.isArray(track.ar)) return track.ar.map(a => a?.name || '').filter(Boolean).join(' / ');
+    if (Array.isArray(track.artists)) return track.artists.map(a => a?.name || '').filter(Boolean).join(' / ');
+    if (track.artist) {
+      return typeof track.artist === 'string' ? track.artist : (track.artist.name || '');
+    }
+    return '';
+  };
+
+  useEffect(() => {
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
+      setLocalSuggestions({ favorites: [], history: [] });
+      setLocalSuggestionsLoading(false);
+      return;
+    }
+
+    let active = true;
+    setLocalSuggestionsLoading(true);
+    const timer = setTimeout(() => {
+      SearchService.searchLocal(trimmedQuery)
+        .then((result) => {
+          if (!active) return;
+          setLocalSuggestions(result);
+          setLocalSuggestionsLoading(false);
+        })
+        .catch(() => {
+          if (!active) return;
+          setLocalSuggestionsLoading(false);
+        });
+    }, 200);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [query]);
+
+  const handleSearchFocus = () => {
+    setSuggestionsOpen(true);
+    setSelectedIndex(-1);
+  };
+  const handleSearchBlur = () => {
+    // 延迟关闭，以便处理建议项的点击
+    setTimeout(() => {
+      setSuggestionsOpen(false);
+      setSelectedIndex(-1);
+    }, 200);
+  };
+
+  const buildSuggestionItems = (tracks) => {
+    return tracks.map((track, index) => ({
+      id: track?.id || `${track?.name || 'unknown'}-${index}`,
+      name: track?.name || '未命名',
+      artist: getTrackArtist(track) || '未知歌手',
+      raw: track
+    }));
+  };
+
+  const handleSuggestionPick = (item) => {
+    if (item.isSearchHistory) {
+      // 如果是搜索历史建议
+      setQuery(item.rawQuery);
+      setSource(item.rawSource);
+      setSuggestionsOpen(false);
+      // 触发搜索
+      setTimeout(() => {
+        handleSearch();
+      }, 0);
+      return;
+    }
+
+    if (item.raw) {
+      // 1. 如果是歌曲建议，直接播放
+      playTrack(item.raw, -1, [item.raw], quality);
+      // 2. 清空搜索框并关闭建议
+      setQuery('');
+      setSuggestionsOpen(false);
+    } else {
+      // 如果没有原始数据，则回退到普通搜索
+      setQuery(item.name);
+      setSuggestionsOpen(false);
+    }
+  };
+
+  const favoritesItems = buildSuggestionItems(localSuggestions.favorites || []);
+  const historyItems = buildSuggestionItems(localSuggestions.history || []);
+
+  const limitedFavorites = favoritesItems.slice(0, suggestionLimit);
+  const limitedHistory = historyItems.slice(0, suggestionLimit);
+
+  // 格式化搜索历史建议
+  const historySuggestionItems = searchHistory.slice(0, 5).map((item, index) => ({
+    id: `history-${index}-${item.timestamp}`,
+    name: item.query,
+    artist: `历史搜索 · ${item.source}`,
+    isSearchHistory: true,
+    rawQuery: item.query,
+    rawSource: item.source
+  }));
+
+  // 合并后的建议列表，用于键盘导航
+  const allLimitedItems = query.trim() 
+    ? [...limitedFavorites, ...limitedHistory]
+    : historySuggestionItems;
+
+  const handleKeyDown = (e) => {
+    if (!suggestionsOpen || allLimitedItems.length === 0) {
+      if (e.key === 'Enter') {
+        setSuggestionsOpen(false); // 即使没有建议，按回车搜索也应关闭弹窗
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedIndex(prev => (prev + 1) % allLimitedItems.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedIndex(prev => (prev - 1 + allLimitedItems.length) % allLimitedItems.length);
+    } else if (e.key === 'Enter') {
+      if (selectedIndex >= 0 && selectedIndex < allLimitedItems.length) {
+        e.preventDefault();
+        handleSuggestionPick(allLimitedItems[selectedIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      setSuggestionsOpen(false);
+      setSelectedIndex(-1);
+    }
+  };
+  const favoritesExtraCount = Math.max(0, favoritesItems.length - suggestionLimit);
+  const historyExtraCount = Math.max(0, historyItems.length - suggestionLimit);
+
+  const handleShowMore = (type) => {
+    // 切换到对应的标签页
+    if (type === 'favorites') {
+      setActiveTab('favorites');
+    } else if (type === 'history') {
+      setActiveTab('history');
+    }
+    // 保持当前的 query，页面内会自动过滤
+    setSuggestionsOpen(false);
+  };
 
   const renderHomePage = () => {
     const isDesktop = !deviceInfo.isMobile;
@@ -249,10 +423,26 @@ const AppContent = () => {
         onSearchChange={setQuery}
         onSearchSubmit={(e) => {
           handleSearch(e);
+          setSuggestionsOpen(false); // 提交搜索后关闭建议弹窗
           if (activeTab !== 'home') {
             handleTabChange('home');
           }
         }}
+        suggestionsOpen={suggestionsOpen}
+        suggestionsLoading={localSuggestionsLoading}
+        suggestions={{
+          favorites: limitedFavorites,
+          history: limitedHistory,
+          searchHistory: historySuggestionItems,
+          favoritesExtraCount,
+          historyExtraCount
+        }}
+        onSearchFocus={handleSearchFocus}
+        onSearchBlur={handleSearchBlur}
+        onKeyDown={handleKeyDown}
+        selectedIndex={selectedIndex}
+        onSuggestionPick={handleSuggestionPick}
+        onShowMore={handleShowMore}
         loading={loading}
       />
       <Navigation
