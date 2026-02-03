@@ -268,12 +268,6 @@
   border-bottom-right-radius: 0;
 }
 
-/* 当建议窗口打开时，强制输入框底部为直角 */
-.app-header-mobile:has(+ .mobile-search-suggestions) .mobile-search-input,
-.app-header-mobile:focus-within .mobile-search-input {
-   /* 如果浏览器支持 :has，可以实现更完美的衔接 */
-}
-
 /* 另一种方式：在移动端，当搜索框有焦点时，调整整体圆角 */
 @media (max-width: 991.98px) {
   .header-search-container:focus-within .mobile-search-input {
