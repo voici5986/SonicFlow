@@ -54,6 +54,18 @@ const AppContent = () => {
     setActiveTab(tab);
   }, []);
 
+  // 关键修复：解决跨 Tab 切换时滚动位置继承的问题
+  useEffect(() => {
+    // 强制页面回到顶部
+    window.scrollTo(0, 0);
+
+    // 如果主内容区域有内部滚动容器，也需要重置
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+      mainContent.scrollTop = 0;
+    }
+  }, [activeTab]);
+
 
 
   const { isOnline } = useNetworkStatus({

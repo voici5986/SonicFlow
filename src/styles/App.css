@@ -9,9 +9,11 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: var(--color-background); /* 适配深色模式 */
+  background-color: var(--color-background);
+  /* 适配深色模式 */
   color: var(--color-text-primary);
-  z-index: var(--z-index-notification); /* 确保在最顶层 */
+  z-index: var(--z-index-notification);
+  /* 确保在最顶层 */
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -35,11 +37,25 @@
 }
 
 @keyframes rotateIcon {
-  0% { transform: rotate(0deg); }
-  25% { transform: rotate(-90deg); }
-  50% { transform: rotate(-90deg); }
-  75% { transform: rotate(0deg); }
-  100% { transform: rotate(0deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  25% {
+    transform: rotate(-90deg);
+  }
+
+  50% {
+    transform: rotate(-90deg);
+  }
+
+  75% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(0deg);
+  }
 }
 
 /* 音乐卡片样式 */
@@ -62,9 +78,9 @@
   flex-wrap: nowrap !important;
   align-items: center !important;
   justify-content: space-between !important;
-  padding: 12px 16px !important;
+  padding: 10px 16px !important;
   width: 100% !important;
-  min-height: 64px;
+  min-height: 60px;
 }
 
 .music-card-info {
@@ -79,13 +95,15 @@
 
 .music-card-info h6 {
   color: var(--color-text-primary) !important;
+  font-size: 14px !important;
   font-weight: 600 !important;
   margin: 0 0 2px 0 !important;
 }
 
 .music-card-info small {
   color: var(--color-text-secondary) !important;
-  font-size: 0.8rem !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -93,9 +111,9 @@
 
 /* 音乐卡片底部操作栏 */
 .music-card-actions {
-  margin-top: auto;
-  padding-top: 10px;
+  margin-top: 0;
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: 12px;
 }
@@ -189,7 +207,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* 通用 Badge */
@@ -240,7 +260,7 @@
 }
 
 .music-card.is-active {
-  border-color: var(--color-primary) !important;
+  border-color: var(--color-border) !important;
   background-color: var(--color-hover-notion) !important;
   box-shadow: none !important;
 }
@@ -263,16 +283,19 @@
 
 /* 移动端全局布局调整 */
 @media (max-width: 768px) {
+
   /* 调整页面底部内边距：Tab栏(8vh) + 播放器收起高度(10vh) */
   body {
     padding-bottom: calc(var(--mobile-tab-bar-height) + var(--player-height-collapsed) + var(--safe-area-bottom)) !important;
-    padding-top: 0 !important; /* 顶栏没了，不需要顶部内边距 */
+    padding-top: 0 !important;
+    /* 顶栏没了，不需要顶部内边距 */
   }
 
   /* 播放器全屏模式下，重置 padding-bottom */
   body.player-expanded {
     padding-bottom: 0 !important;
-    overflow: hidden !important; /* 全屏模式下禁止 body 滚动 */
+    overflow: hidden !important;
+    /* 全屏模式下禁止 body 滚动 */
   }
 }
 
@@ -310,8 +333,15 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* 历史页面特有的时间标签 */
@@ -327,9 +357,10 @@
 
 /* Notion 风格交互卡片 (用于登录页统计等) */
 .stats-card-interactive {
-  border-radius: 10px !important;
+  border-radius: 12px !important;
   background-color: var(--color-background) !important;
-  border: 1px solid transparent !important; /* 默认无边框 */
+  border: 1px solid transparent !important;
+  /* 默认无边框 */
   transition: background 0.15s ease, transform 0.12s ease !important;
   cursor: pointer;
 }
@@ -344,11 +375,12 @@
 
 .stats-card-interactive:active {
   background-color: var(--color-background-alt) !important;
-  transform: scale(0.98) !important;
+  transform: none !important;
 }
 
 .stats-card-interactive .stats-icon {
-  transition: none; /* 移除图标缩放 */
+  transition: none;
+  /* 移除图标缩放 */
 }
 
 .stats-card-interactive:hover .stats-icon {
@@ -479,6 +511,7 @@
   .desktop-layout {
     display: block;
   }
+
   .desktop-layout .main-content {
     margin-left: 0;
   }
