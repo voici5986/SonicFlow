@@ -65,7 +65,8 @@
         background: transparent !important;
         -webkit-appearance: none;
         appearance: none;
-        font-size: 15px;
+        font-size: 14px;
+        font-weight: 400;
         color: #37352f;
         outline: none !important;
     }
@@ -83,21 +84,19 @@
     .mobile-search-suggestions {
         position: absolute;
         top: 36px;
-        /* 随 wrapper 高度调整 */
         left: 0;
         right: 0;
         background-color: #ffffff;
         z-index: 1100;
         max-height: 70vh;
-        overflow-y: auto;
+        display: flex;
+        /* 改为 flex 布局 */
+        flex-direction: column;
         border: 1px solid rgba(15, 15, 15, 0.15);
-        /* 提升透明度，与聚焦态搜索框完全一致 */
         border-top: none;
         border-bottom-left-radius: 12px;
-        /* 对齐桌面端大圆角 */
         border-bottom-right-radius: 12px;
         box-shadow: 0 20px 35px -5px rgba(15, 15, 15, 0.15);
-        /* 对齐桌面端高级深灰阴影 */
         animation: slideDownMobile 0.2s ease-out;
     }
 

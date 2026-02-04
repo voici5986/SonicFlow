@@ -13,13 +13,13 @@ import { FcGoogle } from 'react-icons/fc';
 const AuthContainer = ({ initialMode = 'login', onAuthSuccess }) => {
   // 模式状态：login, register, forgot
   const [mode, setMode] = useState(initialMode);
-  
+
   // 表单状态
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
+
   // UI 状态
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -93,7 +93,7 @@ const AuthContainer = ({ initialMode = 'login', onAuthSuccess }) => {
   const handleResetPassword = async (e) => {
     e.preventDefault();
     if (!email) return setError('请输入邮箱地址');
-    
+
     setLoading(true);
     try {
       const { success } = await resetPassword(email);
@@ -161,7 +161,7 @@ const AuthContainer = ({ initialMode = 'login', onAuthSuccess }) => {
             <input
               type="email"
               className="input-field"
-              placeholder="电子邮箱"
+              placeholder="输入你的邮箱"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -208,8 +208,8 @@ const AuthContainer = ({ initialMode = 'login', onAuthSuccess }) => {
         )}
 
         <button type="submit" disabled={loading} className="btn-auth btn-primary-auth">
-          {loading ? <span className="spinner-custom" style={{ width: '1.2rem', height: '1.2rem' }}></span> : 
-           mode === 'login' ? "立即登录" : mode === 'register' ? "立即注册" : "发送重置邮件"}
+          {loading ? <span className="spinner-custom" style={{ width: '1.2rem', height: '1.2rem' }}></span> :
+            mode === 'login' ? "立即登录" : mode === 'register' ? "立即注册" : "发送重置邮件"}
         </button>
 
         {/* Google 登录 (非重置模式) */}
@@ -219,24 +219,24 @@ const AuthContainer = ({ initialMode = 'login', onAuthSuccess }) => {
           </button>
         )}
 
-      {/* 底部切换链接 */}
-      <div className="d-flex justify-content-between align-items-center mt-4">
-        {mode === 'login' ? (
-          <>
-            <button type="button" onClick={() => switchMode('forgot')} className="text-link">忘记密码？</button>
-            <button type="button" onClick={() => switchMode('register')} className="text-accent">免费注册</button>
-          </>
-        ) : mode === 'register' ? (
-          <div className="w-100 text-center">
-            <span className="text-muted small">已有账号？</span>
-            <button type="button" onClick={() => switchMode('login')} className="text-accent ms-1">立即登录</button>
-          </div>
-        ) : (
-          <div className="w-100 text-center">
-            <button type="button" onClick={() => switchMode('login')} className="text-accent">返回登录</button>
-          </div>
-        )}
-      </div>
+        {/* 底部切换链接 */}
+        <div className="d-flex justify-content-between align-items-center mt-4">
+          {mode === 'login' ? (
+            <>
+              <button type="button" onClick={() => switchMode('forgot')} className="text-link">忘记密码？</button>
+              <button type="button" onClick={() => switchMode('register')} className="text-accent">免费注册</button>
+            </>
+          ) : mode === 'register' ? (
+            <div className="w-100 text-center">
+              <span className="text-muted small">已有账号？</span>
+              <button type="button" onClick={() => switchMode('login')} className="text-accent ms-1">立即登录</button>
+            </div>
+          ) : (
+            <div className="w-100 text-center">
+              <button type="button" onClick={() => switchMode('login')} className="text-accent">返回登录</button>
+            </div>
+          )}
+        </div>
       </form>
     </div>
   );

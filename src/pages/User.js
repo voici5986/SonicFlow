@@ -11,7 +11,7 @@ const User = ({ onTabChange }) => {
   const { currentUser } = useAuth();
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [historyCount, setHistoryCount] = useState(0);
-  
+
   // 加载统计数据
   useEffect(() => {
     const loadCounts = async () => {
@@ -20,33 +20,33 @@ const User = ({ onTabChange }) => {
       setFavoritesCount(favorites.length);
       setHistoryCount(history.length);
     };
-    
+
     loadCounts();
-    
+
     // 监听数据清除事件
     const handleDataCleared = () => {
       loadCounts();
     };
-    
+
     window.addEventListener('local:data_cleared', handleDataCleared);
-    
+
     return () => {
       window.removeEventListener('local:data_cleared', handleDataCleared);
     };
   }, []);
-  
+
   // 处理登录/注册成功
   const handleAuthSuccess = () => {
     // 不需要做任何事情，因为User组件会自动根据currentUser的变化重新渲染
   };
-  
+
   // 处理统计卡片点击
   const handleStatsCardClick = (tabId) => {
     if (onTabChange) {
       onTabChange(tabId);
     }
   };
-  
+
   // 已登录状态下，显示用户资料
   if (currentUser) {
     return (
@@ -55,7 +55,7 @@ const User = ({ onTabChange }) => {
       </div>
     );
   }
-  
+
   // 未登录状态下，显示登录表单和统计卡片
   // 移动端视图：只显示登录表单
   // 桌面端视图：显示两栏布局
@@ -70,22 +70,22 @@ const User = ({ onTabChange }) => {
               <AuthContainer onAuthSuccess={handleAuthSuccess} />
             </div>
           </div>
-          
+
           {/* 右侧：统计卡片 */}
           <div className="col-lg-6 d-flex flex-column">
             <div className="d-flex flex-column h-100" style={{ gap: '12px' }}>
               {/* 统计卡片 */}
-              <div className="stats-card border-0 flex-grow-1" style={{ borderRadius: '10px', backgroundColor: 'var(--color-background)', overflow: 'hidden' }}>
+              <div className="stats-card border-0 flex-grow-1">
                 <div className="d-flex flex-column stats-card-body p-4">
                   <div className="stats-header mb-4">
                     <h4 className="fw-bold mb-0">本地统计</h4>
                     <p className="text-muted small mb-0">数据仅存储在当前设备</p>
                   </div>
-                  
+
                   <div className="row g-4 flex-grow-1">
                     <div className="col-6">
-                      <div 
-                        className="stats-item p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center clickable stats-card-interactive"
+                      <div
+                        className="stats-item p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center clickable"
                         onClick={() => handleStatsCardClick('favorites')}
                       >
                         <FaHeart className="stats-icon text-danger mb-2" size={24} />
@@ -94,8 +94,8 @@ const User = ({ onTabChange }) => {
                       </div>
                     </div>
                     <div className="col-6">
-                      <div 
-                        className="stats-item p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center clickable stats-card-interactive"
+                      <div
+                        className="stats-item p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center clickable"
                         onClick={() => handleStatsCardClick('history')}
                       >
                         <FaHistory className="stats-icon text-primary mb-2" size={24} />
@@ -106,9 +106,9 @@ const User = ({ onTabChange }) => {
                   </div>
                 </div>
               </div>
-              
+
               {/* 数据清理卡片 */}
-              <div className="p-3" style={{ borderRadius: '10px', backgroundColor: 'var(--color-background)', border: 'none' }}>
+              <div className="p-3" style={{ borderRadius: '10px', backgroundColor: 'var(--color-background-alt)', border: 'none' }}>
                 <div className="d-flex align-items-center justify-content-between">
                   <div>
                     <h6 className="mb-1 fw-bold">隐私与存储</h6>

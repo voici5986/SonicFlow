@@ -1,7 +1,8 @@
 /* 添加全局样式优化 */
 /* 主要变量已移至theme.css */
 
-html, body {
+html,
+body {
   margin: 0;
   font-family: var(--font-family-base);
   -webkit-font-smoothing: antialiased;
@@ -14,40 +15,24 @@ html, body {
 /* 美化按钮 */
 .btn {
   border-radius: var(--border-radius-md);
-  transition: all 0.3s var(--ease-out-back);
+  transition: background 0.12s ease-in;
   position: relative;
   overflow: hidden;
-  box-shadow: var(--button-shadow);
+  box-shadow: none;
   font-weight: var(--font-weight-medium);
   letter-spacing: 0.3px;
 }
 
-.btn::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 5px;
-  height: 5px;
-  background: rgba(255, 255, 255, 0.7);
-  opacity: 0;
-  border-radius: 100%;
-  transform: scale(1, 1) translate(-50%, -50%);
-  transform-origin: 50% 50%;
+/* 移除 ripple 波纹动画 */
+.btn-primary {
+  background: var(--color-text-primary);
+  border: none;
+  color: #FFFFFF;
 }
 
 .btn:hover {
-  transform: var(--button-hover-transform);
-  box-shadow: var(--button-hover-shadow);
-}
-
-.btn:active {
-  transform: var(--button-active-transform);
-  box-shadow: var(--button-shadow);
-}
-
-.btn:hover::after {
-  animation: ripple 0.6s ease-out;
+  filter: brightness(1.1);
+  /* 极简亮度变化 */
 }
 
 @keyframes ripple {
@@ -55,6 +40,7 @@ html, body {
     transform: scale(0, 0);
     opacity: 0.7;
   }
+
   100% {
     transform: scale(20, 20);
     opacity: 0;
@@ -97,62 +83,60 @@ html, body {
   content: '';
   position: absolute;
   top: 0;
-    left: 0;
-    width: 100%;
+  left: 0;
+  width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, 
-    rgba(255, 255, 255, 0) 0%, 
-    rgba(255, 255, 255, 0.2) 50%, 
-    rgba(255, 255, 255, 0) 100%);
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.2) 50%,
+      rgba(255, 255, 255, 0) 100%);
   animation: progressShine 2s infinite;
 }
 
 @keyframes progressShine {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 /* 美化导航 - 基础样式已移至 Navigation.mobile.css 和 Navigation.desktop.css */
 
-/* 美化专辑封面 */
+/* 美化专辑封面 (移除投影与缩放) */
 img.rounded {
   border-radius: var(--border-radius) !important;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.07);
-  transition: all 0.3s var(--ease-out-back);
-}
-
-img.rounded:hover {
-  transform: scale(1.03);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12);
+  transition: all 0.2s ease;
 }
 
 /* 专辑封面包装器 */
 .album-cover-wrapper {
   position: relative;
   overflow: hidden;
-  background-color: var(--card-hover-background); /* 使用 hover 背景色作为占位 */
+  background-color: var(--color-background-alt);
   border-radius: var(--border-radius);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.07);
-  transition: all 0.3s var(--ease-out-back);
-}
-
-.album-cover-wrapper:hover {
-  transform: scale(1.03);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12);
+  transition: all 0.2s ease;
 }
 
 /* 美化表单控件 */
-.form-control, .form-select, .dropdown-toggle {
+.form-control,
+.form-select,
+.dropdown-toggle {
   border-radius: var(--border-radius);
   border: 1px solid var(--color-border);
   padding: 0.6rem 1rem;
   transition: all 0.3s var(--ease-in-out);
 }
 
-.form-control:focus, .form-select:focus {
-  box-shadow: 0 0 0 3px rgba(47, 52, 55, 0.12);
+.form-control:focus,
+.form-select:focus {
+  box-shadow: 0 0 0 1px var(--color-border-active);
+  /* 对齐 2px 实线感 */
   border-color: var(--color-border-active);
-  transform: translateY(-1px);
+  transform: none;
+  /* 移除位移 */
 }
 
 /* 
@@ -161,7 +145,8 @@ img.rounded:hover {
  */
 .fixed-bottom {
   border-top: none !important;
-  box-shadow: none !important; /* 移除冗余阴影，由 AudioPlayer.css 统一管理 */
+  box-shadow: none !important;
+  /* 移除冗余阴影，由 AudioPlayer.css 统一管理 */
   z-index: var(--z-index-bootstrap-fixed);
 }
 
@@ -177,14 +162,16 @@ img.rounded:hover {
  * 已废弃：核心逻辑已移至 AudioPlayer.css 的全屏模式
  */
 .lyric-container {
-  display: none; /* 强制隐藏旧版容器 */
+  display: none;
+  /* 强制隐藏旧版容器 */
 }
 
 /* 
  * 文本溢出处理 
  * 用于歌曲列表等场景
  */
-.track-name, .track-artist {
+.track-name,
+.track-artist {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -202,6 +189,7 @@ img.rounded:hover {
   0% {
     background-position: -468px 0;
   }
+
   100% {
     background-position: 468px 0;
   }

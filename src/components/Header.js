@@ -80,37 +80,40 @@ const Header = ({
           className={`header-search-suggestions ${extraClass || ''}`.trim()}
           onMouseDown={(e) => e.preventDefault()}
         >
-          <div className="suggestion-section">
-            <div className="suggestion-section-title d-flex justify-content-between align-items-center">
-              <span>最近搜索</span>
-              {historyTotal > 0 && (
-                <span
-                  className="clear-history-link"
-                  onClick={handleClearHistory}
-                >
-                  清空
-                </span>
+          <div className="suggestion-scroll-area">
+            <div className="suggestion-section">
+              <div className="suggestion-section-title d-flex justify-content-between align-items-center">
+                <span>最近搜索</span>
+                {historyTotal > 0 && (
+                  <span
+                    className="clear-history-link"
+                    onClick={handleClearHistory}
+                  >
+                    清空
+                  </span>
+                )}
+              </div>
+              {historyTotal > 0 ? (
+                displayHistory.map((item, idx) => {
+                  const isSelected = idx === selectedIndex;
+                  return (
+                    <button
+                      type="button"
+                      key={item.id}
+                      className={`suggestion-item ${isSelected ? 'selected' : ''}`}
+                      onClick={() => onSuggestionPick && onSuggestionPick(item)}
+                    >
+                      <span className="suggestion-title">{item.name}</span>
+                      <span className="suggestion-subtitle">{item.artist}</span>
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="suggestion-empty">还没有搜索记录，输入想听的歌试试吧</div>
               )}
             </div>
-            {historyTotal > 0 ? (
-              displayHistory.map((item, idx) => {
-                const isSelected = idx === selectedIndex;
-                return (
-                  <button
-                    type="button"
-                    key={item.id}
-                    className={`suggestion-item ${isSelected ? 'selected' : ''}`}
-                    onClick={() => onSuggestionPick && onSuggestionPick(item)}
-                  >
-                    <span className="suggestion-title">{item.name}</span>
-                    <span className="suggestion-subtitle">{item.artist}</span>
-                  </button>
-                );
-              })
-            ) : (
-              <div className="suggestion-empty">还没有搜索记录，输入想听的歌试试吧</div>
-            )}
           </div>
+          <div className="suggestion-footer">按回车搜索全部歌曲</div>
         </div>
       );
     }
@@ -132,76 +135,78 @@ const Header = ({
         className={`header-search-suggestions ${extraClass || ''}`.trim()}
         onMouseDown={(e) => e.preventDefault()}
       >
-        <div className="suggestion-section">
-          <div className="suggestion-section-title">收藏中</div>
-          {displayFavorites.length > 0 ? (
-            displayFavorites.map((item) => {
+        <div className="suggestion-scroll-area">
+          <div className="suggestion-section">
+            <div className="suggestion-section-title">收藏中</div>
+            {displayFavorites.length > 0 ? (
+              displayFavorites.map((item) => {
+                const isSelected = globalIdx === selectedIndex;
+                globalIdx++;
+                return (
+                  <button
+                    type="button"
+                    key={item.id}
+                    className={`suggestion-item ${isSelected ? 'selected' : ''}`}
+                    onClick={() => onSuggestionPick && onSuggestionPick(item)}
+                  >
+                    <span className="suggestion-title">{item.name}</span>
+                    <span className="suggestion-subtitle">{item.artist}</span>
+                  </button>
+                );
+              })
+            ) : (
+              <div className="suggestion-empty">暂无匹配</div>
+            )}
+            {favExtraCount > 0 && (() => {
               const isSelected = globalIdx === selectedIndex;
               globalIdx++;
               return (
-                <button
-                  type="button"
-                  key={item.id}
-                  className={`suggestion-item ${isSelected ? 'selected' : ''}`}
-                  onClick={() => onSuggestionPick && onSuggestionPick(item)}
+                <div
+                  className={`suggestion-more ${isSelected ? 'selected' : ''}`}
+                  onClick={() => onShowMore && onShowMore('favorites')}
                 >
-                  <span className="suggestion-title">{item.name}</span>
-                  <span className="suggestion-subtitle">{item.artist}</span>
-                </button>
+                  还有 {favExtraCount} 首收藏 →
+                </div>
               );
-            })
-          ) : (
-            <div className="suggestion-empty">暂无匹配</div>
-          )}
-          {favExtraCount > 0 && (() => {
-            const isSelected = globalIdx === selectedIndex;
-            globalIdx++;
-            return (
-              <div
-                className={`suggestion-more ${isSelected ? 'selected' : ''}`}
-                onClick={() => onShowMore && onShowMore('favorites')}
-              >
-                还有 {favExtraCount} 首收藏 →
-              </div>
-            );
-          })()}
-        </div>
+            })()}
+          </div>
 
-        <div className="suggestion-divider"></div>
+          <div className="suggestion-divider"></div>
 
-        <div className="suggestion-section">
-          <div className="suggestion-section-title">历史记录</div>
-          {displayHistory.length > 0 ? (
-            displayHistory.map((item) => {
+          <div className="suggestion-section">
+            <div className="suggestion-section-title">历史记录</div>
+            {displayHistory.length > 0 ? (
+              displayHistory.map((item) => {
+                const isSelected = globalIdx === selectedIndex;
+                globalIdx++;
+                return (
+                  <button
+                    type="button"
+                    key={item.id}
+                    className={`suggestion-item ${isSelected ? 'selected' : ''}`}
+                    onClick={() => onSuggestionPick && onSuggestionPick(item)}
+                  >
+                    <span className="suggestion-title">{item.name}</span>
+                    <span className="suggestion-subtitle">{item.artist}</span>
+                  </button>
+                );
+              })
+            ) : (
+              <div className="suggestion-empty">暂无匹配</div>
+            )}
+            {histExtraCount > 0 && (() => {
               const isSelected = globalIdx === selectedIndex;
               globalIdx++;
               return (
-                <button
-                  type="button"
-                  key={item.id}
-                  className={`suggestion-item ${isSelected ? 'selected' : ''}`}
-                  onClick={() => onSuggestionPick && onSuggestionPick(item)}
+                <div
+                  className={`suggestion-more ${isSelected ? 'selected' : ''}`}
+                  onClick={() => onShowMore && onShowMore('history')}
                 >
-                  <span className="suggestion-title">{item.name}</span>
-                  <span className="suggestion-subtitle">{item.artist}</span>
-                </button>
+                  还有 {histExtraCount} 首历史 →
+                </div>
               );
-            })
-          ) : (
-            <div className="suggestion-empty">暂无匹配</div>
-          )}
-          {histExtraCount > 0 && (() => {
-            const isSelected = globalIdx === selectedIndex;
-            globalIdx++;
-            return (
-              <div
-                className={`suggestion-more ${isSelected ? 'selected' : ''}`}
-                onClick={() => onShowMore && onShowMore('history')}
-              >
-                还有 {histExtraCount} 首历史 →
-              </div>
-            );
-          })()}
+            })()}
+          </div>
         </div>
 
         <div className="suggestion-footer">按回车搜索全部歌曲</div>

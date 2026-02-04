@@ -1,14 +1,14 @@
 import React from 'react';
 import SearchResultItem from '../components/SearchResultItem';
 
-const Home = ({ 
-  query, 
-  results, 
-  source, 
-  quality, 
-  loading, 
-  setField, 
-  handleSearch 
+const Home = ({
+  query,
+  results,
+  source,
+  quality,
+  loading,
+  setField,
+  handleSearch
 }) => {
   const sources = [
     'netease', 'kuwo', 'joox', 'bilibili'
@@ -36,7 +36,6 @@ const Home = ({
                   handleSearch();
                 }
               }}
-              style={{ height: '48px' }}
             />
           </div>
           <div className="col-6 col-md-2">
@@ -44,7 +43,6 @@ const Home = ({
               value={source}
               className="form-select-custom"
               onChange={(e) => setField('source', e.target.value)}
-              style={{ height: '48px' }}
             >
               {sources.map((src) => (
                 <option key={src} value={src}>
@@ -58,7 +56,6 @@ const Home = ({
               value={quality}
               className="form-select-custom"
               onChange={(e) => setField('quality', parseInt(e.target.value))}
-              style={{ height: '48px' }}
             >
               {qualities.map((q) => (
                 <option key={q} value={q}>
@@ -73,19 +70,19 @@ const Home = ({
               className="w-100 search-submit-btn"
               disabled={loading}
               style={{
-                backgroundColor: 'var(--color-background)',
-                color: 'var(--color-text-primary)',
-                borderRadius: 'var(--border-radius)',
+                backgroundColor: '#2383E2',
+                color: '#ffffff',
+                borderRadius: '8px',
                 padding: '0',
                 fontWeight: '600',
                 textDecoration: 'none',
-                border: '1px solid var(--color-border)',
-                boxShadow: 'var(--shadow-sm)',
-                transition: 'all 0.2s ease',
+                border: 'none',
+                boxShadow: 'none',
+                transition: 'none',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                height: '48px',
+                height: '40px',
                 cursor: loading ? 'not-allowed' : 'pointer'
               }}
             >
