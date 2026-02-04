@@ -35,9 +35,9 @@ import useSearch from './hooks/useSearch';
 import SearchResultItem from './components/SearchResultItem';
 import SearchService from './services/SearchService';
 // 导入样式文件
+// 已移除旧的 Header.css 引用，样式现在由 Header 组件内部管理
 import './styles/AudioPlayer.css';
 import './styles/Orientation.css';
-import './styles/Header.css';
 
 // 懒加载页面组件
 const Favorites = React.lazy(() => import('./pages/Favorites'));
@@ -68,16 +68,16 @@ const AppContent = () => {
   });
 
   // 使用自定义Hook管理搜索逻辑
-  const { 
-    query, 
-    results, 
-    source, 
-    quality, 
-    loading, 
-    handleSearch, 
-    setQuery, 
-    setSource, 
-    setQuality 
+  const {
+    query,
+    results,
+    source,
+    quality,
+    loading,
+    handleSearch,
+    setQuery,
+    setSource,
+    setQuality
   } = useSearch(isOnline);
 
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
@@ -155,6 +155,7 @@ const AppContent = () => {
       SearchService.searchLocal(trimmedQuery)
         .then((result) => {
           if (!active) return;
+          console.log(`[Search Debug] SearchService 返回结果: 收藏=${result.favorites.length}, 历史=${result.history.length}`);
           setLocalSuggestions(result);
           setLocalSuggestionsLoading(false);
         })
@@ -184,7 +185,7 @@ const AppContent = () => {
 
   const buildSuggestionItems = (tracks) => {
     return tracks.map((track, index) => ({
-      id: track?.id || `${track?.name || 'unknown'}-${index}`,
+      id: track?.id || `${track?.name || 'idx'}-${index}-${Date.now()}`,
       name: track?.name || '未命名',
       artist: getTrackArtist(track) || '未知歌手',
       raw: track
@@ -192,6 +193,12 @@ const AppContent = () => {
   };
 
   const handleSuggestionPick = (item) => {
+    // 处理“查看更多”跳转
+    if (item.type === 'more') {
+      handleShowMore(item.subType);
+      return;
+    }
+
     if (item.isSearchHistory) {
       // 如果是搜索历史建议
       setQuery(item.rawQuery);
@@ -210,18 +217,24 @@ const AppContent = () => {
       // 2. 清空搜索框并关闭建议
       setQuery('');
       setSuggestionsOpen(false);
+      setSelectedIndex(-1);
+      // 3. 主动失去焦点，强制触发 CSS 状态回退
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
     } else {
       // 如果没有原始数据，则回退到普通搜索
       setQuery(item.name);
       setSuggestionsOpen(false);
+      setSelectedIndex(-1);
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
     }
   };
 
   const favoritesItems = buildSuggestionItems(localSuggestions.favorites || []);
   const historyItems = buildSuggestionItems(localSuggestions.history || []);
-
-  const limitedFavorites = favoritesItems.slice(0, suggestionLimit);
-  const limitedHistory = historyItems.slice(0, suggestionLimit);
 
   // 格式化搜索历史建议
   const historySuggestionItems = searchHistory.slice(0, 5).map((item, index) => ({
@@ -234,14 +247,42 @@ const AppContent = () => {
   }));
 
   // 合并后的建议列表，用于键盘导航
-  const allLimitedItems = query.trim() 
-    ? [...limitedFavorites, ...limitedHistory]
-    : historySuggestionItems;
+  const allLimitedItems = (() => {
+    if (!query.trim()) return historySuggestionItems;
+
+    const limit = 5;
+    const items = [];
+
+    // 1. 加入收藏匹配项
+    const favs = favoritesItems.slice(0, limit);
+    items.push(...favs);
+
+    // 2. 如果还有更多收藏，加入“更多收藏”占位项
+    if (favoritesItems.length > limit) {
+      items.push({ id: 'more-favorites', type: 'more', subType: 'favorites' });
+    }
+
+    // 3. 加入历史匹配项
+    const hists = historyItems.slice(0, limit);
+    items.push(...hists);
+
+    // 4. 如果还有更多历史，加入“更多历史”占位项
+    if (historyItems.length > limit) {
+      items.push({ id: 'more-history', type: 'more', subType: 'history' });
+    }
+
+    return items;
+  })();
 
   const handleKeyDown = (e) => {
     if (!suggestionsOpen || allLimitedItems.length === 0) {
       if (e.key === 'Enter') {
         setSuggestionsOpen(false); // 即使没有建议，按回车搜索也应关闭弹窗
+        setSelectedIndex(-1);
+        // 主动失去焦点，恢复搜索框原本样式
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
       }
       return;
     }
@@ -262,8 +303,7 @@ const AppContent = () => {
       setSelectedIndex(-1);
     }
   };
-  const favoritesExtraCount = Math.max(0, favoritesItems.length - suggestionLimit);
-  const historyExtraCount = Math.max(0, historyItems.length - suggestionLimit);
+
 
   const handleShowMore = (type) => {
     // 切换到对应的标签页
@@ -272,8 +312,14 @@ const AppContent = () => {
     } else if (type === 'history') {
       setActiveTab('history');
     }
-    // 保持当前的 query，页面内会自动过滤
+    // 1. 立即关闭建议弹窗
     setSuggestionsOpen(false);
+    setSelectedIndex(-1);
+
+    // 2. 主动失去焦点，解决搜索框“圆角未恢复”的问题
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
   };
 
   const renderHomePage = () => {
@@ -286,10 +332,10 @@ const AppContent = () => {
             <div className="d-flex align-items-center flex-wrap gap-3">
               <div className="filter-group d-flex align-items-center">
                 <span className="text-muted small me-2">音源:</span>
-                <select 
-                  className="form-select-custom" 
-                  value={source} 
-                  onChange={(e) => setSource(e.target.value)} 
+                <select
+                  className="form-select-custom"
+                  value={source}
+                  onChange={(e) => setSource(e.target.value)}
                   style={{ height: '38px', width: isDesktop ? '120px' : 'auto', fontSize: '0.85rem', flex: isDesktop ? 'none' : 1 }}
                 >
                   {sources.map((src) => (<option key={src} value={src}>{src}</option>))}
@@ -297,20 +343,20 @@ const AppContent = () => {
               </div>
               <div className="filter-group d-flex align-items-center">
                 <span className="text-muted small me-2">音质:</span>
-                <select 
-                  className="form-select-custom" 
-                  value={quality} 
-                  onChange={(e) => setQuality(e.target.value)} 
+                <select
+                  className="form-select-custom"
+                  value={quality}
+                  onChange={(e) => setQuality(e.target.value)}
                   style={{ height: '38px', width: isDesktop ? '120px' : 'auto', fontSize: '0.85rem', flex: isDesktop ? 'none' : 1 }}
                 >
                   {qualities.map((q) => (<option key={q} value={q}>{q === 999 ? '无损' : `${q}kbps`}</option>))}
                 </select>
               </div>
               {isDesktop && (
-                <button 
-                  type="submit" 
-                  className="search-submit-btn" 
-                  disabled={loading} 
+                <button
+                  type="submit"
+                  className="search-submit-btn"
+                  disabled={loading}
                   style={{ height: '38px', padding: '0 24px', fontSize: '0.85rem' }}
                 >
                   {loading ? <span className="spinner-custom" style={{ width: '1rem', height: '1rem' }}></span> : '开始搜索'}
@@ -416,7 +462,7 @@ const AppContent = () => {
   return (
     <div className={`app-container ${!deviceInfo.isMobile ? 'desktop-layout' : ''}`}>
       <OrientationPrompt />
-      <Header 
+      <Header
         activeTab={activeTab}
         onTabChange={handleTabChange}
         searchQuery={query}
@@ -424,6 +470,11 @@ const AppContent = () => {
         onSearchSubmit={(e) => {
           handleSearch(e);
           setSuggestionsOpen(false); // 提交搜索后关闭建议弹窗
+          setSelectedIndex(-1);
+          // 关键修复：主动失去焦点，让 CSS :focus-within 状态消失，搜索框样式恢复
+          if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+          }
           if (activeTab !== 'home') {
             handleTabChange('home');
           }
@@ -431,11 +482,9 @@ const AppContent = () => {
         suggestionsOpen={suggestionsOpen}
         suggestionsLoading={localSuggestionsLoading}
         suggestions={{
-          favorites: limitedFavorites,
-          history: limitedHistory,
-          searchHistory: historySuggestionItems,
-          favoritesExtraCount,
-          historyExtraCount
+          favorites: favoritesItems,
+          history: historyItems,
+          searchHistory: historySuggestionItems
         }}
         onSearchFocus={handleSearchFocus}
         onSearchBlur={handleSearchBlur}

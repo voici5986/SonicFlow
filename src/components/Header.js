@@ -2,16 +2,16 @@ import React from 'react';
 import { FaSearch, FaUser, FaTimesCircle } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
 import { useDevice } from '../contexts/DeviceContext';
-import '../styles/Header.css';
+import '../styles/Header.desktop.css';
+import '../styles/Header.mobile.css';
 
-const Header = ({ 
-  activeTab, 
-  onTabChange, 
-  searchQuery, 
-  onSearchChange, 
+const Header = ({
+  activeTab,
+  onTabChange,
+  searchQuery,
+  onSearchChange,
   onSearchSubmit,
   suggestionsOpen,
-  suggestionsLoading,
   suggestions,
   onSearchFocus,
   onSearchBlur,
@@ -19,7 +19,7 @@ const Header = ({
   onSuggestionPick,
   onShowMore,
   selectedIndex = -1,
-  loading 
+  loading
 }) => {
   const { currentUser } = useAuth();
   const { isMobile } = useDevice();
@@ -36,12 +36,12 @@ const Header = ({
   };
 
   const userInitial = getUserInitial();
-  const suggestionData = suggestions || { 
-    favorites: [], 
-    history: [], 
+  const suggestionData = suggestions || {
+    favorites: [],
+    history: [],
     searchHistory: [],
-    favoritesExtraCount: 0, 
-    historyExtraCount: 0 
+    favoritesExtraCount: 0,
+    historyExtraCount: 0
   };
   const hasQuery = searchQuery && searchQuery.trim().length > 0;
 
@@ -66,9 +66,14 @@ const Header = ({
   const renderSuggestions = (extraClass) => {
     if (!suggestionsOpen) return null;
 
-    // 当没有输入时，显示搜索历史
+    const limit = 5; // 建议显示的条数
+    const favs = suggestionData.favorites || [];
+    const hists = suggestionData.history || [];
+
+    // 当没有输入时，显示搜索内容（历史或引导）
     if (!hasQuery) {
-      if (suggestionData.searchHistory.length === 0) return null;
+      const displayHistory = (suggestionData.searchHistory || []).slice(0, limit);
+      const historyTotal = (suggestionData.searchHistory || []).length;
 
       return (
         <div
@@ -78,16 +83,61 @@ const Header = ({
           <div className="suggestion-section">
             <div className="suggestion-section-title d-flex justify-content-between align-items-center">
               <span>最近搜索</span>
-              <span 
-                className="clear-history-link" 
-                onClick={handleClearHistory}
-                style={{ cursor: 'pointer', fontSize: '11px', fontWeight: 'normal' }}
-              >
-                清空
-              </span>
+              {historyTotal > 0 && (
+                <span
+                  className="clear-history-link"
+                  onClick={handleClearHistory}
+                >
+                  清空
+                </span>
+              )}
             </div>
-            {suggestionData.searchHistory.map((item, idx) => {
-              const isSelected = idx === selectedIndex;
+            {historyTotal > 0 ? (
+              displayHistory.map((item, idx) => {
+                const isSelected = idx === selectedIndex;
+                return (
+                  <button
+                    type="button"
+                    key={item.id}
+                    className={`suggestion-item ${isSelected ? 'selected' : ''}`}
+                    onClick={() => onSuggestionPick && onSuggestionPick(item)}
+                  >
+                    <span className="suggestion-title">{item.name}</span>
+                    <span className="suggestion-subtitle">{item.artist}</span>
+                  </button>
+                );
+              })
+            ) : (
+              <div className="suggestion-empty">还没有搜索记录，输入想听的歌试试吧</div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // 处理搜索匹配项
+    const rawFavorites = suggestionData.favorites || [];
+    const rawHistory = suggestionData.history || [];
+
+    const displayFavorites = rawFavorites.slice(0, limit);
+    const displayHistory = rawHistory.slice(0, limit);
+
+    const favExtraCount = Math.max(0, rawFavorites.length - displayFavorites.length);
+    const histExtraCount = Math.max(0, rawHistory.length - displayHistory.length);
+
+    let globalIdx = 0;
+
+    return (
+      <div
+        className={`header-search-suggestions ${extraClass || ''}`.trim()}
+        onMouseDown={(e) => e.preventDefault()}
+      >
+        <div className="suggestion-section">
+          <div className="suggestion-section-title">收藏中</div>
+          {displayFavorites.length > 0 ? (
+            displayFavorites.map((item) => {
+              const isSelected = globalIdx === selectedIndex;
+              globalIdx++;
               return (
                 <button
                   type="button"
@@ -99,95 +149,62 @@ const Header = ({
                   <span className="suggestion-subtitle">{item.artist}</span>
                 </button>
               );
-            })}
-          </div>
+            })
+          ) : (
+            <div className="suggestion-empty">暂无匹配</div>
+          )}
+          {favExtraCount > 0 && (() => {
+            const isSelected = globalIdx === selectedIndex;
+            globalIdx++;
+            return (
+              <div
+                className={`suggestion-more ${isSelected ? 'selected' : ''}`}
+                onClick={() => onShowMore && onShowMore('favorites')}
+              >
+                还有 {favExtraCount} 首收藏 →
+              </div>
+            );
+          })()}
         </div>
-      );
-    }
 
-    const allItems = [
-      ...suggestionData.favorites.map(item => ({ ...item, type: 'favorites' })),
-      ...suggestionData.history.map(item => ({ ...item, type: 'history' }))
-    ];
+        <div className="suggestion-divider"></div>
 
-    let globalIdx = 0;
-
-    return (
-      <div
-        className={`header-search-suggestions ${extraClass || ''}`.trim()}
-        onMouseDown={(e) => e.preventDefault()}
-      >
-        {suggestionsLoading ? (
-          <div className="suggestion-loading">正在匹配...</div>
-        ) : (
-          <>
-            <div className="suggestion-section">
-              <div className="suggestion-section-title">收藏中</div>
-              {suggestionData.favorites.length > 0 ? (
-                suggestionData.favorites.map((item) => {
-                  const isSelected = globalIdx === selectedIndex;
-                  globalIdx++;
-                  return (
-                    <button
-                      type="button"
-                      key={item.id}
-                      className={`suggestion-item ${isSelected ? 'selected' : ''}`}
-                      onClick={() => onSuggestionPick && onSuggestionPick(item)}
-                    >
-                      <span className="suggestion-title">{item.name}</span>
-                      <span className="suggestion-subtitle">{item.artist}</span>
-                    </button>
-                  );
-                })
-              ) : (
-                <div className="suggestion-empty">暂无匹配</div>
-              )}
-              {suggestionData.favoritesExtraCount > 0 && (
-                <div 
-                  className="suggestion-more" 
-                  onClick={() => onShowMore && onShowMore('favorites')}
+        <div className="suggestion-section">
+          <div className="suggestion-section-title">历史记录</div>
+          {displayHistory.length > 0 ? (
+            displayHistory.map((item) => {
+              const isSelected = globalIdx === selectedIndex;
+              globalIdx++;
+              return (
+                <button
+                  type="button"
+                  key={item.id}
+                  className={`suggestion-item ${isSelected ? 'selected' : ''}`}
+                  onClick={() => onSuggestionPick && onSuggestionPick(item)}
                 >
-                  还有 {suggestionData.favoritesExtraCount} 首收藏 →
-                </div>
-              )}
-            </div>
+                  <span className="suggestion-title">{item.name}</span>
+                  <span className="suggestion-subtitle">{item.artist}</span>
+                </button>
+              );
+            })
+          ) : (
+            <div className="suggestion-empty">暂无匹配</div>
+          )}
+          {histExtraCount > 0 && (() => {
+            const isSelected = globalIdx === selectedIndex;
+            globalIdx++;
+            return (
+              <div
+                className={`suggestion-more ${isSelected ? 'selected' : ''}`}
+                onClick={() => onShowMore && onShowMore('history')}
+              >
+                还有 {histExtraCount} 首历史 →
+              </div>
+            );
+          })()}
+        </div>
 
-            <div className="suggestion-divider"></div>
-
-            <div className="suggestion-section">
-              <div className="suggestion-section-title">历史记录</div>
-              {suggestionData.history.length > 0 ? (
-                suggestionData.history.map((item) => {
-                  const isSelected = globalIdx === selectedIndex;
-                  globalIdx++;
-                  return (
-                    <button
-                      type="button"
-                      key={item.id}
-                      className={`suggestion-item ${isSelected ? 'selected' : ''}`}
-                      onClick={() => onSuggestionPick && onSuggestionPick(item)}
-                    >
-                      <span className="suggestion-title">{item.name}</span>
-                      <span className="suggestion-subtitle">{item.artist}</span>
-                    </button>
-                  );
-                })
-              ) : (
-                <div className="suggestion-empty">暂无匹配</div>
-              )}
-              {suggestionData.historyExtraCount > 0 && (
-                <div 
-                  className="suggestion-more" 
-                  onClick={() => onShowMore && onShowMore('history')}
-                >
-                  还有 {suggestionData.historyExtraCount} 首历史 →
-                </div>
-              )}
-            </div>
-
-            <div className="suggestion-footer">按回车搜索全部歌曲</div>
-          </>
-        )}
+        <div className="suggestion-footer">按回车搜索全部歌曲</div>
       </div>
     );
   };
@@ -203,10 +220,8 @@ const Header = ({
       <header className="app-header-desktop d-none d-lg-flex">
         <div className="header-search-container">
           <form onSubmit={onSearchSubmit} className="w-100">
-            <div className="input-group-custom header-search-input-group" style={{ flexWrap: 'nowrap' }}>
-              <span className="input-group-text-custom bg-transparent border-0 pe-0 d-flex align-items-center justify-content-center">
-                <FaSearch className="text-muted" size={14} />
-              </span>
+            <div className="header-search-field-wrapper">
+              <FaSearch className="header-search-icon" />
               <input
                 type="search"
                 placeholder={getPlaceholder()}
@@ -215,12 +230,12 @@ const Header = ({
                 onFocus={onSearchFocus}
                 onBlur={onSearchBlur}
                 onKeyDown={onKeyDown}
-                className="form-control-custom bg-transparent border-0 shadow-none text-sm"
-                style={{ fontSize: '0.9rem', height: '100%', outline: 'none' }}
+                className="header-search-input"
+                autoComplete="off"
               />
               {searchQuery && (
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="search-clear-btn"
                   onClick={handleClear}
                   onMouseDown={(e) => e.preventDefault()}
@@ -234,7 +249,7 @@ const Header = ({
         </div>
 
         <div className="header-user-container ms-auto">
-          <div 
+          <div
             className="header-user-profile d-flex align-items-center"
             onClick={() => onTabChange('user')}
             style={{ cursor: 'pointer' }}
@@ -247,7 +262,7 @@ const Header = ({
                 {currentUser ? '在线' : '点击登录'}
               </div>
             </div>
-            
+
             <div className="header-avatar-wrapper">
               {currentUser && currentUser.photoURL ? (
                 <img
@@ -278,10 +293,11 @@ const Header = ({
 
       {/* 移动端全局搜索 Header */}
       <div className="app-header-mobile d-lg-none">
-        <form onSubmit={onSearchSubmit} className="w-100">
-          <div className="mobile-search-wrapper">
-            <FaSearch className="mobile-search-icon" />
-            <input
+        <div className="mobile-search-container">
+          <form onSubmit={onSearchSubmit} className="w-100">
+            <div className="mobile-search-field-wrapper">
+              <FaSearch className="mobile-search-icon" />
+              <input
                 type="search"
                 placeholder={getPlaceholder()}
                 value={searchQuery}
@@ -290,10 +306,11 @@ const Header = ({
                 onBlur={onSearchBlur}
                 onKeyDown={onKeyDown}
                 className="mobile-search-input"
+                autoComplete="off"
               />
               {searchQuery && (
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="mobile-search-clear-btn"
                   onClick={handleClear}
                   onMouseDown={(e) => e.preventDefault()}
@@ -302,8 +319,9 @@ const Header = ({
                 </button>
               )}
             </div>
-        </form>
-        {renderSuggestions('mobile-search-suggestions')}
+          </form>
+          {renderSuggestions('mobile-search-suggestions')}
+        </div>
       </div>
     </>
   );

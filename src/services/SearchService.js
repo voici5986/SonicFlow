@@ -16,7 +16,7 @@ const SearchService = {
     }
 
     const normalizedQuery = query.toLowerCase().trim();
-    
+
     try {
       // 并行获取数据
       const [favorites, historyData] = await Promise.all([
@@ -25,13 +25,13 @@ const SearchService = {
       ]);
 
       // 1. 匹配收藏
-      const matchedFavorites = (favorites || []).filter(track => 
+      const matchedFavorites = (favorites || []).filter(track =>
         this._isMatch(track, normalizedQuery)
       );
 
       // 2. 匹配历史
       const historyTracks = (historyData || []).map(item => item.song).filter(Boolean);
-      
+
       const uniqueHistoryMap = new Map();
       historyTracks.forEach(track => {
         if (track && track.id && !uniqueHistoryMap.has(track.id)) {
@@ -39,7 +39,7 @@ const SearchService = {
         }
       });
 
-      const matchedHistory = Array.from(uniqueHistoryMap.values()).filter(track => 
+      const matchedHistory = Array.from(uniqueHistoryMap.values()).filter(track =>
         this._isMatch(track, normalizedQuery)
       );
 
@@ -53,44 +53,51 @@ const SearchService = {
     }
   },
 
+  /**
+   * 内部匹配逻辑：支持极致模糊匹配和全字段覆盖
+   */
   _isMatch(track, query) {
     if (!track || !query) return false;
-    
+
     try {
-      // 获取歌名
-      const name = (track.name || '').toString().toLowerCase();
-      
-      // 获取歌手 - 兼容多种结构
-      let artist = '';
-      if (Array.isArray(track.ar)) {
-        artist = track.ar.map(a => a?.name || '').join(' ').toLowerCase();
-      } else if (Array.isArray(track.artists)) {
-        artist = track.artists.map(a => a?.name || '').join(' ').toLowerCase();
-      } else if (track.artist) {
-        artist = (typeof track.artist === 'string' ? track.artist : (track.artist.name || '')).toString().toLowerCase();
-      }
+      // 1. 获取所有可能的文本字段进行匹配
+      // 涵盖歌名、歌手、专辑、别称(alia)、翻译名(tns)、特殊歌手字段等
+      const searchTargets = [
+        track.name,
+        track.artist,
+        track.album,
+        track.alia,
+        track.tns,
+        track.singer,
+        track.artistsname,
+        track.author,
+        // 深度提取 ar 数组
+        ...(Array.isArray(track.ar) ? track.ar.map(a => [a.name, a.tns, a.alias]) : []),
+        // 深度提取 artists 数组
+        ...(Array.isArray(track.artists) ? track.artists.map(a => [a.name, a.alias]) : []),
+        // 专辑信息
+        track.al?.name,
+        track.al?.tns,
+        track.album?.name
+      ].flat().filter(Boolean).map(s => s.toString().toLowerCase().replace(/\s+/g, ''));
 
-      // 获取专辑 - 兼容多种结构
-      const album = (
-        (track.al && track.al.name) || 
-        (track.album && (typeof track.album === 'string' ? track.album : track.album.name)) || 
-        ''
-      ).toString().toLowerCase();
+      // 2. 处理搜索词：支持空格分隔的“且”匹配，同时支持整体模糊匹配
+      const cleanQuery = query.toLowerCase().replace(/\s+/g, '');
+      const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 0);
 
-      // 支持多词搜索 (例如 "周杰伦 晴天")
-      const queryWords = query.split(/\s+/).filter(word => word.length > 0);
-      
+      // 检查整体包含（专治日文中间带标点或空格搜不到的情况）
+      const isOverallMatch = searchTargets.some(target => target.includes(cleanQuery));
+      if (isOverallMatch) return true;
+
+      // 如果有多个词，检查是否每个词都命中（增强逻辑）
       if (queryWords.length > 1) {
-        // 所有关键词都必须匹配（在歌名、歌手或专辑中找到）
-        return queryWords.every(word => 
-          name.includes(word) || artist.includes(word) || album.includes(word)
-        );
+        return queryWords.every(word => {
+          const w = word.replace(/\s+/g, '');
+          return searchTargets.some(target => target.includes(w));
+        });
       }
 
-      // 单词搜索
-      return name.includes(query) || 
-             artist.includes(query) || 
-             album.includes(query);
+      return false;
     } catch (e) {
       console.warn('Match check failed for track:', track, e);
       return false;
