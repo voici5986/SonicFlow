@@ -664,7 +664,7 @@ const UserProfile = ({ onTabChange }) => {
         </div>
       )}
 
-      <div className="version">SonicFlow v{process.env.VITE_APP_VERSION}</div>
+      <div className="version">OTONEI v{process.env.VITE_APP_VERSION}</div>
     </div>
   );
 };

@@ -15,10 +15,10 @@ const DesktopNavbar = ({
   const deviceInfo = useDevice();
   const isSidebar = !deviceInfo.isMobile;
 
-  // SonicFlow标志样式 - 调整更紧凑
+  // OTONEI标志样式 - 调整更紧凑
   const logoStyle = {
     fontFamily: "'Montserrat', sans-serif",
-    fontWeight: 700,
+    fontWeight: 800,
     fontSize: isSidebar ? '1.4rem' : '1.6rem',
     color: 'var(--color-text-primary)',
     letterSpacing: '-0.5px', // 减小字间距，使文字更紧凑
@@ -33,7 +33,7 @@ const DesktopNavbar = ({
         <div className={`navbar-brand d-flex align-items-center ${isSidebar ? 'mb-4 ps-3' : ''}`}>
           <img
             src="/logo.svg"
-            alt="SonicFlow Logo"
+            alt="OTONEI Logo"
             width={isSidebar ? "32" : "38"}
             height={isSidebar ? "32" : "38"}
             className="logo-image logo-pulse me-1"
@@ -42,7 +42,7 @@ const DesktopNavbar = ({
               marginBottom: '2px' // 微调垂直对齐
             }}
           />
-          <span className="brand-text" style={logoStyle}>SonicFlow</span>
+          <span className="brand-text" style={logoStyle}>OTONEI</span>
         </div>
 
         {/* 仅在移动端显示顶部的用户头像按钮 */}

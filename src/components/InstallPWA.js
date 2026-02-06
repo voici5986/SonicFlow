@@ -55,7 +55,7 @@ const InstallPWA = () => {
       setIsInstalled(true);
       
       // 显示安装成功消息
-      alert('SonicFlow已成功安装！您可以从主屏幕启动应用。');
+      alert('OTONEI已成功安装！您可以从主屏幕启动应用。');
     };
     
     window.addEventListener('appinstalled', handleAppInstalled);
@@ -111,7 +111,7 @@ const InstallPWA = () => {
     >
       <div className="toast-custom">
         <div className="toast-header-custom">
-          <span>安装 SonicFlow</span>
+          <span>安装 OTONEI</span>
           <button 
             onClick={handleDismiss}
             style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: '0' }}
@@ -120,7 +120,7 @@ const InstallPWA = () => {
           </button>
         </div>
         <div className="toast-body-custom">
-          <p className="mb-2">安装 SonicFlow 到主屏幕，获得更好的使用体验和离线访问功能。</p>
+          <p className="mb-2">安装 OTONEI 到主屏幕，获得更好的使用体验和离线访问功能。</p>
           <div className="d-flex justify-content-end">
             <button 
               onClick={handleInstallClick}

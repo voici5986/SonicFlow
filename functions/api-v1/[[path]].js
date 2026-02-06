@@ -1,5 +1,5 @@
 /**
- * Cloudflare Pages Functions: API Proxy for SonicFlow
+ * Cloudflare Pages Functions: API Proxy for OTONEI
  * Handles /api-v1/* requests and forwards them to the target API.
  */
 

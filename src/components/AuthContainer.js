@@ -123,8 +123,8 @@ const AuthContainer = ({ initialMode = 'login', onAuthSuccess }) => {
     <div className="auth-form-container">
       {/* 品牌区域 (移动端显示) */}
       <div className="brand-section d-lg-none">
-        <div className="brand-logo"><FaWaveSquare /></div>
-        <div className="brand-name">SonicFlow</div>
+        <div className="brand-logo"><img src="/logo.svg" alt="OTONEI" style={{ width: '48px', height: '48px' }} /></div>
+        <div className="brand-name">OTONEI</div>
         <div className="brand-tagline">让音乐随心而动</div>
       </div>
 

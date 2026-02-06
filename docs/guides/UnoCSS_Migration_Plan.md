@@ -1,4 +1,4 @@
-# UnoCSS 迁移方案 (SonicFlow 项目)
+# UnoCSS 迁移方案 (OTONEI 项目)
 
 本方案旨在将项目从全量加载的 Bootstrap CSS 迁移至高性能的原子化 CSS 引擎 **UnoCSS**，以实现按需生成样式、减小打包体积并提升开发体验。
 

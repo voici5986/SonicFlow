@@ -1,9 +1,4 @@
-# 🎵 SonicFlow 现代化音乐流媒体平台
-
-[![GitHub license](https://img.shields.io/github/license/voici5986/SonicFlow?style=for-the-badge)](LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/voici5986/SonicFlow?style=for-the-badge)](https://github.com/voici5986/SonicFlow/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/voici5986/SonicFlow?style=for-the-badge)](https://github.com/voici5986/SonicFlow/network)
-[![在线演示](https://img.shields.io/badge/🚀_在线演示-Visit-blue?style=for-the-badge)](https://sonicflow-2gv.pages.dev/)
+# 🎵 OTONEI 现代化音乐流媒体平台
 
 一款基于 React 19 + Vite 开发的现代化在线音乐搜索与播放应用，支持多平台聚合搜索、无损音质下载及云端数据同步。
 
@@ -20,7 +15,7 @@
 
 ## 🏗️ 技术架构
 
-SonicFlow 采用现代化的前端技术栈构建：
+OTONEI 采用现代化的前端技术栈构建：
 
 - **前端框架**: React 19 + Vite 7
 - **UI 组件库**: React Bootstrap + React Icons

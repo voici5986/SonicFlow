@@ -1,21 +1,21 @@
 # Firebase 账号同步功能配置指南
 
-本文档描述了如何为SonicFlow音乐播放器设置Firebase来启用账号同步功能。
+本文档描述了如何为 OTONEI 音乐播放器设置 Firebase 来启用账号同步功能。
 
 ## 配置步骤
 
-### 1. 创建Firebase项目
+### 1. 创建 Firebase 项目
 
 1. 访问 [Firebase Console](https://console.firebase.google.com/)
 2. 点击"创建项目"或"添加项目"
-3. 输入项目名称（如"sonic-flow-sync"）
+3. 输入项目名称（如"otonei-sync"）
 4. 根据需要配置 Google Analytics（可选）
 5. 点击"创建项目"完成设置
 
-### 2. 添加Web应用
+### 2. 添加 Web 应用
 
-1. 在项目概览页面，点击"Web"图标（`</>`）添加Web应用
-2. 输入应用昵称（如"SonicFlow Web"）
+1. 在项目概览页面，点击"Web"图标（`</>`）添加 Web 应用
+2. 输入应用昵称（如"OTONEI Web"）
 3. 可选择勾选"设置Firebase托管"
 4. 点击"注册应用"
 5. 系统将显示Firebase配置，包含apiKey、authDomain等信息，保存这些信息

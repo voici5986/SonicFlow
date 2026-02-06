@@ -26,8 +26,8 @@
 .brand-logo {
   width: 80px;
   height: 80px;
-  background: var(--color-primary);
-  color: white;
+  background: transparent;
+  color: var(--color-text-primary);
   border-radius: 20px;
   display: flex;
   align-items: center;

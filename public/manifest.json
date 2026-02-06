@@ -1,6 +1,6 @@
 {
-  "short_name": "SonicFlow",
-  "name": "SonicFlow音乐播放器",
+  "short_name": "OTONEI",
+  "name": "OTONEI音乐播放器",
   "description": "在线音乐搜索、播放和下载，支持多平台音乐资源",
   "icons": [
     {
@@ -30,7 +30,7 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "theme_color": "#8a2be2",
+  "theme_color": "#000000",
   "background_color": "#ffffff",
   "orientation": "portrait",
   "categories": ["music", "entertainment", "streaming"],

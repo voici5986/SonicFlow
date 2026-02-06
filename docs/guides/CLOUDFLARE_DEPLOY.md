@@ -15,13 +15,13 @@
 4.  切换到 **"Pages"** 标签页。
 5.  点击 **"Connect to Git"** (连接到 Git)。
 6.  选择 **GitHub**，如果你是第一次使用，可能需要授权 Cloudflare 访问你的 GitHub 仓库。
-7.  在列表中选择你上传好的 **SonicFlow** (或你的仓库名) 项目，点击 **"Begin setup"** (开始设置)。
+7.17. 在列表中选择你上传好的 **OTONEI** (或你的仓库名) 项目，点击 **"Begin setup"** (开始设置)。
 
 ## 3. 配置构建设置 (关键步骤)
 
 在 "Set up builds and deployments" 页面，请按照以下参数填写：
 
--   **Project name**: 随便起，比如 `sonicflow-music`。
+-   **Project name**: 随便起，比如 `otonei-music`。
 -   **Production branch**: 通常是 `main` 或 `master`。
 -   **Framework preset** (框架预设): 选择 **"Create React App"** (或者手动配置下面的选项)。
 -   **Build command** (构建命令): `npm run build`

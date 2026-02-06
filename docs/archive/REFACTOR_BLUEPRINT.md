@@ -1,4 +1,4 @@
-# SonicFlow 架构重构蓝图 (Refactor Blueprint)
+# OTONEI 架构重构蓝图 (Refactor Blueprint)
 
 ## 0. 核心愿景
 通过“逻辑抽象、视图分离”的架构，提升代码的可维护性与扩展性，同时**绝对保证**移动端（PWA）已优化的 UI 体验不发生任何退化。
