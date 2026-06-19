@@ -6,9 +6,9 @@
     "node": ">=20.19.0"
   },
   "dependencies": {
-    "axios": "^1.17.0",
+    "axios": "^1.18.0",
     "bootstrap": "^5.3.8",
-    "firebase": "^12.14.0",
+    "firebase": "^12.15.0",
     "localforage": "^1.10.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
@@ -61,7 +61,7 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@vitejs/plugin-react": "^6.0.2",
-    "eslint": "^10.4.1",
+    "eslint": "^10.5.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -75,7 +75,7 @@
     "vite-plugin-env-compatible": "^2.0.1",
     "vite-plugin-pwa": "^1.3.0",
     "vite-plugin-svgr": "^5.2.0",
-    "vitest": "^4.1.8",
+    "vitest": "^4.1.9",
     "workbox-build": "^7.4.1"
   }
 }
