@@ -6,3 +6,5 @@ ignoredBuiltDependencies:
   - '@firebase/util'
   - esbuild
   - protobufjs
+minimumReleaseAgeExclude:
+  - prettier@3.9.1
