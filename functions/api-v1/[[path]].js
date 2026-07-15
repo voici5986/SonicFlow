@@ -12,19 +12,27 @@ const ALLOWED_PATHS = new Set([
   `${SOURCE_PATH_PREFIX}${TARGET_PATH_ACTUAL}`,
 ]);
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+// 在 Cloudflare Pages 环境变量中配置站点域名（如 https://otonei.com）以收紧 CORS；留空则反射请求 Origin
+const ALLOWED_ORIGIN = '';
+
+const getCorsHeaders = (request) => {
+  const requestOrigin = request.headers.get('origin');
+  const allowOrigin = ALLOWED_ORIGIN || requestOrigin || '*';
+  return {
+    'Access-Control-Allow-Origin': allowOrigin,
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    ...(ALLOWED_ORIGIN ? { 'Access-Control-Allow-Credentials': 'true' } : {}),
+  };
 };
 
-const jsonResponse = (body, status) =>
+const jsonResponse = (body, status, request) =>
   new Response(JSON.stringify(body), {
     status,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
       'Cache-Control': 'no-store',
-      ...corsHeaders,
+      ...getCorsHeaders(request),
     },
   });
 
@@ -35,7 +43,7 @@ export async function onRequest(context) {
   if (request.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
-      headers: corsHeaders,
+      headers: getCorsHeaders(request),
     });
   }
 
@@ -44,13 +52,17 @@ export async function onRequest(context) {
       status: 405,
       headers: {
         Allow: 'GET, OPTIONS',
-        ...corsHeaders,
+        ...getCorsHeaders(request),
       },
     });
   }
 
   if (!ALLOWED_PATHS.has(url.pathname)) {
-    return jsonResponse({ error: 'Not Found', message: 'Unsupported API proxy path' }, 404);
+    return jsonResponse(
+      { error: 'Not Found', message: 'Unsupported API proxy path' },
+      404,
+      request
+    );
   }
 
   const targetUrlString = `${TARGET_API_BASE}${TARGET_PATH_ACTUAL}${url.search}`;
@@ -67,6 +79,7 @@ export async function onRequest(context) {
   newHeaders.delete('x-forwarded-proto');
   newHeaders.delete('x-real-ip');
   newHeaders.delete('cookie');
+  newHeaders.delete('authorization');
 
   try {
     const response = await fetch(targetUrlString, {
@@ -76,7 +89,9 @@ export async function onRequest(context) {
     });
 
     const responseHeaders = new Headers(response.headers);
-    Object.entries(corsHeaders).forEach(([key, value]) => responseHeaders.set(key, value));
+    Object.entries(getCorsHeaders(request)).forEach(([key, value]) =>
+      responseHeaders.set(key, value)
+    );
     responseHeaders.set('Cache-Control', 'no-store');
     responseHeaders.set('X-Content-Type-Options', 'nosniff');
     responseHeaders.delete('X-Powered-By');
@@ -88,6 +103,6 @@ export async function onRequest(context) {
       headers: responseHeaders,
     });
   } catch (error) {
-    return jsonResponse({ error: 'Proxy Fetch Failed', message: error.message }, 502);
+    return jsonResponse({ error: 'Proxy Fetch Failed', message: error.message }, 502, request);
   }
 }

@@ -92,8 +92,8 @@ export const FavoritesProvider = ({ children }) => {
           })
         );
 
-        // 如果已登录并添加了收藏，增加待同步计数，并触发延迟同步
-        if (currentUser && !currentUser.isLocal && result.added) {
+        // 已登录时，无论添加还是取消收藏都计入待同步（修复：原仅 added 时同步，导致取消收藏不同步）
+        if (currentUser && !currentUser.isLocal) {
           try {
             const { incrementPendingChanges } = await import('../services/storage');
             // 增加收藏待同步计数

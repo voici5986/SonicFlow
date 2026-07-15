@@ -109,6 +109,14 @@ class AudioStateManager {
     this.error = error;
     this._updateState(AUDIO_STATES.ERROR);
   }
+
+  // 清除错误态，避免错误残留导致后续状态通知重复触发重试（限流约束下尤为重要）
+  clearError() {
+    if (this.error !== null) {
+      this.error = null;
+      this.notifyListeners();
+    }
+  }
 }
 
 const audioStateManager = new AudioStateManager();

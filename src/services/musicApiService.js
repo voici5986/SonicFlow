@@ -2,7 +2,8 @@
  * 音乐API服务模块
  * 统一处理音乐相关API调用，包括搜索、获取URL、歌词和封面
  */
-import axios from 'axios';
+import { apiClient } from './apiClient';
+import { withRateLimit } from './rateLimiter';
 import { getMemoryCache, setMemoryCache, CACHE_TYPES } from './memoryCache';
 import audioStateManager from './audioStateManager';
 import { validateSearchResults } from '../utils/dataValidator';
@@ -10,7 +11,6 @@ import '../types';
 import logger from '../utils/logger';
 
 // Constants
-const API_BASE = process.env.REACT_APP_API_BASE || '/api-v1/api.php';
 const REQUEST_TIMEOUT = 12000; // 12秒请求超时
 
 // 添加防重复请求映射
@@ -43,17 +43,19 @@ export const searchMusic = async (query, source, count = 20, page = 1) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒超时
 
-    const response = await axios.get(`${API_BASE}`, {
-      params: {
-        types: 'search',
-        source: source,
-        name: query,
-        count: count,
-        pages: page,
-      },
-      signal: controller.signal,
-      timeout: REQUEST_TIMEOUT,
-    });
+    const response = await withRateLimit(() =>
+      apiClient.get('', {
+        params: {
+          types: 'search',
+          source: source,
+          name: query,
+          count: count,
+          pages: page,
+        },
+        signal: controller.signal,
+        timeout: REQUEST_TIMEOUT,
+      })
+    );
 
     // 清除超时
     clearTimeout(timeoutId);
@@ -80,7 +82,6 @@ export const searchMusic = async (query, source, count = 20, page = 1) => {
   } catch (error) {
     // 处理取消请求的情况
     if (
-      axios.isCancel(error) ||
       error?.code === 'ERR_CANCELED' ||
       error?.name === 'CanceledError' ||
       error?.name === 'AbortError'
@@ -114,7 +115,7 @@ export const getAudioUrl = async (track, quality = 999, forceRefresh = false) =>
 
     // 检查是否有相同URL的请求正在进行中
     const pendingKey = `${track.source}_${track.id}_${quality}`;
-    if (pendingUrlRequests.has(pendingKey) && !forceRefresh) {
+    if (pendingUrlRequests.has(pendingKey)) {
       logger.log(`[getAudioUrl] 检测到重复请求: ${track.name} (${track.id}), 使用现有请求`);
       return pendingUrlRequests.get(pendingKey);
     }
@@ -140,15 +141,17 @@ export const getAudioUrl = async (track, quality = 999, forceRefresh = false) =>
           `[getAudioUrl] ${forceRefresh ? '强制刷新' : '内存缓存未命中'}，调用API: ${requestId}`
         );
 
-        const response = await axios.get(`${API_BASE}`, {
-          params: {
-            types: 'url',
-            source: track.source,
-            id: track.id,
-            br: quality,
-          },
-          timeout: REQUEST_TIMEOUT,
-        });
+        const response = await withRateLimit(() =>
+          apiClient.get('', {
+            params: {
+              types: 'url',
+              source: track.source,
+              id: track.id,
+              br: quality,
+            },
+            timeout: REQUEST_TIMEOUT,
+          })
+        );
 
         // 缓存结果到内存
         setMemoryCache(CACHE_TYPES.AUDIO_URLS, cacheKey, response.data);
@@ -240,14 +243,16 @@ export const getLyrics = async (track) => {
 
         logger.log(`[getLyrics] 缓存未命中，调用API: ${requestId}`);
 
-        const response = await axios.get(`${API_BASE}`, {
-          params: {
-            types: 'lyric',
-            source: track.source,
-            id: track.lyric_id,
-          },
-          timeout: REQUEST_TIMEOUT,
-        });
+        const response = await withRateLimit(() =>
+          apiClient.get('', {
+            params: {
+              types: 'lyric',
+              source: track.source,
+              id: track.lyric_id,
+            },
+            timeout: REQUEST_TIMEOUT,
+          })
+        );
 
         const lyrics = {
           raw: response.data.lyric || '',
@@ -339,10 +344,12 @@ export const forceGetCoverImage = async (source, picId, size = 500) => {
     if (cachedUrl && !cachedUrl.includes('default_cover')) return cachedUrl;
 
     logger.log(`[forceGetCoverImage] 开始按需请求封面: ${source}/${picId}`);
-    const response = await axios.get(`${API_BASE}`, {
-      params: { types: 'pic', source, id: picId, size },
-      timeout: 5000,
-    });
+    const response = await withRateLimit(() =>
+      apiClient.get('', {
+        params: { types: 'pic', source, id: picId, size },
+        timeout: 5000,
+      })
+    );
 
     if (response.data?.url) {
       const url = response.data.url.replace(/\\/g, '');

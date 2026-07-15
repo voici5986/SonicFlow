@@ -39,6 +39,7 @@ const UserProfile = ({ onTabChange }) => {
   const [importProgress, setImportProgress] = useState(0);
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = React.useRef(null);
+  const syncCooldownTimerRef = React.useRef(null);
 
   // 使用同步上下文
   const { syncStatus, startSync, handleSyncComplete, updatePendingChanges } = useSync();
@@ -79,6 +80,13 @@ const UserProfile = ({ onTabChange }) => {
     };
   }, [loadCounts, updatePendingChanges]);
 
+  // 清理同步冷却定时器，避免组件卸载后对已卸载组件 setState
+  useEffect(() => {
+    return () => {
+      if (syncCooldownTimerRef.current) clearTimeout(syncCooldownTimerRef.current);
+    };
+  }, []);
+
   // 处理手动同步
   const handleManualSync = async () => {
     if (!currentUser) return;
@@ -107,7 +115,7 @@ const UserProfile = ({ onTabChange }) => {
     setSyncCooldown(true);
 
     // 使用setTimeout在8秒后解除冷却状态
-    setTimeout(() => {
+    syncCooldownTimerRef.current = setTimeout(() => {
       setSyncCooldown(false);
     }, 8000); // 8秒冷却期
 
@@ -160,25 +168,14 @@ const UserProfile = ({ onTabChange }) => {
         }
       };
 
-      let response = await searchWithKeyword(trackInfo.name, source);
-      if (!response || !response.data || response.data.length === 0) {
-        const simplifiedName = trackInfo.name.replace(
-          /[^\w\s\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/g,
-          ''
-        );
-        if (simplifiedName !== trackInfo.name) {
-          response = await searchWithKeyword(simplifiedName, source);
-        }
-      }
-      if (!response || !response.data || response.data.length === 0) {
-        const nameFirst = trackInfo.name.split(' ')[0];
-        if (nameFirst && nameFirst !== trackInfo.name && nameFirst.length > 1) {
-          response = await searchWithKeyword(nameFirst, source);
-        }
-      }
-      if (!response || !response.data || response.data.length === 0) {
-        const shortQuery = `${getTrackArtist(trackInfo) || ''} ${trackInfo.name.substring(0, 5)}`;
-        response = await searchWithKeyword(shortQuery, source);
+      // 受 API 限流（50次/5min）约束，仅做“主源 + 1 个备用源”两级回退，避免请求风暴
+      const sourcesToTry = [source, source === 'netease' ? 'ytmusic' : 'netease'].filter(
+        (s, i, arr) => arr.indexOf(s) === i
+      ); // 去重
+      let response = null;
+      for (const s of sourcesToTry) {
+        response = await searchWithKeyword(trackInfo.name, s);
+        if (response && response.data && response.data.length > 0) break;
       }
 
       if (!response || !response.data || response.data.length === 0) return null;
@@ -354,7 +351,7 @@ const UserProfile = ({ onTabChange }) => {
         newStatus[i] = { status: 'error', message: '出错' };
       }
       setImportStatus([...newStatus]);
-      if (importedCount > 0) await saveFavorites(newFavorites);
+      // 循环内不落盘，统一在循环结束后 saveFavorites 一次（见下方）
     }
 
     if (importedCount > 0) {

@@ -91,9 +91,12 @@ class AudioEngine {
   }
 
   play() {
-    if (this.audio.src) {
-      return this.audio.play().catch((e) => logger.error('[AudioEngine] 播放失败:', e));
-    }
+    if (!this.audio.src) return Promise.resolve();
+    return this.audio.play().catch((e) => {
+      // 浏览器自动播放拦截（非用户手势）属预期，不报错；真实错误仍记录
+      if (e && e.name === 'NotAllowedError') return;
+      logger.error('[AudioEngine] 播放失败:', e);
+    });
   }
 
   pause() {

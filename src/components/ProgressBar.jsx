@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback, memo } from 'react';
 import { usePlayer } from '../contexts/PlayerContext';
+import audioEngine from '../services/AudioEngine';
 
 const ProgressBar = () => {
   const { currentTrack, playProgress, totalSeconds, seekTo, formatTime, isPlaying, setIsPlaying } =
@@ -7,6 +8,7 @@ const ProgressBar = () => {
 
   const [isDragging, setIsDragging] = useState(false);
   const [dragProgress, setDragProgress] = useState(0);
+  const dragProgressRef = useRef(0);
   const [isHovering, setIsHovering] = useState(false);
   const [isTouched, setIsTouched] = useState(false);
   const [lastReleasedProgress, setLastReleasedProgress] = useState(null);
@@ -28,14 +30,16 @@ const ProgressBar = () => {
       const rect = progressBarRef.current.getBoundingClientRect();
       const position = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
 
-      setDragProgress(position * 100);
+      const p = position * 100;
+      dragProgressRef.current = p;
+      setDragProgress(p);
       // 实时 seek 实现“听音辨位” (Scrubbing)，如果性能有问题可改为仅更新 UI
       seekTo(position * totalSeconds);
     };
 
     const handleDragEnd = () => {
-      // 兼容触摸结束
-      setLastReleasedProgress(dragProgress);
+      // 兼容触摸结束（用 ref 读取最新进度，避免闭包拿到旧值）
+      setLastReleasedProgress(dragProgressRef.current);
       justReleasedRef.current = true;
 
       if (releaseTimeoutRef.current) clearTimeout(releaseTimeoutRef.current);
@@ -47,9 +51,10 @@ const ProgressBar = () => {
       setIsDragging(false);
       setIsTouched(false);
 
-      // 如果之前在播放，则恢复
+      // 如果之前在播放，真正恢复播放（而非仅改 React 状态）
       if (wasPlayingRef.current) {
-        setTimeout(() => setIsPlaying(true), 50);
+        audioEngine.play();
+        setIsPlaying(true);
       }
     };
 
@@ -64,7 +69,7 @@ const ProgressBar = () => {
       document.removeEventListener('mouseup', handleDragEnd);
       document.removeEventListener('touchend', handleDragEnd);
     };
-  }, [isDragging, dragProgress, setIsPlaying, currentTrack, seekTo, totalSeconds]);
+  }, [isDragging, setIsPlaying, currentTrack, seekTo, totalSeconds]);
 
   // 只保留 MouseDown/TouchStart 在元素上
   const handleMouseDown = useCallback(
@@ -75,6 +80,7 @@ const ProgressBar = () => {
       // e.preventDefault();
 
       wasPlayingRef.current = isPlaying;
+      if (isPlaying) audioEngine.pause();
       setIsDragging(true);
       if (e.touches) setIsTouched(true);
 
@@ -82,7 +88,9 @@ const ProgressBar = () => {
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const position = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
 
-      setDragProgress(position * 100);
+      const p = position * 100;
+      dragProgressRef.current = p;
+      setDragProgress(p);
       seekTo(position * totalSeconds);
     },
     [currentTrack, isPlaying, seekTo, totalSeconds]

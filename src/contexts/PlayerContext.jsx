@@ -290,6 +290,8 @@ export const PlayerProvider = ({ children }) => {
           handleError(state.error, ErrorTypes.PLAYBACK, ErrorSeverity.ERROR, '播放器引擎错误');
           retryCountRef.current = 0; // 超过最大重试次数，重置
         }
+        // 处理完毕后清除错误态，避免后续状态通知重复触发重试（限流约束下尤为重要）
+        audioStateManager.clearError();
       }
     });
   }, [currentTrack, currentIndex, currentPlaylist, handlePlay]);

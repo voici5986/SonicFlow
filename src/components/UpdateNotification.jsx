@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { FaSync, FaTimes } from 'react-icons/fa';
 import logger from '../utils/logger.js';
@@ -11,10 +11,7 @@ import { useDevice } from '../contexts/DeviceContext';
 const UpdateNotification = () => {
   const { isMobile, isTablet } = useDevice();
   const isMobileModal = isMobile || isTablet;
-  const {
-    needRefresh: [needRefresh, setNeedRefresh],
-    updateServiceWorker,
-  } = useRegisterSW({
+  const { needRefresh, updateServiceWorker } = useRegisterSW({
     onRegistered(r) {
       logger.log('SW Registered: ' + r);
     },
@@ -23,22 +20,25 @@ const UpdateNotification = () => {
     },
   });
 
+  // 本地状态：用户是否手动关闭了更新提示
+  const [dismissed, setDismissed] = useState(false);
+
   // 处理关闭提示
   const close = () => {
-    setNeedRefresh(false);
+    setDismissed(true);
   };
 
   useEffect(() => {
-    if (!needRefresh || !isMobileModal) return;
+    if (!needRefresh || !isMobileModal || dismissed) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [needRefresh, isMobileModal]);
+  }, [needRefresh, isMobileModal, dismissed]);
 
-  // 如果不需要更新，不渲染任何内容
-  if (!needRefresh) {
+  // 如果不需要更新或已手动关闭，不渲染任何内容
+  if (!needRefresh || dismissed) {
     return null;
   }
 

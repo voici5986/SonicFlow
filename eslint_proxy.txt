@@ -1,0 +1,6 @@
+
+C:\chunwang\vibecoder\OTONEI\functions\api-v1\[[path]].js
+  88:20  error  'corsHeaders' is not defined  no-undef
+
+✖ 1 problem (1 error, 0 warnings)
+

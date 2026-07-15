@@ -42,18 +42,15 @@ const AuthContainer = ({ initialMode = 'login', onAuthSuccess }) => {
 
     try {
       setLoading(true);
-      await login(email, password);
-      onAuthSuccess && onAuthSuccess();
+      const { success, error } = await login(email, password);
+      if (success) {
+        onAuthSuccess && onAuthSuccess();
+      } else {
+        setError(error?.message || '登录失败，请稍后再试');
+      }
     } catch (err) {
       logger.error('登录失败:', err);
-      const msg =
-        {
-          'auth/user-not-found': '邮箱或密码错误',
-          'auth/wrong-password': '邮箱或密码错误',
-          'auth/invalid-email': '无效的邮箱格式',
-          'auth/too-many-requests': '登录尝试次数过多，请稍后再试',
-        }[err.code] || '登录失败，请稍后再试';
-      setError(msg);
+      setError('登录失败，请稍后再试');
     } finally {
       setLoading(false);
     }
@@ -70,17 +67,15 @@ const AuthContainer = ({ initialMode = 'login', onAuthSuccess }) => {
 
     try {
       setLoading(true);
-      await register(email, password, displayName);
-      onAuthSuccess && onAuthSuccess();
+      const { success, error } = await register(email, password, displayName);
+      if (success) {
+        onAuthSuccess && onAuthSuccess();
+      } else {
+        setError(error?.message || '注册失败，请稍后再试');
+      }
     } catch (err) {
       logger.error('注册失败:', err);
-      const msg =
-        {
-          'auth/email-already-in-use': '该邮箱已被注册',
-          'auth/invalid-email': '无效的邮箱格式',
-          'auth/weak-password': '密码强度太弱',
-        }[err.code] || '注册失败，请稍后再试';
-      setError(msg);
+      setError('注册失败，请稍后再试');
     } finally {
       setLoading(false);
     }
@@ -107,8 +102,12 @@ const AuthContainer = ({ initialMode = 'login', onAuthSuccess }) => {
     setError('');
     setLoading(true);
     try {
-      const { success } = await signInWithGoogle();
-      if (success) onAuthSuccess && onAuthSuccess();
+      const { success, error } = await signInWithGoogle();
+      if (success) {
+        onAuthSuccess && onAuthSuccess();
+      } else {
+        setError(error?.message || 'Google登录失败，请重试');
+      }
     } catch {
       setError('Google登录失败，请重试');
     } finally {
