@@ -1,3 +1,21 @@
+# [1.7.0](https://github.com/voici5986/OTONEI/compare/v1.6.5...v1.7.0) (2026-08-05)
+
+### Bug Fixes
+
+- **app:** 优化搜索结果播放列表同步逻辑 ([352f7e4](https://github.com/voici5986/OTONEI/commit/352f7e4c49891655231a41775252f1e516b84abb))
+- resolve husky deprecation warnings ([b73af44](https://github.com/voici5986/OTONEI/commit/b73af443a2045f31e7e2c2e860d71ec5ba03fbad))
+
+### Features
+
+- 为搜索功能添加分页加载支持 ([4c379f2](https://github.com/voici5986/OTONEI/commit/4c379f2318b1ec05a7d20608b6058cf52b986727))
+- configure husky hooks for commit message linting ([eb44704](https://github.com/voici5986/OTONEI/commit/eb44704c569d8590349c93e43e3ece324e715a59))
+- **deploy:** 完善 Cloudflare Pages 部署配置 ([3fec442](https://github.com/voici5986/OTONEI/commit/3fec4428e7478eb0beff88397da51999992753a6))
+- **services:** 添加统一 API 客户端模块 ([7ae59a5](https://github.com/voici5986/OTONEI/commit/7ae59a535c9c91a4f714c5492e7ffa24b388eb8b))
+
+### Performance Improvements
+
+- **download:** 将下载间隔从5秒缩短至2秒 ([f07f2ea](https://github.com/voici5986/OTONEI/commit/f07f2ead05e2abe8b37618af32a9b321cfc1f33e))
+
 ## [1.6.5](https://github.com/voici5986/OTONEI/compare/v1.6.4...v1.6.5) (2026-02-28)
 
 ### Bug Fixes
