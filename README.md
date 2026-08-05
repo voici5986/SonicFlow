@@ -24,8 +24,8 @@ OTONEI 是一个基于 React 19 + Vite 8 的在线音乐搜索、播放、下载
 
 要求：
 
-- Node.js >= 20.19.0
-- pnpm 10.33.0
+- Node.js >= 20.19.0（CI 与部署使用 22.x / 24.x）
+- pnpm >= 10.33.0（推荐与 CI 一致使用 10.33.0，11.x 已验证兼容）
 
 安装和启动：
 
@@ -62,6 +62,24 @@ pnpm run format:check
 pnpm run build
 pnpm run serve
 ```
+
+## 正式发布
+
+使用 PowerShell 脚本 `release.ps1` 执行严格校验与 semantic-release 自动发版：
+
+```powershell
+.\release.ps1                # 交互选择（创建正式版本 / 仅运行质量门禁）
+.\release.ps1 -Release       # 直接创建正式版本（跳过菜单，仍会二次确认）
+.\release.ps1 -ValidateOnly  # 只运行质量门禁，不修改 Git
+```
+
+发布流程：
+
+1. 5 道质量门禁：锁定依赖安装、Prettier 格式、ESLint、Vitest、生产构建、依赖审计
+2. semantic-release dry-run 预演并计算下一个版本
+3. 二次确认后更新 `package.json` 与 `CHANGELOG.md`、创建 Git 提交和 `vX.Y.Z` 标签并推送
+
+前置要求：`main` 分支、Git 工作区干净、自上一标签起存在 `fix`/`feat` 或破坏性变更提交。标签推送后，GitHub Actions 自动构建多架构 Docker 镜像推送到 GHCR，Cloudflare Pages 与 Vercel 自动触发部署。
 
 ## 部署
 
