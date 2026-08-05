@@ -17,6 +17,30 @@ const REQUEST_TIMEOUT = 12000; // 12秒请求超时
 const pendingUrlRequests = new Map();
 const pendingLyricRequests = new Map();
 
+// RL-3：封面请求并发上限，避免大列表首次渲染时短时打满 API 配额。
+// 与 RL-0 的全局限流器（滑动窗口 50/5min）叠加生效，这里只约束“同时进行的封面请求数”。
+const COVER_MAX_CONCURRENCY = 3;
+let coverInFlight = 0;
+const coverQueue = [];
+
+const acquireCoverSlot = () =>
+  new Promise((resolve) => {
+    if (coverInFlight < COVER_MAX_CONCURRENCY) {
+      coverInFlight++;
+      resolve();
+    } else {
+      coverQueue.push(resolve);
+    }
+  });
+
+const releaseCoverSlot = () => {
+  coverInFlight--;
+  if (coverQueue.length > 0) {
+    coverInFlight++;
+    coverQueue.shift()();
+  }
+};
+
 /**
  * 搜索音乐
  * @param {string} query - 搜索关键词
@@ -299,42 +323,6 @@ export const getLyrics = async (track) => {
 };
 
 /**
- * 获取封面图片
- * @param {string} source - 音乐源
- * @param {string} picId - 封面ID
- * @param {number} size - 封面尺寸（只支持300和500）
- * @returns {Promise<string>} - 封面URL或默认封面路径
- */
-export const getCoverImage = async (source, picId, size = 500) => {
-  try {
-    // 验证参数
-    if (!picId || picId === 'undefined' || picId === 'null') {
-      return 'default_cover.svg';
-    }
-
-    // 验证size参数
-    if (size !== 300 && size !== 500) {
-      size = 500;
-    }
-
-    const cacheKey = `${source}_${picId}_${size}`;
-
-    // 1. 严格检查内存缓存 (最高优先级)
-    const cachedUrl = getMemoryCache(CACHE_TYPES.COVER_IMAGES, cacheKey);
-    if (cachedUrl) {
-      return cachedUrl;
-    }
-
-    // 2. 策略调整：为了节省 API 额度，不再主动发起 types=pic 请求
-    // 只有在 playMusic 等核心流程明确需要时，才会考虑请求
-    logger.log(`[getCoverImage] 为节省额度，跳过主动请求: ${source}/${picId}`);
-    return 'default_cover.svg';
-  } catch {
-    return 'default_cover.svg';
-  }
-};
-
-/**
  * 强制获取封面图片 (仅限播放等核心场景按需使用，以节省API额度)
  */
 export const forceGetCoverImage = async (source, picId, size = 500) => {
@@ -343,20 +331,26 @@ export const forceGetCoverImage = async (source, picId, size = 500) => {
     const cachedUrl = getMemoryCache(CACHE_TYPES.COVER_IMAGES, cacheKey);
     if (cachedUrl && !cachedUrl.includes('default_cover')) return cachedUrl;
 
-    logger.log(`[forceGetCoverImage] 开始按需请求封面: ${source}/${picId}`);
-    const response = await withRateLimit(() =>
-      apiClient.get('', {
-        params: { types: 'pic', source, id: picId, size },
-        timeout: 5000,
-      })
-    );
+    // RL-3：受并发上限约束，避免大量封面请求短时挤占 API 配额
+    await acquireCoverSlot();
+    try {
+      logger.log(`[forceGetCoverImage] 开始按需请求封面: ${source}/${picId}`);
+      const response = await withRateLimit(() =>
+        apiClient.get('', {
+          params: { types: 'pic', source, id: picId, size },
+          timeout: 5000,
+        })
+      );
 
-    if (response.data?.url) {
-      const url = response.data.url.replace(/\\/g, '');
-      setMemoryCache(CACHE_TYPES.COVER_IMAGES, cacheKey, url);
-      return url;
+      if (response.data?.url) {
+        const url = response.data.url.replace(/\\/g, '');
+        setMemoryCache(CACHE_TYPES.COVER_IMAGES, cacheKey, url);
+        return url;
+      }
+      return 'default_cover.svg';
+    } finally {
+      releaseCoverSlot();
     }
-    return 'default_cover.svg';
   } catch {
     return 'default_cover.svg';
   }

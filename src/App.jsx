@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, useMemo, useRef } from 'react';
 import Navigation from './components/Navigation';
 import DeviceDebugger from './components/DeviceDebugger';
 import OrientationPrompt from './components/OrientationPrompt';
@@ -121,9 +121,11 @@ const AppContent = () => {
   // 从PlayerContext获取封面相关方法
   const { setCurrentPlaylist, handlePlay: playTrack } = usePlayer();
 
-  // 当搜索结果变化时，同步更新播放列表
+  // 仅当用户主动触发一次新搜索时，才把搜索结果设为播放列表。
+  // 避免从收藏/历史进入播放后，后台 search 结果刷新覆盖了用户当前播放列表（NZ-3）。
+  const searchPlaylistSyncRef = useRef(false);
   useEffect(() => {
-    if (results && results.length > 0) {
+    if (searchPlaylistSyncRef.current && results && results.length > 0) {
       setCurrentPlaylist(results);
     }
   }, [results, setCurrentPlaylist]);
@@ -195,14 +197,13 @@ const AppContent = () => {
     }
 
     if (item.isSearchHistory) {
-      // 如果是搜索历史建议
+      // 如果是搜索历史建议：用点击项的原始 query/source 直接搜索，
+      // 不再依赖 setTimeout(0) 捕获的旧闭包（NZ-2）。
       setQuery(item.rawQuery);
       setSource(item.rawSource);
       setSuggestionsOpen(false);
-      // 触发搜索
-      setTimeout(() => {
-        handleSearch();
-      }, 0);
+      searchPlaylistSyncRef.current = true; // 标记为主动搜索，允许同步播放列表（NZ-3）
+      handleSearch(null, item.rawQuery, item.rawSource);
       return;
     }
 
@@ -281,6 +282,7 @@ const AppContent = () => {
 
   const handleSearchAction = useCallback(
     (e) => {
+      searchPlaylistSyncRef.current = true; // 主动搜索，允许同步播放列表（NZ-3）
       handleSearch(e);
       setSuggestionsOpen(false);
       setSelectedIndex(-1);

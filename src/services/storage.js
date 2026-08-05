@@ -107,18 +107,17 @@ export async function getCoverFromStorage(key) {
  */
 export async function clearExpiredCovers(options = {}) {
   try {
-    const { maxKeys = 200, batchSize = 50 } = options;
+    const { batchSize = 50 } = options;
     const now = Date.now();
     const expireThreshold = now - COVER_CACHE_TTL;
     let removedCount = 0;
 
-    // 获取所有键
+    // 获取所有键（不再截断，确保大库也能全量清理）
     const keys = await coverStore.keys();
-    const limitedKeys = keys.slice(0, Math.max(0, maxKeys));
 
     // 检查每个缓存项
-    for (let i = 0; i < limitedKeys.length; i++) {
-      const key = limitedKeys[i];
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
       const data = await coverStore.getItem(key);
       if (!data || !data.timestamp || data.timestamp < expireThreshold) {
         await coverStore.removeItem(key);
@@ -132,7 +131,7 @@ export async function clearExpiredCovers(options = {}) {
     }
 
     logger.log(
-      `[clearExpiredCovers] 已清除 ${removedCount} 个过期的封面缓存 (扫描 ${limitedKeys.length}/${keys.length})`
+      `[clearExpiredCovers] 已清除 ${removedCount} 个过期的封面缓存 (扫描 ${keys.length})`
     );
     return removedCount;
   } catch (error) {

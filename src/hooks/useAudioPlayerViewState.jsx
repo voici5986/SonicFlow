@@ -154,7 +154,7 @@ const useAudioPlayerViewState = () => {
         return '随机播放';
       case 'repeat-one':
         return '单曲循环';
-      case 'sequence':
+      case 'repeat-all':
         return '列表循环';
       default:
         return '列表循环';
@@ -167,7 +167,7 @@ const useAudioPlayerViewState = () => {
         return <FaRandom size={20} />;
       case 'repeat-one':
         return <MdRepeatOne size={22} />;
-      case 'sequence':
+      case 'repeat-all':
         return <FaRedo size={18} />;
       default:
         return <FaRedo size={18} />;

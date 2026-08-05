@@ -1,4 +1,4 @@
-import { useReducer, useCallback, useEffect } from 'react';
+import { useReducer, useCallback, useEffect, useRef } from 'react';
 import { toast } from 'react-toastify';
 import { searchMusic } from '../services/musicApiService';
 import logger from '../utils/logger';
@@ -85,17 +85,24 @@ const useSearch = (isOnline) => {
   const { query, results, source, loading, loadingMore, page, hasMore, activeQuery, activeSource } =
     state;
 
+  // RL-4：翻页最小间隔时间戳（用 ref 持久化，避免闭包丢失）
+  const lastLoadMoreAtRef = useRef(0);
+
   const handleSearch = useCallback(
-    async (e) => {
+    async (e, q, s) => {
       if (e) e.preventDefault();
 
-      if (!checkNetworkStatus(isOnline, '搜索音乐')) return;
-      if (!validateSearchParams(query)) return;
+      const searchQuery = (q ?? query).trim();
+      const searchSource = s ?? source;
 
-      const trimmedQuery = query.trim();
+      if (!checkNetworkStatus(isOnline, '搜索音乐')) return;
+      if (!validateSearchParams(searchQuery)) return;
+
+      const trimmedQuery = searchQuery;
+      const effectiveSource = searchSource;
       dispatch({ type: 'SEARCH_START' });
       try {
-        const searchResults = await searchMusic(trimmedQuery, source, SEARCH_PAGE_SIZE, 1);
+        const searchResults = await searchMusic(trimmedQuery, effectiveSource, SEARCH_PAGE_SIZE, 1);
         const resultsWithoutCovers = searchResults.map((track) => ({ ...track }));
 
         dispatch({
@@ -105,7 +112,7 @@ const useSearch = (isOnline) => {
             page: 1,
             hasMore: resultsWithoutCovers.length === SEARCH_PAGE_SIZE,
             query: trimmedQuery,
-            source,
+            source: effectiveSource,
           },
         });
 
@@ -116,7 +123,7 @@ const useSearch = (isOnline) => {
         // 添加到搜索历史
         try {
           const { addSearchHistory } = await import('../services/storage');
-          addSearchHistory(trimmedQuery, source);
+          addSearchHistory(trimmedQuery, effectiveSource);
         } catch (error) {
           logger.error('添加搜索历史失败:', error);
         }
@@ -128,10 +135,17 @@ const useSearch = (isOnline) => {
     [query, source, isOnline]
   );
 
+  // RL-4：翻页最小间隔，避免连续翻页/连点在短时间内线性耗尽 API 配额
+  const LOAD_MORE_MIN_INTERVAL = 800; // ms
+
   const handleLoadMore = useCallback(async () => {
     if (loading || loadingMore || !hasMore) return;
     if (!activeQuery) return;
     if (!checkNetworkStatus(isOnline, '加载更多搜索结果')) return;
+
+    const now = Date.now();
+    if (now - lastLoadMoreAtRef.current < LOAD_MORE_MIN_INTERVAL) return; // 节流：过近的请求直接丢弃
+    lastLoadMoreAtRef.current = now;
 
     const nextPage = page + 1;
     dispatch({ type: 'LOAD_MORE_START' });
