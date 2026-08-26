@@ -22,12 +22,17 @@ Root directory: 留空
 环境变量建议：
 
 ```text
-NODE_VERSION=22.16.0
-PNPM_VERSION=10.33.0
+NODE_VERSION=26
+PNPM_VERSION=11
+VITE_API_BASE=/api-v1/api.php
 REACT_APP_API_BASE=/api-v1/api.php
 ```
 
-Firebase 同步是可选功能。需要账号同步时，再补充 `REACT_APP_FIREBASE_*` 变量。
+仓库中的 `.node-version`、`engines.node`、`engines.pnpm` 和 `devEngines.packageManager` 是版本策略来源；Dashboard 中的变量是部署环境的镜像配置，修改后应与这些策略保持一致。当前未在本地验证 Cloudflare 控制台是否自动读取 `.node-version`，请在项目设置中显式确认 Node 26.x 与 pnpm 11.x。
+
+Firebase 配置优先使用 `VITE_FIREBASE_*`；迁移窗口内仍兼容 `REACT_APP_FIREBASE_*`，新旧变量同时存在且冲突时以 `VITE_*` 为准。外部控制面变量需在确认新变量已配置后再移除旧变量。
+
+Firebase 同步是可选功能。需要账号同步时，补充 `VITE_FIREBASE_*` 变量；旧部署仍可在兼容窗口内使用对应的 `REACT_APP_FIREBASE_*`。
 
 ## 验证
 

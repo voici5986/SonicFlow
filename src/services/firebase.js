@@ -12,19 +12,20 @@ import {
 } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import logger from '../utils/logger.js';
+import { env } from '../config/env';
 
 // Firebase 配置
 // 工具函数：清洗环境变量，过滤掉字符串形式的 "undefined"
 const cleanEnvVar = (val) => (val === 'undefined' || !val ? undefined : val);
 
 const firebaseConfig = {
-  apiKey: cleanEnvVar(process.env.REACT_APP_FIREBASE_API_KEY),
-  authDomain: cleanEnvVar(process.env.REACT_APP_FIREBASE_AUTH_DOMAIN),
-  projectId: cleanEnvVar(process.env.REACT_APP_FIREBASE_PROJECT_ID),
-  storageBucket: cleanEnvVar(process.env.REACT_APP_FIREBASE_STORAGE_BUCKET),
-  messagingSenderId: cleanEnvVar(process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID),
-  appId: cleanEnvVar(process.env.REACT_APP_FIREBASE_APP_ID),
-  measurementId: cleanEnvVar(process.env.REACT_APP_FIREBASE_MEASUREMENT_ID),
+  apiKey: cleanEnvVar(env.firebase.apiKey),
+  authDomain: cleanEnvVar(env.firebase.authDomain),
+  projectId: cleanEnvVar(env.firebase.projectId),
+  storageBucket: cleanEnvVar(env.firebase.storageBucket),
+  messagingSenderId: cleanEnvVar(env.firebase.messagingSenderId),
+  appId: cleanEnvVar(env.firebase.appId),
+  measurementId: cleanEnvVar(env.firebase.measurementId),
 };
 
 // 检查配置是否基本完整 (至少需要 apiKey 和 projectId)
@@ -94,7 +95,7 @@ export const checkFirebaseAvailability = async () => {
     logger.log('尝试连接Firebase服务...');
 
     // 检查环境变量是否配置
-    if (!process.env.REACT_APP_FIREBASE_API_KEY || !process.env.REACT_APP_FIREBASE_PROJECT_ID) {
+    if (!env.firebase.apiKey || !env.firebase.projectId) {
       logger.warn('Firebase配置不完整，可能导致连接失败');
     }
 

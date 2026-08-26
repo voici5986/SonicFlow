@@ -1,0 +1,113 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { apiGet, cache, loadTrack, setError } = vi.hoisted(() => ({
+  apiGet: vi.fn(),
+  cache: new Map(),
+  loadTrack: vi.fn(),
+  setError: vi.fn(),
+}));
+
+vi.mock('../services/apiClient', () => ({
+  apiClient: { get: apiGet },
+}));
+
+vi.mock('../services/rateLimiter', () => ({
+  withRateLimit: (request) => request(),
+}));
+
+vi.mock('../services/memoryCache', () => ({
+  CACHE_TYPES: {
+    SEARCH_RESULTS: 'search',
+    AUDIO_URLS: 'audio',
+    LYRICS: 'lyrics',
+    COVER_IMAGES: 'covers',
+  },
+  getMemoryCache: (type, key) => cache.get(`${type}:${key}`),
+  setMemoryCache: (type, key, value) => cache.set(`${type}:${key}`, value),
+}));
+
+vi.mock('../services/audioStateManager', () => ({
+  default: { loadTrack, setError },
+}));
+
+vi.mock('../utils/dataValidator', () => ({
+  validateSearchResults: (results) => results,
+}));
+
+import {
+  forceGetCoverImage,
+  getAudioUrl,
+  getLyrics,
+  playMusic,
+  searchMusic,
+} from '../services/musicApiService';
+
+describe('music API service', () => {
+  beforeEach(() => {
+    apiGet.mockReset();
+    cache.clear();
+    loadTrack.mockReset();
+    setError.mockReset();
+    const localStorageData = new Map();
+    const localStorageMock = {
+      clear: () => localStorageData.clear(),
+      getItem: (key) => localStorageData.get(key) ?? null,
+      removeItem: (key) => localStorageData.delete(key),
+      setItem: (key, value) => localStorageData.set(String(key), String(value)),
+    };
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      value: localStorageMock,
+    });
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: localStorageMock,
+    });
+  });
+
+  it('searches through the API and caches validated results', async () => {
+    const results = [{ id: '1', name: 'Song', source: 'netease' }];
+    apiGet.mockResolvedValueOnce({ data: results });
+
+    await expect(searchMusic('song', 'netease', 20, 1)).resolves.toEqual(results);
+    await expect(searchMusic('song', 'netease', 20, 1)).resolves.toEqual(results);
+    expect(apiGet).toHaveBeenCalledTimes(1);
+  });
+
+  it('coalesces audio URL requests and delegates playback to the state manager', async () => {
+    const track = { id: '1', name: 'Song', source: 'netease', pic_id: 'cover' };
+    apiGet.mockResolvedValueOnce({ data: { url: '/song.mp3', size: 123 } });
+
+    const first = getAudioUrl(track, 999);
+    const second = getAudioUrl(track, 999);
+    await expect(Promise.all([first, second])).resolves.toEqual([
+      { url: '/song.mp3', size: 123 },
+      { url: '/song.mp3', size: 123 },
+    ]);
+    expect(apiGet).toHaveBeenCalledTimes(1);
+
+    apiGet.mockResolvedValueOnce({ data: { url: '/song.mp3', size: 123 } });
+    await expect(playMusic(track)).resolves.toEqual({ url: '/song.mp3', fileSize: 123 });
+    expect(loadTrack).toHaveBeenCalledWith(track, '/song.mp3');
+    expect(setError).not.toHaveBeenCalled();
+  });
+
+  it('uses local lyric cache before making another request', async () => {
+    const track = { id: '1', name: 'Song', source: 'netease', lyric_id: 'lyric-1' };
+    apiGet.mockResolvedValueOnce({ data: { lyric: '[00:01.00] Song', tlyric: '' } });
+
+    await expect(getLyrics(track)).resolves.toEqual({ raw: '[00:01.00] Song', translated: '' });
+    await expect(getLyrics(track)).resolves.toEqual({ raw: '[00:01.00] Song', translated: '' });
+    expect(apiGet).toHaveBeenCalledTimes(1);
+  });
+
+  it('normalizes cover URLs and falls back when the API fails', async () => {
+    apiGet.mockResolvedValueOnce({ data: { url: 'https:\\/\\/example.test\\/cover.jpg' } });
+    await expect(forceGetCoverImage('netease', 'cover', 500)).resolves.toBe(
+      'https://example.test/cover.jpg'
+    );
+
+    apiGet.mockRejectedValueOnce(new Error('offline'));
+    await expect(forceGetCoverImage('netease', 'missing', 500)).resolves.toBe('default_cover.svg');
+  });
+});

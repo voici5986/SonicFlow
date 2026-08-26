@@ -1,9 +1,12 @@
-FROM node:24.13.0-slim AS base
+ARG NODE_VERSION=26
+FROM node:${NODE_VERSION}-slim AS base
 
 ENV NPM_HOME="/npm"
 ENV PATH="$NPM_HOME:$PATH"
+# 新变量优先；旧变量保留在兼容窗口内，便于现有部署平滑切换。
+ENV VITE_API_BASE="/api-v1/api.php"
 ENV REACT_APP_API_BASE="/api-v1/api.php"
-RUN corepack enable
+RUN npm install --global pnpm@11
 COPY . /app
 WORKDIR /app
 

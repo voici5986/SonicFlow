@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "unicorn", "typescript", "oxc"],
+  "ignorePatterns": [
+    "node_modules/**",
+    "build/**",
+    "dist/**",
+    "dev-dist/**",
+    "coverage/**",
+    "public/**"
+  ],
+  "rules": {
+    "react/set-state-in-effect": "off",
+    "react/purity": "off",
+    "react/refs": "off"
+  }
+}

@@ -22,6 +22,7 @@ import ClearDataButton from './ClearDataButton';
 import AvatarImage from './AvatarImage';
 import '../styles/User.mobile.css';
 import logger from '../utils/logger.js';
+import { env } from '../config/env';
 import { getTrackArtist } from '../utils/trackFormatter';
 
 const UserProfile = ({ onTabChange }) => {
@@ -626,7 +627,7 @@ const UserProfile = ({ onTabChange }) => {
         </div>
       )}
 
-      <div className="version">OTONEI v{process.env.VITE_APP_VERSION}</div>
+      <div className="version">OTONEI v{env.appVersion}</div>
     </div>
   );
 };

@@ -5,11 +5,14 @@ import svgr from 'vite-plugin-svgr';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
+const coveragePath = (filePath) => filePath.split('/').join(path.sep);
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     envCompatible({
+      // 仅为兼容旧部署变量保留；业务代码统一通过 src/config/env.js 读取。
       prefix: 'REACT_APP_',
     }),
     svgr(),
@@ -148,9 +151,72 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    environmentOptions: {
+      jsdom: {
+        url: 'http://localhost/',
+      },
+    },
     setupFiles: './src/test/setupTests.js',
     globals: true,
     css: true,
+    exclude: ['**/node_modules/**', '**/dist/**', '**/e2e/**', '**/*.pwa.spec.js'],
+    coverage: {
+      provider: 'v8',
+      reportsDirectory: './coverage',
+      reporter: ['text', 'json-summary', 'html'],
+      include: [
+        'src/config/env.js',
+        'src/services/storage.js',
+        'src/services/syncService.js',
+        'src/services/musicApiService.js',
+        'src/services/firebase.js',
+        'src/hooks/useSearch.jsx',
+      ],
+      exclude: ['**/*.test.{js,jsx}', 'src/test/**', '**/*.d.ts'],
+      thresholds: {
+        // 这些门槛来自首次显式 include 的实测基线，后续只允许递增。
+        statements: 42,
+        branches: 34,
+        functions: 48,
+        lines: 42,
+        [coveragePath('src/hooks/useSearch.jsx')]: {
+          statements: 74,
+          branches: 60,
+          functions: 80,
+          lines: 78,
+        },
+        [coveragePath('src/services/musicApiService.js')]: {
+          statements: 69,
+          branches: 43,
+          functions: 80,
+          lines: 70,
+        },
+        [coveragePath('src/services/storage.js')]: {
+          statements: 38,
+          branches: 38,
+          functions: 48,
+          lines: 38,
+        },
+        [coveragePath('src/services/syncService.js')]: {
+          statements: 22,
+          branches: 12,
+          functions: 33,
+          lines: 22,
+        },
+        [coveragePath('src/services/firebase.js')]: {
+          statements: 27,
+          branches: 19,
+          functions: 9,
+          lines: 27,
+        },
+        [coveragePath('src/config/env.js')]: {
+          statements: 60,
+          branches: 50,
+          functions: 75,
+          lines: 60,
+        },
+      },
+    },
   },
   server: {
     host: true, // 开启局域网访问

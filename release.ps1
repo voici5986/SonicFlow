@@ -249,27 +249,11 @@ function Invoke-QualityGates {
         "--frozen-lockfile"
     ) $root
 
-    # 所有质量门禁都必须通过；发布脚本不提供跳过参数。
-    # 与 .github/workflows/ci.yml 保持一致的检查序列。
-    Invoke-NativeStep "[1/5] 检查代码格式" "pnpm" @(
+    # 所有质量门禁都必须通过；发布脚本与 CI 共用同一质量契约。
+    # verify:release 在任何发布写入前完成格式、类型、测试、构建、E2E 和审计。
+    Invoke-NativeStep "[质量门禁] 运行完整发布验证" "pnpm" @(
         "run",
-        "format:check"
-    ) $root
-    Invoke-NativeStep "[2/5] 运行 lint" "pnpm" @(
-        "run",
-        "lint"
-    ) $root
-    Invoke-NativeStep "[3/5] 运行单元测试" "pnpm" @(
-        "run",
-        "test"
-    ) $root
-    Invoke-NativeStep "[4/5] 构建前端生产包" "pnpm" @(
-        "run",
-        "build"
-    ) $root
-    Invoke-NativeStep "[5/5] 审计生产依赖漏洞" "pnpm" @(
-        "audit",
-        "--prod"
+        "verify:release"
     ) $root
 }
 

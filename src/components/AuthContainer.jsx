@@ -44,7 +44,7 @@ const AuthContainer = ({ initialMode = 'login', onAuthSuccess }) => {
       setLoading(true);
       const { success, error } = await login(email, password);
       if (success) {
-        onAuthSuccess && onAuthSuccess();
+        onAuthSuccess?.();
       } else {
         setError(error?.message || '登录失败，请稍后再试');
       }
@@ -69,7 +69,7 @@ const AuthContainer = ({ initialMode = 'login', onAuthSuccess }) => {
       setLoading(true);
       const { success, error } = await register(email, password, displayName);
       if (success) {
-        onAuthSuccess && onAuthSuccess();
+        onAuthSuccess?.();
       } else {
         setError(error?.message || '注册失败，请稍后再试');
       }
@@ -104,7 +104,7 @@ const AuthContainer = ({ initialMode = 'login', onAuthSuccess }) => {
     try {
       const { success, error } = await signInWithGoogle();
       if (success) {
-        onAuthSuccess && onAuthSuccess();
+        onAuthSuccess?.();
       } else {
         setError(error?.message || 'Google登录失败，请重试');
       }

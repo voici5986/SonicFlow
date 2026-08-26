@@ -73,16 +73,19 @@ service cloud.firestore {
 
 ```
 # API配置
+VITE_API_BASE=/api-v1/api.php
 REACT_APP_API_BASE=/api-v1/api.php
 
 # Firebase配置
-REACT_APP_FIREBASE_API_KEY=your-api-key
-REACT_APP_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
-REACT_APP_FIREBASE_PROJECT_ID=your-project-id
-REACT_APP_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
-REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
-REACT_APP_FIREBASE_APP_ID=your-app-id
+VITE_FIREBASE_API_KEY=your-api-key
+VITE_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+VITE_FIREBASE_APP_ID=your-app-id
 ```
+
+应用优先读取 `VITE_*`。已有部署在迁移窗口内仍可使用对应的 `REACT_APP_*` 变量；确认所有外部环境已切换后，再单独移除旧变量。
 
 ## 功能说明
 

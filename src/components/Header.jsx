@@ -58,7 +58,7 @@ const Header = ({
 
   const handleClear = () => {
     onSearchChange('');
-    onSearchFocus && onSearchFocus();
+    onSearchFocus?.();
   };
 
   const renderSuggestions = (extraClass) => {

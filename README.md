@@ -24,8 +24,8 @@ OTONEI 是一个基于 React 19 + Vite 8 的在线音乐搜索、播放、下载
 
 要求：
 
-- Node.js >= 20.19.0（CI 与部署使用 22.x / 24.x）
-- pnpm >= 10.33.0（推荐与 CI 一致使用 10.33.0，11.x 已验证兼容）
+- Node.js 26.x（以 `.node-version` 和 `engines.node` 的主版本范围为准）
+- pnpm 11.x（`>=11 <12`，以 `engines.pnpm` / `devEngines.packageManager` 为准）
 
 安装和启动：
 
@@ -40,28 +40,40 @@ pnpm start
 
 复制 `.env.example` 为 `.env.local`。
 
-| 变量                                     | 说明                    | 默认值            |
-| ---------------------------------------- | ----------------------- | ----------------- |
-| `REACT_APP_API_BASE`                     | 音乐 API 入口           | `/api-v1/api.php` |
-| `REACT_APP_FIREBASE_API_KEY`             | Firebase API Key        | 可选              |
-| `REACT_APP_FIREBASE_AUTH_DOMAIN`         | Firebase Auth 域名      | 可选              |
-| `REACT_APP_FIREBASE_PROJECT_ID`          | Firebase 项目 ID        | 可选              |
-| `REACT_APP_FIREBASE_STORAGE_BUCKET`      | Firebase Storage Bucket | 可选              |
-| `REACT_APP_FIREBASE_MESSAGING_SENDER_ID` | Firebase Sender ID      | 可选              |
-| `REACT_APP_FIREBASE_APP_ID`              | Firebase App ID         | 可选              |
-| `REACT_APP_FIREBASE_MEASUREMENT_ID`      | Firebase Measurement ID | 可选              |
+| 变量                                | 说明                    | 默认值            |
+| ----------------------------------- | ----------------------- | ----------------- |
+| `VITE_API_BASE`                     | 音乐 API 入口           | `/api-v1/api.php` |
+| `VITE_FIREBASE_API_KEY`             | Firebase API Key        | 可选              |
+| `VITE_FIREBASE_AUTH_DOMAIN`         | Firebase Auth 域名      | 可选              |
+| `VITE_FIREBASE_PROJECT_ID`          | Firebase 项目 ID        | 可选              |
+| `VITE_FIREBASE_STORAGE_BUCKET`      | Firebase Storage Bucket | 可选              |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase Sender ID      | 可选              |
+| `VITE_FIREBASE_APP_ID`              | Firebase App ID         | 可选              |
+| `VITE_FIREBASE_MEASUREMENT_ID`      | Firebase Measurement ID | 可选              |
 
 不配置 Firebase 时，应用会进入本地/降级模式。
+现有 `REACT_APP_*` 变量在兼容窗口内仍可使用；当新旧变量同时存在且值冲突时，以 `VITE_*` 为准。
 
 ## 常用命令
 
 ```bash
 pnpm run lint
 pnpm test
+pnpm run check:toolchain
 pnpm run format:check
+pnpm run test:coverage
+pnpm run typecheck
+pnpm run test:e2e
+pnpm run test:e2e:pwa
+pnpm run lint:ox
+pnpm run lint:ox:check
+pnpm run format:ox:check
 pnpm run build
 pnpm run serve
 ```
+
+Oxlint/Oxfmt 已纳入发布质量链；ESLint/Prettier 仍保留用于双轨对照，暂不删除旧依赖。
+`format:ox` 仍应在审查格式 diff 后再用于写入全仓库。
 
 ## 正式发布
 
@@ -75,9 +87,9 @@ pnpm run serve
 
 发布流程：
 
-1. 5 道质量门禁：锁定依赖安装、Prettier 格式、ESLint、Vitest、生产构建、依赖审计
+1. 完整质量门禁：锁定依赖安装、工具链一致性、Prettier/Oxfmt 格式、ESLint/Oxlint、TypeScript、Vitest 覆盖率、生产构建、普通/PWA E2E、依赖审计
 2. semantic-release dry-run 预演并计算下一个版本
-3. 二次确认后更新 `package.json` 与 `CHANGELOG.md`、创建 Git 提交和 `vX.Y.Z` 标签并推送
+3. 二次确认后更新 `package.json` 与 `CHANGELOG.md`、创建 Git 提交和 Docker 兼容的 `vX.Y.Z`（可带预发布标识、不含 `+build` 元数据）标签并推送
 
 前置要求：`main` 分支、Git 工作区干净、自上一标签起存在 `fix`/`feat` 或破坏性变更提交。标签推送后，GitHub Actions 自动构建多架构 Docker 镜像推送到 GHCR，Cloudflare Pages 与 Vercel 自动触发部署。
 
@@ -108,8 +120,9 @@ build
 建议环境变量：
 
 ```text
-NODE_VERSION=22.16.0
-PNPM_VERSION=10.33.0
+NODE_VERSION=26
+PNPM_VERSION=11
+VITE_API_BASE=/api-v1/api.php
 REACT_APP_API_BASE=/api-v1/api.php
 ```
 
@@ -153,9 +166,15 @@ CI 会执行：
 
 - `pnpm run format:check`
 - `pnpm run lint`
-- `pnpm test`
+- `pnpm run typecheck`
+- `pnpm run test:coverage`
 - `pnpm run build`
+- `pnpm run test:e2e`（Chromium，固定 API fixture，屏蔽 Service Worker）
+- `pnpm run test:e2e:pwa`（生产构建，独立 Chromium 离线验证）
 - `pnpm audit --prod`
+
+Oxlint/Oxfmt 当前与 ESLint/Prettier 双轨运行；旧工具仍作为迁移对照，不替换其规则覆盖。
+`format:check` 只检查 Git 已跟踪且有 Prettier 解析器的文件，不会把本地未跟踪草稿纳入发布门禁。
 
 ## 许可证
 

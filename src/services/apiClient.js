@@ -3,10 +3,11 @@
  * 基于 Axios 的统一请求实例，所有音乐 API 请求都经由 /api-v1 代理发出。
  */
 import axios from 'axios';
+import { env } from '../config/env';
 
 // 基础地址：Cloudflare Pages / Vercel / Docker 默认保持 /api-v1/api.php，
-// 可通过环境变量 REACT_APP_API_BASE 覆盖。
-const apiBase = process.env.REACT_APP_API_BASE || '/api-v1/api.php';
+// 优先读取 VITE_API_BASE，兼容期回退到 REACT_APP_API_BASE。
+const apiBase = env.apiBase;
 
 const apiClient = axios.create({
   baseURL: apiBase,
