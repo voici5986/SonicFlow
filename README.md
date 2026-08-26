@@ -18,7 +18,7 @@ OTONEI 是一个基于 React 19 + Vite 8 的在线音乐搜索、播放、下载
 - Localforage / IndexedDB
 - Firebase Auth / Firestore
 - vite-plugin-pwa
-- Vitest / ESLint / Prettier
+- Vitest / Oxlint / Oxfmt
 
 ## 本地开发
 
@@ -65,15 +65,12 @@ pnpm run test:coverage
 pnpm run typecheck
 pnpm run test:e2e
 pnpm run test:e2e:pwa
-pnpm run lint:ox
-pnpm run lint:ox:check
-pnpm run format:ox:check
 pnpm run build
 pnpm run serve
 ```
 
-Oxlint/Oxfmt 已纳入发布质量链；ESLint/Prettier 仍保留用于双轨对照，暂不删除旧依赖。
-`format:ox` 仍应在审查格式 diff 后再用于写入全仓库。
+`lint` 和 `format:check` 现在分别使用 Oxlint 和 Oxfmt；`lint:ox`、`lint:ox:check`、`format:ox`、`format:ox:check` 保留为迁移兼容别名。
+运行 `format` 写入全仓库前，仍应先审查格式 diff。
 
 ## 正式发布
 
@@ -87,7 +84,7 @@ Oxlint/Oxfmt 已纳入发布质量链；ESLint/Prettier 仍保留用于双轨对
 
 发布流程：
 
-1. 完整质量门禁：锁定依赖安装、工具链一致性、Prettier/Oxfmt 格式、ESLint/Oxlint、TypeScript、Vitest 覆盖率、生产构建、普通/PWA E2E、依赖审计
+1. 完整质量门禁：锁定依赖安装、工具链一致性、Oxfmt 格式、Oxlint、TypeScript、Vitest 覆盖率、生产构建、普通/PWA E2E、依赖审计
 2. semantic-release dry-run 预演并计算下一个版本
 3. 二次确认后更新 `package.json` 与 `CHANGELOG.md`、创建 Git 提交和 Docker 兼容的 `vX.Y.Z`（可带预发布标识、不含 `+build` 元数据）标签并推送
 
@@ -173,8 +170,8 @@ CI 会执行：
 - `pnpm run test:e2e:pwa`（生产构建，独立 Chromium 离线验证）
 - `pnpm audit --prod`
 
-Oxlint/Oxfmt 当前与 ESLint/Prettier 双轨运行；旧工具仍作为迁移对照，不替换其规则覆盖。
-`format:check` 只检查 Git 已跟踪且有 Prettier 解析器的文件，不会把本地未跟踪草稿纳入发布门禁。
+Oxlint/Oxfmt 现在是正式质量门禁；ESLint/Prettier 配置和依赖已移除。
+`format:check` 遵循 Oxfmt 和 `.gitignore` 规则，自动跳过依赖、构建产物和覆盖率目录。
 
 ## 许可证
 

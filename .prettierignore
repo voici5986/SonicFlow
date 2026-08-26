@@ -1,8 +1,0 @@
-node_modules
-build
-dist
-dev-dist
-public
-coverage
-.pnpm-store
-pnpm-lock.yaml

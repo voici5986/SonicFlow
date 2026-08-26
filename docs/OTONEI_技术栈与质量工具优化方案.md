@@ -2,6 +2,13 @@
 
 > 评估目标：在尽量不扰动业务功能的前提下，降低前端工具链维护成本、提升测试可信度，并为后续 TypeScript 化和长期维护打基础。
 
+## 实施状态（2026-08-26）
+
+- Oxlint/Oxfmt 已替换 ESLint/Prettier，主质量脚本和 `lint-staged` 已切换到 Ox。
+- Oxlint React 插件已启用；`set-state-in-effect`、`purity`、`refs` 保留现有项目例外。
+- Playwright 普通/PWA E2E、关键 service 测试和渐进 TypeScript 基建已加入质量链。
+- Node/pnpm 的最终支持范围仍以 `package.json`、`.node-version` 和 CI 配置为准；pnpm 使用 `devEngines` 范围，不固定单一版本。
+
 ## 1. 当前状态
 
 OTONEI 当前主要技术栈：
@@ -9,8 +16,8 @@ OTONEI 当前主要技术栈：
 - React 19
 - Vite 8
 - JavaScript / JSX
-- ESLint
-- Prettier
+- Oxlint
+- Oxfmt
 - Vitest
 - Testing Library
 - Husky + lint-staged
@@ -22,25 +29,30 @@ OTONEI 当前主要技术栈：
 当前质量链大致为：
 
 ```text
-Prettier
+Oxfmt
   ↓
-ESLint
+Oxlint
   ↓
-Vitest
+TypeScript
+  ↓
+Vitest + coverage
   ↓
 Vite Build
   ↓
 pnpm audit --prod
 ```
 
-GitHub Actions 已经运行：
+GitHub Actions 通过 `verify:release` 运行：
 
 ```text
 pnpm install --frozen-lockfile
 pnpm run format:check
 pnpm run lint
-pnpm test
+pnpm run typecheck
+pnpm run test:coverage
 pnpm run build
+pnpm run test:e2e
+pnpm run test:e2e:pwa
 pnpm audit --prod
 ```
 
@@ -104,7 +116,7 @@ Vitest 不动。
 
 ---
 
-## 3.1 推荐依赖调整
+## 3.1 依赖调整
 
 删除：
 
@@ -125,13 +137,13 @@ oxlint
 oxfmt
 ```
 
-建议精确锁定版本，尤其是 `oxfmt`：
+Manifest 使用主版本范围，具体解析版本由 `pnpm-lock.yaml` 锁定；不在 `package.json` 中固定单一版本：
 
 ```json
 {
   "devDependencies": {
-    "oxlint": "固定版本",
-    "oxfmt": "固定版本"
+    "oxlint": "^1.80.0",
+    "oxfmt": "^0.65.0"
   }
 }
 ```
@@ -148,9 +160,9 @@ oxfmt
 ```json
 {
   "scripts": {
-    "lint": "oxlint .",
-    "format": "oxfmt .",
-    "format:check": "oxfmt . --check",
+    "lint": "oxlint . --deny-warnings",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
     "test": "vitest run",
     "build": "vite build"
   }
@@ -184,10 +196,9 @@ format:check
 
 不要机械复制 ESLint 所有规则。
 
-建议核心启用：
+当前核心启用：
 
 ```text
-eslint
 react
 typescript
 unicorn
@@ -220,14 +231,14 @@ react-hooks/purity
 react-hooks/refs
 ```
 
-所以迁移时不要直接全部改成 error。
+当前已通过严格命令行门禁运行；上述三项例外仍保持关闭，避免把迁移变成 React 重构。
 
-推荐采用：
+迁移阶段记录：
 
 ```text
-第一阶段：warn
-第二阶段：逐个修
-第三阶段：再升 error
+第一阶段：warn，收集差异
+第二阶段：修复明确误报与等价规则
+第三阶段：Oxlint/Oxfmt 纳入正式门禁
 ```
 
 这样不会把 Ox 迁移变成一次大规模 React 重构。
@@ -485,7 +496,7 @@ Cloudflare 配置建议
 例如：
 
 ```text
-24.x
+26
 ```
 
 CI：
@@ -495,13 +506,24 @@ with:
   node-version-file: '.node-version'
 ```
 
-pnpm 建议使用：
+pnpm 使用范围约束：
 
 ```json
 {
-  "packageManager": "pnpm@固定版本"
+  "engines": {
+    "pnpm": ">=11 <12"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": ">=11.0.0 <12.0.0",
+      "onFail": "download"
+    }
+  }
 }
 ```
+
+不使用顶层 `packageManager` 固定单一版本；锁文件仅记录本次解析结果。
 
 然后本地和 CI 都由 Corepack / pnpm setup 读取。
 
@@ -683,7 +705,7 @@ OTONEI     → Biome
 
 # 12. 最终建议实施顺序
 
-## Phase A：低风险工具链整理
+## Phase A：工具链切换（已完成）
 
 ```text
 1. ESLint → Oxlint
@@ -693,7 +715,8 @@ OTONEI     → Biome
 5. 清理 ESLint / Prettier 依赖和配置
 ```
 
-风险：低  
+风险：低到中
+
 收益：中
 
 ---

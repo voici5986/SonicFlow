@@ -87,7 +87,6 @@ dev-dist/
 .netlify/
 .vercel/
 .npm
-.eslintcache
 .stylelintcache
 
 # 本地配置文件

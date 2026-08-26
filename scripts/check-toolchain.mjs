@@ -22,25 +22,25 @@ const parseMajorRange = (range) => {
 
 const expectedNodeMajor = parseNodeMajor(expectedNode);
 const expectedEngine =
-  expectedNodeMajor === undefined
-    ? undefined
-    : `>=${expectedNodeMajor} <${expectedNodeMajor + 1}`;
+  expectedNodeMajor === undefined ? undefined : `>=${expectedNodeMajor} <${expectedNodeMajor + 1}`;
 const expectedPnpmRange = packageJson.engines?.pnpm;
 const expectedPnpm = parseMajorRange(expectedPnpmRange);
 const devEnginePackageManager = packageJson.devEngines?.packageManager;
 const devPnpmRange = parseMajorRange(devEnginePackageManager?.version);
 const actualNodeMajor = Number(process.versions.node.split('.')[0]);
-const actualPnpmMajor = userAgentVersion
-  ? Number(userAgentVersion.split('.')[0])
-  : undefined;
+const actualPnpmMajor = userAgentVersion ? Number(userAgentVersion.split('.')[0]) : undefined;
 const dockerNodeMajor = parseNodeMajor(dockerNode);
 
 const problems = [];
 if (expectedNodeMajor === undefined) {
-  problems.push(`.node-version 必须是 Node 主版本、次版本或完整版本，当前为 ${expectedNode || '(空)'}`);
+  problems.push(
+    `.node-version 必须是 Node 主版本、次版本或完整版本，当前为 ${expectedNode || '(空)'}`
+  );
 }
 if (expectedNodeMajor !== undefined && actualNodeMajor !== expectedNodeMajor) {
-  problems.push(`运行时 Node ${process.versions.node} 不在 .node-version ${expectedNode} 的主版本范围内`);
+  problems.push(
+    `运行时 Node ${process.versions.node} 不在 .node-version ${expectedNode} 的主版本范围内`
+  );
 }
 if (!expectedEngine || packageJson.engines?.node !== expectedEngine) {
   problems.push(
@@ -48,7 +48,9 @@ if (!expectedEngine || packageJson.engines?.node !== expectedEngine) {
   );
 }
 if (packageJson.packageManager) {
-  problems.push('package.json#packageManager 不应固定单一版本，请使用 devEngines.packageManager 范围');
+  problems.push(
+    'package.json#packageManager 不应固定单一版本，请使用 devEngines.packageManager 范围'
+  );
 }
 if (!expectedPnpm) {
   problems.push(
@@ -75,9 +77,7 @@ if (!userAgentVersion) {
   actualPnpmMajor < expectedPnpm.min ||
   actualPnpmMajor >= expectedPnpm.max
 ) {
-  problems.push(
-    `运行时 pnpm ${userAgentVersion} 不在允许范围 ${expectedPnpmRange || '(缺失)'} 内`
-  );
+  problems.push(`运行时 pnpm ${userAgentVersion} 不在允许范围 ${expectedPnpmRange || '(缺失)'} 内`);
 }
 if (expectedNodeMajor !== undefined && dockerNodeMajor !== expectedNodeMajor) {
   problems.push(
