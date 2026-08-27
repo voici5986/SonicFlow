@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import useSearch from '../hooks/useSearch';
 import { searchMusic } from '../services/musicApiService';
+import { checkNetworkStatus, handleError, validateSearchParams } from '../utils/errorHandler';
 
 vi.mock('../services/musicApiService', () => ({
   searchMusic: vi.fn(),
@@ -43,6 +44,8 @@ const createTracks = (start, count) =>
 describe('useSearch pagination', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    checkNetworkStatus.mockReturnValue(true);
+    validateSearchParams.mockReturnValue(true);
   });
 
   it('loads page 1 then appends page 2 with the current API rule', async () => {
@@ -95,5 +98,91 @@ describe('useSearch pagination', () => {
       { id: '1', name: 'Same A', source: 'netease' },
       { id: '1', name: 'Other Source', source: 'kuwo' },
     ]);
+  });
+
+  it('supports direct search arguments and updates source and quality', async () => {
+    searchMusic.mockResolvedValueOnce([]);
+
+    const { result } = renderHook(() => useSearch(true));
+
+    act(() => {
+      result.current.setSource('ytmusic');
+      result.current.setQuality('320');
+    });
+
+    expect(result.current.source).toBe('ytmusic');
+    expect(result.current.quality).toBe(320);
+
+    await act(async () => {
+      await result.current.handleSearch(null, '  直接搜索  ', 'ytmusic');
+    });
+
+    expect(searchMusic).toHaveBeenCalledWith('直接搜索', 'ytmusic', 20, 1);
+    expect(result.current.activeQuery).toBe('直接搜索');
+    expect(result.current.activeSource).toBe('ytmusic');
+  });
+
+  it('stops before the API when offline or when the query is invalid', async () => {
+    const { result } = renderHook(() => useSearch(true));
+
+    checkNetworkStatus.mockReturnValue(false);
+    await act(async () => {
+      await result.current.handleSearch({ preventDefault: vi.fn() });
+    });
+    expect(searchMusic).not.toHaveBeenCalled();
+
+    checkNetworkStatus.mockReturnValue(true);
+    validateSearchParams.mockReturnValue(false);
+    await act(async () => {
+      await result.current.handleSearch({ preventDefault: vi.fn() }, '无效');
+    });
+    expect(searchMusic).not.toHaveBeenCalled();
+  });
+
+  it('reports search and pagination failures', async () => {
+    searchMusic.mockRejectedValueOnce(new Error('search failed'));
+
+    const { result } = renderHook(() => useSearch(true));
+
+    act(() => {
+      result.current.setQuery('失败搜索');
+    });
+
+    await act(async () => {
+      await result.current.handleSearch({ preventDefault: vi.fn() });
+    });
+
+    expect(result.current.error).toEqual(new Error('search failed'));
+    expect(handleError).toHaveBeenCalledWith(
+      expect.any(Error),
+      'SEARCH',
+      'ERROR',
+      '搜索失败，请重试'
+    );
+
+    searchMusic
+      .mockResolvedValueOnce(createTracks(1, 20))
+      .mockRejectedValueOnce(new Error('page failed'));
+
+    await act(async () => {
+      await result.current.handleSearch({ preventDefault: vi.fn() });
+    });
+    await act(async () => {
+      await result.current.handleLoadMore();
+    });
+
+    expect(result.current.error).toEqual(new Error('page failed'));
+    expect(handleError).toHaveBeenLastCalledWith(
+      expect.any(Error),
+      'SEARCH',
+      'ERROR',
+      '加载更多失败，请重试'
+    );
+
+    const callsAfterFailure = searchMusic.mock.calls.length;
+    await act(async () => {
+      await result.current.handleLoadMore();
+    });
+    expect(searchMusic).toHaveBeenCalledTimes(callsAfterFailure);
   });
 });

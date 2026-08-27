@@ -5,7 +5,9 @@ import svgr from 'vite-plugin-svgr';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
-const coveragePath = (filePath) => filePath.split('/').join(path.sep);
+// Vitest matches per-file coverage thresholds against POSIX-style relative paths
+// on every platform. Keep these keys stable on Windows and Linux alike.
+const coveragePath = (filePath) => filePath.replace(/\\/g, '/');
 
 // https://vitejs.dev/config/
 export default defineConfig({

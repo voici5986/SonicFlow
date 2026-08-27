@@ -27,7 +27,13 @@ vi.mock('firebase/firestore', () => ({
 import {
   checkFirebaseAvailability,
   firebaseInitError,
+  getCurrentUser,
   isFirebaseAvailable,
+  loginWithEmailAndPassword,
+  loginWithGoogle,
+  logout,
+  registerWithEmailAndPassword,
+  sendPasswordReset,
 } from '../services/firebase';
 
 describe('Firebase fallback', () => {
@@ -35,5 +41,27 @@ describe('Firebase fallback', () => {
     expect(isFirebaseAvailable).toBe(false);
     expect(firebaseInitError).toBeInstanceOf(Error);
     await expect(checkFirebaseAvailability()).resolves.toBe(false);
+  });
+
+  it('short-circuits authentication operations while unavailable', async () => {
+    await expect(getCurrentUser()).resolves.toBeNull();
+    await expect(
+      registerWithEmailAndPassword('user@example.com', 'password', 'User')
+    ).resolves.toMatchObject({
+      user: null,
+      error: expect.any(Error),
+    });
+    await expect(loginWithEmailAndPassword('user@example.com', 'password')).resolves.toMatchObject({
+      user: null,
+      error: expect.any(Error),
+    });
+    await expect(loginWithGoogle()).resolves.toMatchObject({
+      user: null,
+      error: expect.any(Error),
+    });
+    await expect(sendPasswordReset('user@example.com')).resolves.toMatchObject({
+      error: expect.any(Error),
+    });
+    await expect(logout()).resolves.toEqual({ error: null });
   });
 });
