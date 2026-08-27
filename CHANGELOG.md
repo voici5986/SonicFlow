@@ -1,3 +1,9 @@
+## [1.7.1](https://github.com/voici5986/OTONEI/compare/v1.7.0...v1.7.1) (2026-08-27)
+
+### Bug Fixes
+
+- **ci:** 修复覆盖率阈值跨平台匹配与覆盖缺口 ([920c1be](https://github.com/voici5986/OTONEI/commit/920c1be56ac83e0cba524b426d7fcd6226128ac6))
+
 # [1.7.0](https://github.com/voici5986/OTONEI/compare/v1.6.5...v1.7.0) (2026-08-05)
 
 ### Bug Fixes

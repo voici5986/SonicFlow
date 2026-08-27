@@ -514,7 +514,7 @@ pnpm 使用范围约束：
     "packageManager": {
       "name": "pnpm",
       "version": ">=11.0.0 <12.0.0",
-      "onFail": "download"
+      "onFail": "warn"
     }
   }
 }
