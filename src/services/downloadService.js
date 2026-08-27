@@ -126,8 +126,8 @@ const processQueue = async () => {
  * 下载单首歌曲 (加入队列)
  * @param {Object} track - 歌曲信息
  * @param {number|string} quality - 音质参数
- * @param {Function} onStartDownload - 下载开始回调
- * @param {Function} onFinishDownload - 下载结束回调
+ * @param {Function} [onStartDownload] - 下载开始回调
+ * @param {Function} [onFinishDownload] - 下载结束回调
  * @returns {Promise<boolean>} - 下载是否成功
  */
 export const downloadTrack = (track, quality = 999, onStartDownload, onFinishDownload) => {

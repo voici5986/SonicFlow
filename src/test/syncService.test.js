@@ -56,8 +56,12 @@ import {
   clearSyncTimestamp,
   getLocalChangesSince,
   initialSync,
+  mergeFavorites,
+  mergeHistory,
   removeSyncListener,
+  shouldSyncOnLogin,
   SyncEvents,
+  triggerDelayedSync,
   triggerEvent,
 } from '../services/syncService';
 
@@ -135,5 +139,40 @@ describe('sync service safeguards', () => {
     expect(data.has('last_sync_timestamp_user-1')).toBe(false);
     expect(data.has('last_sync_timestamp_user-2')).toBe(true);
     expect(data.has('other')).toBe(true);
+  });
+
+  it('skips merge and login checks when Firebase is unavailable', async () => {
+    await expect(mergeFavorites('user-1')).resolves.toMatchObject({
+      success: false,
+      error: '当前处于离线模式，无法同步数据',
+    });
+    await expect(mergeHistory('user-1')).resolves.toMatchObject({
+      success: false,
+      error: '当前处于离线模式，无法同步数据',
+    });
+    await expect(shouldSyncOnLogin('user-1')).resolves.toEqual({
+      shouldSync: false,
+      reason: '当前处于离线模式，无法同步数据',
+    });
+  });
+
+  it('reports delayed sync cancellation when Firebase is unavailable', async () => {
+    vi.useFakeTimers();
+    const listener = vi.fn();
+    addSyncListener(SyncEvents.SYNC_FAILED, listener);
+
+    await triggerDelayedSync('user-1');
+    await vi.advanceTimersByTimeAsync(30000);
+
+    expect(listener).toHaveBeenCalledWith(
+      expect.objectContaining({
+        uid: 'user-1',
+        error: '当前处于离线模式，无法同步数据',
+        syncType: 'delayed',
+      })
+    );
+
+    removeSyncListener(SyncEvents.SYNC_FAILED, listener);
+    vi.useRealTimers();
   });
 });

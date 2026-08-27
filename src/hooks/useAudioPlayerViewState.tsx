@@ -1,12 +1,60 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type RefObject, type TouchEvent } from 'react';
 import { usePlayer } from '../contexts/PlayerContext';
 import { FaRandom, FaRedo } from 'react-icons/fa';
 import { MdRepeatOne } from 'react-icons/md';
 import logger from '../utils/logger.js';
 import { getTrackArtist } from '../utils/trackFormatter';
 import { getTrackCoverUrl } from '../utils/trackCover';
+import type { LyricData, LyricLine, Track } from '../types';
 
-const useAudioPlayerViewState = () => {
+type PlayMode = 'random' | 'repeat-one' | 'repeat-all' | string;
+
+interface PlayerViewContext {
+  currentTrack: Track | null;
+  isPlaying: boolean;
+  lyricExpanded: boolean;
+  lyricData: LyricData;
+  currentLyricIndex: number;
+  coverCache: Record<string, string>;
+  currentPlaylist: Track[];
+  playMode: PlayMode;
+  playedSeconds: number;
+  totalSeconds: number;
+  togglePlay: () => void;
+  toggleLyric: () => void;
+  handlePrevious: () => void;
+  handleNext: () => void;
+  handleTogglePlayMode: () => void;
+  seekTo: (seconds: number) => void;
+  lyricsContainerRef: RefObject<HTMLElement | null>;
+  parseLyric: (text: string) => LyricLine[];
+}
+
+export interface AudioPlayerViewState {
+  currentTrack: Track | null;
+  isPlaying: boolean;
+  lyricExpanded: boolean;
+  currentLyricIndex: number;
+  playMode: PlayMode;
+  togglePlay: () => void;
+  toggleLyric: () => void;
+  handlePrevious: () => void;
+  handleNext: () => void;
+  handleTogglePlayMode: () => void;
+  lyricsContainerRef: RefObject<HTMLElement | null>;
+  processedLyrics: LyricLine[];
+  showMobileLyrics: boolean;
+  setShowMobileLyrics: React.Dispatch<React.SetStateAction<boolean>>;
+  isDragging: boolean;
+  dragOffsetY: number;
+  handleTouchStart: (event: TouchEvent<HTMLElement>) => void;
+  handleTouchMove: (event: TouchEvent<HTMLElement>) => void;
+  handleTouchEnd: () => void;
+  getPlayModeTitle: () => string;
+  renderPlayModeIcon: () => React.ReactNode;
+}
+
+const useAudioPlayerViewState = (): AudioPlayerViewState => {
   const {
     currentTrack,
     isPlaying,
@@ -26,7 +74,7 @@ const useAudioPlayerViewState = () => {
     seekTo,
     lyricsContainerRef,
     parseLyric,
-  } = usePlayer();
+  } = usePlayer() as PlayerViewContext;
 
   const [showMobileLyrics, setShowMobileLyrics] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -46,11 +94,13 @@ const useAudioPlayerViewState = () => {
     if (!currentTrack || !('mediaSession' in navigator)) return;
 
     const directCoverUrl = getTrackCoverUrl(currentTrack);
+    const album =
+      typeof currentTrack.album === 'string' ? currentTrack.album : currentTrack.album?.name || '';
 
     navigator.mediaSession.metadata = new MediaMetadata({
       title: currentTrack.name,
       artist: getTrackArtist(currentTrack) || '',
-      album: currentTrack.album || '',
+      album,
       artwork: [
         {
           src:
@@ -67,9 +117,7 @@ const useAudioPlayerViewState = () => {
     navigator.mediaSession.setActionHandler('play', togglePlay);
     navigator.mediaSession.setActionHandler('pause', togglePlay);
     navigator.mediaSession.setActionHandler('seekto', (details) => {
-      if (details.seekTime !== undefined) {
-        seekTo(details.seekTime);
-      }
+      if (details.seekTime !== undefined) seekTo(details.seekTime);
     });
 
     if (currentPlaylist.length > 1) {
@@ -83,7 +131,7 @@ const useAudioPlayerViewState = () => {
       try {
         navigator.mediaSession.setPositionState({
           duration: totalSeconds,
-          playbackRate: 1.0,
+          playbackRate: 1,
           position: Math.min(playedSeconds, totalSeconds),
         });
       } catch (error) {
@@ -110,40 +158,31 @@ const useAudioPlayerViewState = () => {
   useEffect(() => {
     if (lyricExpanded && currentLyricIndex >= 0 && lyricsContainerRef.current) {
       const activeLine = lyricsContainerRef.current.querySelector('.active');
-      if (activeLine) {
-        activeLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+      activeLine?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [currentLyricIndex, lyricExpanded, lyricsContainerRef]);
 
-  const handleTouchStart = (e) => {
+  const handleTouchStart = (event: TouchEvent<HTMLElement>) => {
     if (!lyricExpanded || showMobileLyrics) return;
-    setStartY(e.touches[0].clientY);
+    setStartY(event.touches[0].clientY);
     setIsDragging(false);
     setDragOffsetY(0);
   };
 
-  const handleTouchMove = (e) => {
+  const handleTouchMove = (event: TouchEvent<HTMLElement>) => {
     if (!lyricExpanded || showMobileLyrics) return;
 
-    const currentY = e.touches[0].clientY;
-    const deltaY = currentY - startY;
-
+    const deltaY = event.touches[0].clientY - startY;
     if (deltaY > 0) {
       setDragOffsetY(deltaY);
-      if (deltaY > 10 && !isDragging) {
-        setIsDragging(true);
-      }
+      if (deltaY > 10 && !isDragging) setIsDragging(true);
     }
   };
 
   const handleTouchEnd = () => {
     if (!lyricExpanded || showMobileLyrics) return;
 
-    if (isDragging && dragOffsetY > 120) {
-      toggleLyric();
-    }
-
+    if (isDragging && dragOffsetY > 120) toggleLyric();
     setIsDragging(false);
     setDragOffsetY(0);
   };
@@ -155,7 +194,6 @@ const useAudioPlayerViewState = () => {
       case 'repeat-one':
         return '单曲循环';
       case 'repeat-all':
-        return '列表循环';
       default:
         return '列表循环';
     }
@@ -168,7 +206,6 @@ const useAudioPlayerViewState = () => {
       case 'repeat-one':
         return <MdRepeatOne size={22} />;
       case 'repeat-all':
-        return <FaRedo size={18} />;
       default:
         return <FaRedo size={18} />;
     }

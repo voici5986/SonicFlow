@@ -1,19 +1,17 @@
-import React from 'react';
+import type { CSSProperties } from 'react';
 import useAlbumCoverImage from '../hooks/useAlbumCoverImage';
+import type { Track } from '../types';
 
-/**
- * 桌面端专辑封面组件
- * 简单的缩略图显示，无复杂动画
- *
- * @param {Object} props
- * @param {Object} props.track - 歌曲信息
- * @param {string|number} props.size - 尺寸 'small' | number
- * @param {Function} props.onClick - 点击处理
- * @param {string} props.className - 额外类名
- * @param {number} props.imgSize - 图片加载尺寸
- * @param {boolean} props.lazy - 是否懒加载
- * @param {boolean} props.forceFetch - 是否强制加载
- */
+export interface DesktopAlbumCoverProps {
+  track: Track | null | undefined;
+  size?: string | number;
+  onClick?: () => void;
+  className?: string;
+  imgSize?: number;
+  lazy?: boolean;
+  forceFetch?: boolean;
+}
+
 const DesktopAlbumCover = ({
   track,
   size = 'small',
@@ -22,7 +20,7 @@ const DesktopAlbumCover = ({
   imgSize = 300,
   lazy = false,
   forceFetch = false,
-}) => {
+}: DesktopAlbumCoverProps) => {
   const { imageUrl, isLoaded, forceLoadCover, handleImageError } = useAlbumCoverImage(
     track,
     imgSize,
@@ -30,30 +28,23 @@ const DesktopAlbumCover = ({
     forceFetch
   );
 
-  // 确定样式和尺寸
-  const getStyles = () => {
-    if (size === 'small') {
-      return {};
-    }
+  const getStyles = (): CSSProperties => {
+    if (size === 'small') return {};
 
+    const dimension = typeof size === 'number' ? `${size}px` : size;
     return {
-      width: typeof size === 'number' ? `${size}px` : size,
-      height: typeof size === 'number' ? `${size}px` : size,
+      width: dimension,
+      height: dimension,
       objectFit: 'cover',
       backgroundColor: 'var(--card-hover-background)',
     };
   };
 
-  // 样式类名
   const sizeClass = size === 'small' ? 'player-thumbnail rounded me-2' : 'rounded';
 
   const handleClick = () => {
-    if (lazy && !isLoaded) {
-      forceLoadCover();
-    }
-    if (onClick) {
-      onClick();
-    }
+    if (lazy && !isLoaded) void forceLoadCover();
+    onClick?.();
   };
 
   return (

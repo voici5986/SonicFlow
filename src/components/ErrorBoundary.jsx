@@ -1,5 +1,6 @@
 import React from 'react';
 import logger from '../utils/logger.js';
+import { env } from '../config/env';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -12,7 +13,7 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    if (process.env.NODE_ENV === 'development') {
+    if (env.isDevelopment) {
       logger.error('[ErrorBoundary] Caught error:', error, info);
     }
   }

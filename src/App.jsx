@@ -22,13 +22,14 @@ import { getTrackArtist } from './utils/trackFormatter';
 import './styles/AudioPlayer.css';
 import './styles/Orientation.css';
 import logger from './utils/logger.js';
+import { env } from './config/env';
 
 // 懒加载页面组件
 const Favorites = React.lazy(() => import('./pages/Favorites'));
 const History = React.lazy(() => import('./pages/History'));
 const User = React.lazy(() => import('./pages/User'));
 
-// 搜索结果项组件 - 已迁移至 components/SearchResultItem.js
+// 搜索结果项组件 - 已迁移至 components/SearchResultItem.tsx
 
 const AppContent = () => {
   const [activeTab, setActiveTab] = useState('home');
@@ -497,7 +498,7 @@ const AppContent = () => {
   useEffect(() => {
     if (deviceInfo.isMobile || deviceInfo.isTablet) {
       lockToPortrait().then((success) => {
-        if (process.env.NODE_ENV === 'development') {
+        if (env.isDevelopment) {
           logger.log(success ? '成功锁定屏幕方向为竖屏' : '无法锁定屏幕方向，将使用备选方案');
         }
       });
@@ -508,11 +509,11 @@ const AppContent = () => {
   useEffect(() => {
     const initialize = async () => {
       try {
-        if (process.env.NODE_ENV === 'development') {
+        if (env.isDevelopment) {
           logger.log('应用初始化中...');
         }
       } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
+        if (env.isDevelopment) {
           logger.error('初始化失败:', error);
         }
       }
@@ -569,7 +570,7 @@ const AppContent = () => {
 
       <InstallPWA />
       <UpdateNotification />
-      {process.env.NODE_ENV === 'development' && <DeviceDebugger />}
+      {env.isDevelopment && <DeviceDebugger />}
     </div>
   );
 };

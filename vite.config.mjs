@@ -12,7 +12,7 @@ export default defineConfig({
   plugins: [
     react(),
     envCompatible({
-      // 仅为兼容旧部署变量保留；业务代码统一通过 src/config/env.js 读取。
+      // 仅为兼容旧部署变量保留；业务代码统一通过 src/config/env.ts 读取。
       prefix: 'REACT_APP_',
     }),
     svgr(),
@@ -114,7 +114,7 @@ export default defineConfig({
     },
   },
   define: {
-    // envCompatible 插件已经处理了环境变量，此处只需保留基础兼容性
+    // 兼容窗口内保留旧变量注入；业务代码统一通过 src/config/env.ts 读取。
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
     'process.env.VITE_APP_VERSION': JSON.stringify(process.env.npm_package_version),
   },
@@ -165,21 +165,28 @@ export default defineConfig({
       reportsDirectory: './coverage',
       reporter: ['text', 'json-summary', 'html'],
       include: [
-        'src/config/env.js',
+        'src/config/env.ts',
+        'src/utils/dataValidator.ts',
+        'src/utils/trackFormatter.ts',
+        'src/utils/trackCover.ts',
+        'src/services/memoryCache.ts',
+        'src/services/rateLimiter.ts',
+        'src/services/AudioEngine.ts',
+        'src/services/audioStateManager.ts',
         'src/services/storage.js',
         'src/services/syncService.js',
         'src/services/musicApiService.js',
         'src/services/firebase.js',
-        'src/hooks/useSearch.jsx',
+        'src/hooks/useSearch.ts',
       ],
       exclude: ['**/*.test.{js,jsx}', 'src/test/**', '**/*.d.ts'],
       thresholds: {
-        // 这些门槛来自首次显式 include 的实测基线，后续只允许递增。
-        statements: 42,
-        branches: 34,
-        functions: 48,
-        lines: 42,
-        [coveragePath('src/hooks/useSearch.jsx')]: {
+        // 首轮门槛按当前显式 include 的实测基线设定，后续只允许递增。
+        statements: 60,
+        branches: 50,
+        functions: 60,
+        lines: 60,
+        [coveragePath('src/hooks/useSearch.ts')]: {
           statements: 74,
           branches: 60,
           functions: 80,
@@ -209,7 +216,7 @@ export default defineConfig({
           functions: 9,
           lines: 27,
         },
-        [coveragePath('src/config/env.js')]: {
+        [coveragePath('src/config/env.ts')]: {
           statements: 60,
           branches: 50,
           functions: 75,

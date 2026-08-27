@@ -40,4 +40,19 @@ describe('validateSearchResults', () => {
     expect(result[0].name).toBe('未知歌曲');
     expect(result[0].source).toBe('unknown');
   });
+
+  it('normalizes non-string names and malformed artist or album fields', () => {
+    const [track] = validateSearchResults([
+      { id: 42, name: 123, artist: 99, album: 88, pic_id: false, lyric_id: {} },
+    ]);
+
+    expect(track).toMatchObject({
+      id: 42,
+      name: '123',
+      artist: '未知艺术家',
+      album: '88',
+      pic_id: null,
+      lyric_id: null,
+    });
+  });
 });

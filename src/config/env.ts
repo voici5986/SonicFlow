@@ -1,30 +1,48 @@
-const normalizeEnvValue = (value) => {
+export interface FirebaseConfig {
+  apiKey?: string;
+  authDomain?: string;
+  projectId?: string;
+  storageBucket?: string;
+  messagingSenderId?: string;
+  appId?: string;
+  measurementId?: string;
+}
+
+export interface EnvConfig {
+  apiBase: string;
+  appVersion: string;
+  mode: string;
+  isDevelopment: boolean;
+  isProduction: boolean;
+  firebase: FirebaseConfig;
+}
+
+type EnvironmentRecord = Record<string, string | undefined>;
+
+declare const process: { env: EnvironmentRecord };
+
+const normalizeEnvValue = (value: unknown): string | undefined => {
   if (typeof value !== 'string') return undefined;
   const normalized = value.trim();
   return normalized && normalized !== 'undefined' ? normalized : undefined;
 };
 
-export const resolveEnvValue = (viteValue, legacyValue) =>
+export const resolveEnvValue = (viteValue: unknown, legacyValue: unknown): string | undefined =>
   normalizeEnvValue(viteValue) ?? normalizeEnvValue(legacyValue);
 
-const viteEnv = import.meta.env || {};
-const legacyEnv = {
-  API_BASE: typeof process !== 'undefined' ? process.env.REACT_APP_API_BASE : undefined,
-  FIREBASE_API_KEY:
-    typeof process !== 'undefined' ? process.env.REACT_APP_FIREBASE_API_KEY : undefined,
-  FIREBASE_AUTH_DOMAIN:
-    typeof process !== 'undefined' ? process.env.REACT_APP_FIREBASE_AUTH_DOMAIN : undefined,
-  FIREBASE_PROJECT_ID:
-    typeof process !== 'undefined' ? process.env.REACT_APP_FIREBASE_PROJECT_ID : undefined,
-  FIREBASE_STORAGE_BUCKET:
-    typeof process !== 'undefined' ? process.env.REACT_APP_FIREBASE_STORAGE_BUCKET : undefined,
-  FIREBASE_MESSAGING_SENDER_ID:
-    typeof process !== 'undefined' ? process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID : undefined,
-  FIREBASE_APP_ID:
-    typeof process !== 'undefined' ? process.env.REACT_APP_FIREBASE_APP_ID : undefined,
-  FIREBASE_MEASUREMENT_ID:
-    typeof process !== 'undefined' ? process.env.REACT_APP_FIREBASE_MEASUREMENT_ID : undefined,
-  APP_VERSION: typeof process !== 'undefined' ? process.env.VITE_APP_VERSION : undefined,
+const viteEnv = import.meta.env;
+
+const legacyEnv: EnvironmentRecord = {
+  // These direct references are intentionally kept for vite-plugin-env-compatible to replace.
+  API_BASE: process.env.REACT_APP_API_BASE,
+  FIREBASE_API_KEY: process.env.REACT_APP_FIREBASE_API_KEY,
+  FIREBASE_AUTH_DOMAIN: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  FIREBASE_PROJECT_ID: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  FIREBASE_STORAGE_BUCKET: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  FIREBASE_MESSAGING_SENDER_ID: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  FIREBASE_APP_ID: process.env.REACT_APP_FIREBASE_APP_ID,
+  FIREBASE_MEASUREMENT_ID: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID,
+  APP_VERSION: process.env.VITE_APP_VERSION,
 };
 
 const envPairs = {
@@ -40,17 +58,21 @@ const envPairs = {
   FIREBASE_APP_ID: ['VITE_FIREBASE_APP_ID', 'REACT_APP_FIREBASE_APP_ID'],
   FIREBASE_MEASUREMENT_ID: ['VITE_FIREBASE_MEASUREMENT_ID', 'REACT_APP_FIREBASE_MEASUREMENT_ID'],
   APP_VERSION: ['VITE_APP_VERSION', 'VITE_APP_VERSION'],
-};
+} as const;
 
-const resolvePair = (name) => {
+type EnvName = keyof typeof envPairs;
+
+const resolvePair = (name: EnvName): string | undefined => {
   const [viteName] = envPairs[name];
-  const legacyValue = legacyEnv[name];
-  return resolveEnvValue(viteEnv[viteName], legacyValue);
+  return resolveEnvValue(viteEnv[viteName], legacyEnv[name]);
 };
 
-export const env = Object.freeze({
+export const env: EnvConfig = Object.freeze({
   apiBase: resolvePair('API_BASE') || '/api-v1/api.php',
   appVersion: resolvePair('APP_VERSION') || 'dev',
+  mode: viteEnv.MODE || 'development',
+  isDevelopment: Boolean(viteEnv.DEV),
+  isProduction: Boolean(viteEnv.PROD),
   firebase: Object.freeze({
     apiKey: resolvePair('FIREBASE_API_KEY'),
     authDomain: resolvePair('FIREBASE_AUTH_DOMAIN'),
@@ -63,7 +85,7 @@ export const env = Object.freeze({
 });
 
 export const envConflicts = Object.freeze(
-  Object.entries(envPairs)
+  (Object.entries(envPairs) as Array<[EnvName, readonly [string, string]]>)
     .filter(([name, [viteName, legacyName]]) => {
       if (viteName === legacyName) return false;
       const viteValue = normalizeEnvValue(viteEnv[viteName]);

@@ -1,5 +1,6 @@
 import { toast } from 'react-toastify';
 import logger from './logger.js';
+import { env } from '../config/env';
 
 // 用于跟踪最近显示的错误消息，防止短时间内重复显示
 const recentErrors = new Map();
@@ -46,7 +47,7 @@ export const handleError = (
   callback = null
 ) => {
   // 记录错误到控制台
-  if (process.env.NODE_ENV === 'development') {
+  if (env.isDevelopment) {
     logger.error(`[${type.toUpperCase()}] Error:`, error);
   }
 

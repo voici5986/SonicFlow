@@ -87,7 +87,6 @@ pnpm audit --prod
 
 - 不建议换掉 Vitest
 - 不建议引入 Jest
-- 不建议引入 Biome 与 Ox 同时共存
 - 不建议一次性全项目 TypeScript 化
 - 不建议为了“现代化”重写 Context / Firebase / PWA
 - 不建议现在改成 Next.js
@@ -377,9 +376,7 @@ OTONEI 很适合 TypeScript，但不建议一次性迁完。
 ### Phase 1：类型定义
 
 ```text
-src/types.js
-↓
-src/types.ts
+src/types.ts（已完成）
 ```
 
 建立：
@@ -676,34 +673,7 @@ linux/arm64
 
 ---
 
-# 11. 关于 Biome
-
-OTONEI 不建议选择 Biome。
-
-不是因为 Biome 不好，而是：
-
-- LabelPilot 已经使用 Ox
-- OTONEI 技术栈与 LabelPilot 接近
-- 两个项目统一 Ox 的收益高于 Ox / Biome 混用
-- Ox 对 React / TypeScript 的规则覆盖已经足够
-
-因此推荐：
-
-```text
-LabelPilot → Ox
-OTONEI     → Ox
-```
-
-而不是：
-
-```text
-LabelPilot → Ox
-OTONEI     → Biome
-```
-
----
-
-# 12. 最终建议实施顺序
+# 11. 最终建议实施顺序
 
 ## Phase A：工具链切换（已完成）
 
@@ -721,13 +691,16 @@ OTONEI     → Biome
 
 ---
 
-## Phase B：补测试可信度
+## Phase B：补测试可信度（已完成首轮）
 
 ```text
 1. 加 @vitest/coverage-v8
 2. 给关键 services / hooks 加测试
-3. 加 Playwright
+3. 加 Playwright 本地 fixture 流程
 4. 覆盖搜索 / 播放 / 收藏 / 降级模式
+
+第三方音乐 API 不作为 E2E 的真实依赖；相关流程使用固定 fixture 或网络拦截。
+首轮全局门槛为 statements 60%、branches 50%、functions 60%、lines 60%。
 ```
 
 风险：低  
@@ -735,7 +708,7 @@ OTONEI     → Biome
 
 ---
 
-## Phase C：渐进 TypeScript
+## Phase C：渐进 TypeScript（已完成当前批次）
 
 ```text
 types
@@ -746,27 +719,30 @@ types
 → components
 ```
 
+当前批次已迁移共享类型、核心工具与服务、主要网络/搜索/播放 Hook、Device/Download/Favorites/Sync Context，以及搜索结果和播放器封面等 UI 边界。Auth/Player Context 与大型页面组件继续保留 JS，后续按依赖边界递进迁移。
+
 风险：中  
 收益：高
 
 ---
 
-## Phase D：工具链收尾
+## Phase D：工具链收尾（部分完成）
 
 ```text
 Node / pnpm 单一来源
-REACT_APP_* → VITE_*
-清理 vite-plugin-env-compatible
+REACT_APP_* → VITE_*（保留兼容窗口）
 GitHub Actions SHA pin
 Docker workflow 现代化
 ```
+
+应用代码已统一从 `src/config/env.ts` 读取 Vite 变量，并保留旧变量回退；`vite-plugin-env-compatible` 暂不删除，待外部部署控制面完成切换后再清理。
 
 风险：低到中  
 收益：中
 
 ---
 
-# 13. 不建议做的事情
+# 12. 不建议做的事情
 
 当前不建议：
 
@@ -777,13 +753,12 @@ Docker workflow 现代化
 - Firebase → 自建后端，仅为了去依赖
 - Vite → 其他 bundler
 - 全量重写 TypeScript
-- Ox + Biome 双工具链
 
 这些目前都没有足够收益。
 
 ---
 
-# 14. 最终目标形态
+# 13. 最终目标形态
 
 ```text
 React 19

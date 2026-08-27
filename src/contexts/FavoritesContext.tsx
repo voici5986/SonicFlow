@@ -1,26 +1,42 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { getFavorites, toggleFavorite as toggleFavoriteStorage } from '../services/storage';
+import type { AppUser, FavoriteRecord, Track, TrackId } from '../types';
 import { useAuth } from './AuthContext';
 import { useSync } from './SyncContext';
 import { triggerDelayedSync } from '../services/syncService';
 import logger from '../utils/logger.js';
 
-// 创建Context
-const FavoritesContext = createContext();
+interface FavoriteToggleResult {
+  added: boolean;
+  full?: boolean;
+  error?: string;
+}
 
-// 自定义Hook，用于在组件中访问FavoritesContext
-export const useFavorites = () => useContext(FavoritesContext);
+export interface FavoritesContextValue {
+  favorites: FavoriteRecord[];
+  isLoading: boolean;
+  isFavorite: (trackId: TrackId | null | undefined) => boolean;
+  toggleFavorite: (track: Track) => Promise<FavoriteToggleResult>;
+}
 
-export const FavoritesProvider = ({ children }) => {
-  const [favorites, setFavorites] = useState([]);
+const FavoritesContext = createContext<FavoritesContextValue | undefined>(undefined);
+
+export const useFavorites = (): FavoritesContextValue => {
+  const context = useContext(FavoritesContext);
+  if (!context) throw new Error('useFavorites must be used within a FavoritesProvider');
+  return context;
+};
+
+export const FavoritesProvider = ({ children }: { children: ReactNode }) => {
+  const [favorites, setFavorites] = useState<FavoriteRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { currentUser } = useAuth();
+  const { currentUser } = useAuth() as { currentUser: AppUser | null };
   const { updatePendingChanges } = useSync();
 
-  const loadFavorites = useCallback(async () => {
+  const loadFavorites = useCallback(async (): Promise<void> => {
     try {
       setIsLoading(true);
-      const favList = await getFavorites();
+      const favList = (await getFavorites()) as FavoriteRecord[];
       setFavorites(favList);
     } catch (error) {
       logger.error('加载收藏列表失败:', error);
@@ -29,19 +45,17 @@ export const FavoritesProvider = ({ children }) => {
     }
   }, []);
 
-  // 初始化时加载收藏列表
   useEffect(() => {
-    loadFavorites();
+    void loadFavorites();
   }, [loadFavorites]);
 
   useEffect(() => {
     const handleExternalDataChange = () => {
-      loadFavorites();
+      void loadFavorites();
     };
-    const handleLocalDataCleared = (event) => {
-      if (event.detail?.favorites) {
-        loadFavorites();
-      }
+    const handleLocalDataCleared = (event: Event) => {
+      const detail = (event as CustomEvent<{ favorites?: boolean }>).detail;
+      if (detail?.favorites) void loadFavorites();
     };
 
     window.addEventListener('local:data_cleared', handleLocalDataCleared);
@@ -53,54 +67,36 @@ export const FavoritesProvider = ({ children }) => {
     };
   }, [loadFavorites]);
 
-  // 检查歌曲是否已收藏
   const isFavorite = useCallback(
-    (trackId) => {
+    (trackId: TrackId | null | undefined): boolean => {
       if (!trackId) return false;
-      // 使用强制字符串比较，防止数字和字符串类型不匹配导致判断失效
       const idToSearch = String(trackId);
       return favorites.some((item) => String(item.id) === idToSearch);
     },
     [favorites]
   );
 
-  // 切换收藏状态
   const toggleFavorite = useCallback(
-    async (track) => {
+    async (track: Track): Promise<FavoriteToggleResult> => {
       try {
-        // 调用存储服务的toggleFavorite方法
-        const result = await toggleFavoriteStorage(track);
+        const result = (await toggleFavoriteStorage(track)) as FavoriteToggleResult;
+        if (result.error === 'favorites_limit') return result;
 
-        // 如果收藏列表已满，直接返回结果
-        if (result.error === 'favorites_limit') {
-          return result;
-        }
-
-        // 更新本地状态
         if (result.added) {
-          // 添加到收藏列表开头
           setFavorites((prev) => [{ ...track, modifiedAt: Date.now() }, ...prev]);
         } else {
-          // 从收藏列表中移除
           setFavorites((prev) => prev.filter((item) => item.id !== track.id));
         }
 
-        // 触发全局事件，通知其他页面刷新状态（如搜索、历史记录）
         window.dispatchEvent(
-          new CustomEvent('favorites_changed', {
-            detail: { track, added: result.added },
-          })
+          new CustomEvent('favorites_changed', { detail: { track, added: result.added } })
         );
 
-        // 已登录时，无论添加还是取消收藏都计入待同步（修复：原仅 added 时同步，导致取消收藏不同步）
         if (currentUser && !currentUser.isLocal) {
           try {
             const { incrementPendingChanges } = await import('../services/storage');
-            // 增加收藏待同步计数
             await incrementPendingChanges('favorites');
-            // 更新待同步项显示
-            updatePendingChanges();
-            // 触发30秒后的延迟同步
+            void updatePendingChanges();
             triggerDelayedSync(currentUser.uid);
           } catch (error) {
             logger.error('更新待同步计数失败:', error);
@@ -116,13 +112,9 @@ export const FavoritesProvider = ({ children }) => {
     [currentUser, updatePendingChanges]
   );
 
-  // 提供Context值
-  const contextValue = {
-    favorites,
-    isLoading,
-    isFavorite,
-    toggleFavorite,
-  };
-
-  return <FavoritesContext.Provider value={contextValue}>{children}</FavoritesContext.Provider>;
+  return (
+    <FavoritesContext.Provider value={{ favorites, isLoading, isFavorite, toggleFavorite }}>
+      {children}
+    </FavoritesContext.Provider>
+  );
 };

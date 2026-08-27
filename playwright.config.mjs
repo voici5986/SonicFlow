@@ -39,7 +39,6 @@ export default defineConfig({
     timeout: 120000,
     env: {
       VITE_API_BASE: '/api-v1/api.php',
-      REACT_APP_API_BASE: '/api-v1/api.php',
       VITE_FIREBASE_API_KEY: '',
       VITE_FIREBASE_AUTH_DOMAIN: '',
       VITE_FIREBASE_PROJECT_ID: '',
@@ -47,6 +46,8 @@ export default defineConfig({
       VITE_FIREBASE_MESSAGING_SENDER_ID: '',
       VITE_FIREBASE_APP_ID: '',
       VITE_FIREBASE_MEASUREMENT_ID: '',
+      // Keep browser E2E deterministic even when the host shell has legacy variables.
+      REACT_APP_API_BASE: '',
       REACT_APP_FIREBASE_API_KEY: '',
       REACT_APP_FIREBASE_AUTH_DOMAIN: '',
       REACT_APP_FIREBASE_PROJECT_ID: '',

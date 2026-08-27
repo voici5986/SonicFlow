@@ -1,4 +1,6 @@
-const isProd = process.env.NODE_ENV === 'production';
+import { env } from '../config/env';
+
+const isProd = env.isProduction;
 
 const noop = () => {};
 

@@ -1,20 +1,18 @@
-import React from 'react';
+import type { CSSProperties } from 'react';
 import useAlbumCoverImage from '../hooks/useAlbumCoverImage';
+import type { Track } from '../types';
 
-/**
- * 移动端专辑封面组件
- * 包含"呼吸动画"和"大图模式"
- *
- * @param {Object} props
- * @param {Object} props.track - 歌曲信息
- * @param {string|number} props.size - 尺寸 'small' | 'large' | number
- * @param {boolean} props.isPlaying - 是否正在播放 (用于呼吸动画)
- * @param {Function} props.onClick - 点击处理
- * @param {string} props.className - 额外类名
- * @param {number} props.imgSize - 图片加载尺寸
- * @param {boolean} props.lazy - 是否懒加载
- * @param {boolean} props.forceFetch - 是否强制加载
- */
+export interface MobileAlbumCoverProps {
+  track: Track | null | undefined;
+  size?: 'small' | 'large' | string | number;
+  isPlaying?: boolean;
+  onClick?: () => void;
+  className?: string;
+  imgSize?: number;
+  lazy?: boolean;
+  forceFetch?: boolean;
+}
+
 const MobileAlbumCover = ({
   track,
   size = 'small',
@@ -24,7 +22,7 @@ const MobileAlbumCover = ({
   imgSize = 300,
   lazy = false,
   forceFetch = false,
-}) => {
+}: MobileAlbumCoverProps) => {
   const { imageUrl, isLoaded, forceLoadCover, handleImageError } = useAlbumCoverImage(
     track,
     imgSize,
@@ -32,38 +30,29 @@ const MobileAlbumCover = ({
     forceFetch
   );
 
-  // 确定样式和尺寸
-  const getStyles = () => {
-    if (size === 'small' || size === 'large') {
-      return {};
-    }
+  const getStyles = (): CSSProperties => {
+    if (size === 'small' || size === 'large') return {};
 
+    const dimension = typeof size === 'number' ? `${size}px` : size;
     return {
-      width: typeof size === 'number' ? `${size}px` : size,
-      height: typeof size === 'number' ? `${size}px` : size,
+      width: dimension,
+      height: dimension,
       objectFit: 'cover',
       backgroundColor: 'var(--card-hover-background)',
     };
   };
 
-  // 样式类名
-  let sizeClass =
+  const sizeClass =
     size === 'small'
       ? 'player-thumbnail rounded me-2'
       : size === 'large'
         ? 'album-cover-large'
         : 'rounded';
-
-  // 添加呼吸动画类 (仅在大图模式且播放时)
   const animationClass = size === 'large' && isPlaying ? 'breathing-animation' : '';
 
   const handleClick = () => {
-    if (lazy && !isLoaded) {
-      forceLoadCover();
-    }
-    if (onClick) {
-      onClick();
-    }
+    if (lazy && !isLoaded) void forceLoadCover();
+    onClick?.();
   };
 
   return (
