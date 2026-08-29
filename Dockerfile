@@ -1,21 +1,30 @@
 ARG NODE_VERSION=26
-FROM node:${NODE_VERSION}-slim AS base
 
-ENV NPM_HOME="/npm"
-ENV PATH="$NPM_HOME:$PATH"
-# Docker 默认只注入规范的 Vite 变量；旧变量兼容由应用边界暂时承接。
-ENV VITE_API_BASE="/api-v1/api.php"
-RUN npm install --global pnpm@11
-COPY . /app
+FROM node:${NODE_VERSION}-slim AS build
+
 WORKDIR /app
 
-FROM base AS build
-RUN --mount=type=cache,id=pnpm,target=/npm/store pnpm install --frozen-lockfile
+ENV VITE_API_BASE="/api-v1/api.php"
+ENV HUSKY=0
+
+RUN npm install --global pnpm@11 \
+    && pnpm config set store-dir /pnpm/store
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm install --frozen-lockfile
+
+COPY . .
+
 RUN pnpm run build
 
-# Production stage
-FROM nginx:alpine-slim AS production-stage
+
+FROM nginx:stable-alpine-slim AS production
+
 COPY ./conf/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/build /usr/share/nginx/html
+
 EXPOSE 80
+
 CMD ["nginx", "-g", "daemon off;"]
