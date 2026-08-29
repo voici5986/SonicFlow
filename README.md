@@ -74,7 +74,7 @@ pnpm run serve
 
 ## 正式发布
 
-使用 PowerShell 脚本 `release.ps1` 执行严格校验与 semantic-release 自动发版：
+使用 PowerShell 脚本 `release.ps1` 执行严格校验与 semantic-release 自动发版（需要 PowerShell 7.6+，即 `pwsh`；7.6 基于 .NET 10 LTS）：
 
 ```powershell
 .\release.ps1                # 交互选择（创建正式版本 / 仅运行质量门禁）
@@ -88,7 +88,7 @@ pnpm run serve
 2. semantic-release dry-run 预演并计算下一个版本
 3. 二次确认后更新 `package.json` 与 `CHANGELOG.md`、创建 Git 提交和 Docker 兼容的 `vX.Y.Z`（可带预发布标识、不含 `+build` 元数据）标签并推送
 
-前置要求：`main` 分支、Git 工作区干净、自上一标签起存在 `fix`/`feat` 或破坏性变更提交。标签推送后，GitHub Actions 自动构建多架构 Docker 镜像推送到 GHCR，Cloudflare Pages 与 Vercel 自动触发部署。
+前置要求：PowerShell 7.6+、`main` 分支、Git 工作区干净、自上一标签起存在 `fix`/`feat` 或破坏性变更提交。标签推送后，GitHub Actions 自动构建多架构 Docker 镜像推送到 GHCR，Cloudflare Pages 与 Vercel 自动触发部署。
 
 ## 部署
 

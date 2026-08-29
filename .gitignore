@@ -101,4 +101,3 @@ firebase.json
 **/public/workbox-*.js
 **/public/sw.js
 docs/code-review-checklist.md
-docs/code-review-checklist.md
