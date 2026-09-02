@@ -1,0 +1,66 @@
+name: Firestore Rules
+
+on:
+  pull_request:
+    paths:
+      - firestore.rules
+      - firebase.json
+      - .github/workflows/firestore-rules.yml
+  push:
+    branches:
+      - main
+    paths:
+      - firestore.rules
+      - firebase.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firestore-rules-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Java (Firestore emulator)
+        uses: actions/setup-java@v4.5.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+
+      # 本地模拟器解析 firestore.rules：语法/结构错误会让模拟器启动失败并以非零退出
+      - name: Validate Firestore rules syntax
+        run: npx --yes firebase-tools@latest emulators:exec --only firestore "node -e \"console.log('firestore rules OK')\""
+
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # 手动触发且配置了 Firebase 凭据时才部署；未配置则跳过
+    if: github.event_name == 'workflow_dispatch' && secrets.FIREBASE_PROJECT_ID != '' && secrets.FIREBASE_TOKEN != ''
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+
+      - name: Deploy Firestore rules
+        run: npx --yes firebase-tools@latest deploy --only firestore:rules --project "${{ secrets.FIREBASE_PROJECT_ID }}" --token "${{ secrets.FIREBASE_TOKEN }}" --non-interactive
