@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { FaSync, FaTimes } from 'react-icons/fa';
 import logger from '../utils/logger.js';
@@ -11,7 +11,12 @@ import { useDevice } from '../contexts/DeviceContext';
 const UpdateNotification = () => {
   const { isMobile, isTablet } = useDevice();
   const isMobileModal = isMobile || isTablet;
-  const { needRefresh, updateServiceWorker } = useRegisterSW({
+  // useRegisterSW 返回 needRefresh: [boolean, setNeedRefresh] 元组，
+  // 不能把整个元组当布尔用，否则数组恒为 truthy 导致每次都误弹更新提示。
+  const {
+    needRefresh: [needRefresh, setNeedRefresh],
+    updateServiceWorker,
+  } = useRegisterSW({
     onRegistered(r) {
       logger.log('SW Registered: ' + r);
     },
@@ -20,25 +25,23 @@ const UpdateNotification = () => {
     },
   });
 
-  // 本地状态：用户是否手动关闭了更新提示
-  const [dismissed, setDismissed] = useState(false);
-
-  // 处理关闭提示
+  // 处理关闭提示：直接复位 needRefresh，避免额外维护 dismissed 导致
+  // 同一页面生命周期内后续真实更新到来时不再提示。
   const close = () => {
-    setDismissed(true);
+    setNeedRefresh(false);
   };
 
   useEffect(() => {
-    if (!needRefresh || !isMobileModal || dismissed) return;
+    if (!needRefresh || !isMobileModal) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [needRefresh, isMobileModal, dismissed]);
+  }, [needRefresh, isMobileModal]);
 
-  // 如果不需要更新或已手动关闭，不渲染任何内容
-  if (!needRefresh || dismissed) {
+  // 无 waiting Service Worker 时不渲染
+  if (!needRefresh) {
     return null;
   }
 
