@@ -1,16 +1,83 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 用户仅能读写自己的文档与子集合
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function isSyncTime(value) {
+      return value is int || value is timestamp;
+    }
+
+    function isValidSource(value) {
+      return value is string
+        && value in ['netease', 'kuwo', 'joox', 'bilibili', 'ytmusic', 'unknown'];
+    }
+
+    function isValidTrack(track) {
+      return track is map
+        && track.id is string
+        && track.id.size() > 0
+        && track.id.size() <= 200
+        && isValidSource(track.source)
+        && track.name is string
+        && track.name.size() <= 300
+        && track.artist is string
+        && track.artist.size() <= 300
+        && track.album is string
+        && track.album.size() <= 300
+        && (track.pic_id == null || (track.pic_id is string && track.pic_id.size() <= 500))
+        && (track.lyric_id == null || (track.lyric_id is string && track.lyric_id.size() <= 500));
+    }
+
+    function isValidUserDocument(data) {
+      return data.keys().hasOnly([
+          'email', 'displayName', 'createdAt', 'lastUpdated', 'favorites', 'history'
+        ])
+        && (!('email' in data) || data.email == null || (data.email is string && data.email.size() <= 320))
+        && (!('displayName' in data) || data.displayName == null || (data.displayName is string && data.displayName.size() <= 200))
+        && (!('createdAt' in data) || isSyncTime(data.createdAt))
+        && (!('lastUpdated' in data) || isSyncTime(data.lastUpdated))
+        // 兼容旧客户端创建的空数组，新客户端不再写入这两个字段。
+        && (!('favorites' in data) || (data.favorites is list && data.favorites.size() <= 500))
+        && (!('history' in data) || (data.history is list && data.history.size() <= 100));
+    }
+
+    function isValidFavorite(data) {
+      return data.keys().hasOnly([
+          'id', 'source', 'name', 'artist', 'album', 'pic_id', 'lyric_id',
+          'modifiedAt', 'deletedAt'
+        ])
+        && isValidTrack(data)
+        && isSyncTime(data.modifiedAt)
+        && (!('deletedAt' in data) || isSyncTime(data.deletedAt));
+    }
+
+    function isValidHistory(data) {
+      return data.keys().hasOnly(['song', 'timestamp'])
+        && isSyncTime(data.timestamp)
+        && data.song.keys().hasOnly([
+          'id', 'source', 'name', 'artist', 'album', 'pic_id', 'lyric_id'
+        ])
+        && isValidTrack(data.song);
+    }
+
+    // 用户仅能读写自己的文档与子集合。
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId) && isValidUserDocument(request.resource.data);
+      allow delete: if isOwner(userId);
 
       match /favorites/{docId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidFavorite(request.resource.data);
+        allow delete: if isOwner(userId);
       }
 
       match /history/{docId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidHistory(request.resource.data);
+        allow delete: if isOwner(userId);
       }
     }
   }

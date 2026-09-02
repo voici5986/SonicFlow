@@ -34,7 +34,7 @@ describe('validateSearchResults', () => {
   });
 
   it('drops invalid rows and fills required defaults', () => {
-    const result = validateSearchResults([null, { name: null }]);
+    const result = validateSearchResults([null, { name: null }, { id: 'valid', name: null }]);
 
     expect(result).toHaveLength(1);
     expect(result[0].name).toBe('未知歌曲');
@@ -47,7 +47,7 @@ describe('validateSearchResults', () => {
     ]);
 
     expect(track).toMatchObject({
-      id: 42,
+      id: '42',
       name: '123',
       artist: '未知艺术家',
       album: '88',

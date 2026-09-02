@@ -1,10 +1,19 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { getFavorites, toggleFavorite as toggleFavoriteStorage } from '../services/storage';
-import type { AppUser, FavoriteRecord, Track, TrackId } from '../types';
+import type { AppUser, FavoriteRecord, Track } from '../types';
 import { useAuth } from './AuthContext';
 import { useSync } from './SyncContext';
 import { triggerDelayedSync } from '../services/syncService';
 import logger from '../utils/logger.js';
+import { getTrackKey } from '../utils/trackIdentity';
 
 interface FavoriteToggleResult {
   added: boolean;
@@ -15,7 +24,7 @@ interface FavoriteToggleResult {
 export interface FavoritesContextValue {
   favorites: FavoriteRecord[];
   isLoading: boolean;
-  isFavorite: (trackId: TrackId | null | undefined) => boolean;
+  isFavorite: (track: Pick<Track, 'id' | 'source'> | null | undefined) => boolean;
   toggleFavorite: (track: Track) => Promise<FavoriteToggleResult>;
 }
 
@@ -32,20 +41,25 @@ export const FavoritesProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const { currentUser } = useAuth() as { currentUser: AppUser | null };
   const { updatePendingChanges } = useSync();
+  const activeUserIdRef = useRef(currentUser?.uid);
+  activeUserIdRef.current = currentUser?.uid;
 
   const loadFavorites = useCallback(async (): Promise<void> => {
+    const requestedUserId = currentUser?.uid;
     try {
       setIsLoading(true);
-      const favList = (await getFavorites()) as FavoriteRecord[];
+      const favList = (await getFavorites(requestedUserId)) as FavoriteRecord[];
+      if (activeUserIdRef.current !== requestedUserId) return;
       setFavorites(favList);
     } catch (error) {
       logger.error('加载收藏列表失败:', error);
     } finally {
-      setIsLoading(false);
+      if (activeUserIdRef.current === requestedUserId) setIsLoading(false);
     }
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
+    setFavorites([]);
     void loadFavorites();
   }, [loadFavorites]);
 
@@ -68,10 +82,10 @@ export const FavoritesProvider = ({ children }: { children: ReactNode }) => {
   }, [loadFavorites]);
 
   const isFavorite = useCallback(
-    (trackId: TrackId | null | undefined): boolean => {
-      if (!trackId) return false;
-      const idToSearch = String(trackId);
-      return favorites.some((item) => String(item.id) === idToSearch);
+    (track: Pick<Track, 'id' | 'source'> | null | undefined): boolean => {
+      if (!track?.id) return false;
+      const trackKey = getTrackKey(track);
+      return favorites.some((item) => getTrackKey(item) === trackKey);
     },
     [favorites]
   );
@@ -79,23 +93,30 @@ export const FavoritesProvider = ({ children }: { children: ReactNode }) => {
   const toggleFavorite = useCallback(
     async (track: Track): Promise<FavoriteToggleResult> => {
       try {
-        const result = (await toggleFavoriteStorage(track)) as FavoriteToggleResult;
+        const requestedUserId = currentUser?.uid;
+        const result = (await toggleFavoriteStorage(
+          track,
+          requestedUserId
+        )) as FavoriteToggleResult;
         if (result.error === 'favorites_limit') return result;
 
-        if (result.added) {
-          setFavorites((prev) => [{ ...track, modifiedAt: Date.now() }, ...prev]);
-        } else {
-          setFavorites((prev) => prev.filter((item) => item.id !== track.id));
-        }
+        if (activeUserIdRef.current === requestedUserId) {
+          if (result.added) {
+            setFavorites((prev) => [{ ...track, modifiedAt: Date.now() }, ...prev]);
+          } else {
+            setFavorites((prev) => prev.filter((item) => getTrackKey(item) !== getTrackKey(track)));
+          }
 
-        window.dispatchEvent(
-          new CustomEvent('favorites_changed', { detail: { track, added: result.added } })
-        );
+          window.dispatchEvent(
+            new CustomEvent('favorites_changed', { detail: { track, added: result.added } })
+          );
+        }
 
         if (currentUser && !currentUser.isLocal) {
           try {
             const { incrementPendingChanges } = await import('../services/storage');
-            await incrementPendingChanges('favorites');
+            const pending = await incrementPendingChanges('favorites', currentUser.uid);
+            if (!pending) throw new Error('保存待同步收藏计数失败');
             void updatePendingChanges();
             triggerDelayedSync(currentUser.uid);
           } catch (error) {

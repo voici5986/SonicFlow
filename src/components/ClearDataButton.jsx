@@ -10,6 +10,7 @@ import {
   resetPendingChanges,
 } from '../services/storage';
 import { clearSyncTimestamp } from '../services/syncService';
+import { clearBrowserCaches } from '../utils/cacheStorage';
 import { useAuth } from '../contexts/AuthContext';
 import logger from '../utils/logger.js';
 
@@ -56,12 +57,12 @@ const ClearDataButton = ({
 
       // 清除收藏
       if (selectedOptions.favorites) {
-        operations.push(saveFavorites([]));
+        operations.push(saveFavorites([], currentUser?.uid));
       }
 
       // 清除历史记录
       if (selectedOptions.history) {
-        operations.push(clearHistory());
+        operations.push(clearHistory(currentUser?.uid));
       }
 
       // 清除搜索历史
@@ -72,13 +73,7 @@ const ClearDataButton = ({
       // 清除缓存
       if (selectedOptions.cache) {
         operations.push(Promise.resolve(clearMemoryCache()));
-
-        // 通知Service Worker清理缓存
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-          navigator.serviceWorker.controller.postMessage({
-            type: 'CLEAN_CACHE',
-          });
-        }
+        operations.push(clearBrowserCaches());
       }
 
       // 清除同步时间戳
@@ -88,10 +83,13 @@ const ClearDataButton = ({
       }
 
       // 重置待同步变更计数
-      operations.push(resetPendingChanges());
+      operations.push(resetPendingChanges(currentUser?.uid));
 
       // 等待所有操作完成
-      await Promise.all(operations);
+      const results = await Promise.all(operations);
+      if (results.some((result) => result === false)) {
+        throw new Error('一个或多个本地数据清理操作未完成');
+      }
 
       // 显示成功消息
       toast.success('本地数据已清除');

@@ -8,11 +8,18 @@ import {
   sendPasswordReset,
   firebaseInitError,
 } from '../services/firebase';
-import { SyncEvents, triggerEvent, shouldSyncOnLogin, initialSync } from '../services/syncService';
+import {
+  SyncEvents,
+  cancelDelayedSync,
+  triggerEvent,
+  shouldSyncOnLogin,
+  initialSync,
+} from '../services/syncService';
 import { toast } from 'react-toastify';
 import { saveSyncStatus, getLocalUser, saveLocalUser, getNetworkStatus } from '../services/storage';
 import useFirebaseStatus from '../hooks/useFirebaseStatus';
 import logger from '../utils/logger.js';
+import { setStorageScope } from '../services/storage';
 
 const createLocalPasswordSalt = () => {
   const bytes = new Uint8Array(16);
@@ -84,6 +91,7 @@ export const AuthProvider = ({ children }) => {
 
         // 保存本地用户
         await saveLocalUser(localUser);
+        setStorageScope(localUser);
         setCurrentUser(localUser);
         return { success: true, user: localUser };
       } catch (err) {
@@ -127,6 +135,7 @@ export const AuthProvider = ({ children }) => {
           (await hashLocalPassword(password, localUser.passwordSalt)) === localUser.passwordHash;
 
         if (localUser && localUser.email === email && passwordMatches) {
+          setStorageScope(localUser);
           setCurrentUser(localUser);
           return { success: true, user: localUser };
         }
@@ -182,8 +191,10 @@ export const AuthProvider = ({ children }) => {
 
   // 退出登录
   const signOut = async () => {
+    cancelDelayedSync();
     // 如果是本地用户，直接清除
     if (currentUser?.isLocal) {
+      setStorageScope(null);
       setCurrentUser(null);
       toast.info('您已退出本地账户');
       return { success: true };
@@ -316,6 +327,8 @@ export const AuthProvider = ({ children }) => {
     }
 
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      cancelDelayedSync();
+      setStorageScope(user);
       setCurrentUser(user);
       setLoading(false);
 

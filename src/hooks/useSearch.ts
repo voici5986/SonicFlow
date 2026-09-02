@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 import { searchMusic } from '../services/musicApiService';
 import type { Track } from '../types';
 import logger from '../utils/logger';
+import { getTrackKey } from '../utils/trackIdentity';
 import {
   handleError,
   ErrorTypes,
@@ -71,13 +72,10 @@ const searchInitialState: SearchState = {
   activeSource: 'netease',
 };
 
-const getTrackKey = (track: Track, index: number): string =>
-  `${track?.source || 'unknown'}:${track?.id || index}`;
-
 const dedupeSearchResults = (results: Track[]): Track[] => {
   const existingKeys = new Set<string>();
   return results.filter((track, index) => {
-    const key = getTrackKey(track, index);
+    const key = track?.id == null ? `unknown:${index}` : getTrackKey(track);
     if (existingKeys.has(key)) return false;
     existingKeys.add(key);
     return true;
@@ -132,6 +130,7 @@ const useSearch = (isOnline: boolean): UseSearchResult => {
   const { query, results, source, loading, loadingMore, page, hasMore, activeQuery, activeSource } =
     state;
   const lastLoadMoreAtRef = useRef(0);
+  const searchRequestIdRef = useRef(0);
 
   const handleSearch = useCallback(
     async (event?: { preventDefault(): void } | null, nextQuery?: string, nextSource?: string) => {
@@ -139,6 +138,7 @@ const useSearch = (isOnline: boolean): UseSearchResult => {
 
       const searchQuery = (nextQuery ?? query).trim();
       const searchSource = nextSource ?? source;
+      const requestId = ++searchRequestIdRef.current;
 
       if (!checkNetworkStatus(isOnline, '搜索音乐')) return;
       if (!validateSearchParams(searchQuery)) return;
@@ -151,6 +151,7 @@ const useSearch = (isOnline: boolean): UseSearchResult => {
           SEARCH_PAGE_SIZE,
           1
         )) as Track[];
+        if (requestId !== searchRequestIdRef.current) return;
         const resultsWithoutCovers = searchResults.map((track) => ({ ...track }));
 
         dispatch({
@@ -173,6 +174,7 @@ const useSearch = (isOnline: boolean): UseSearchResult => {
           logger.error('添加搜索历史失败:', error);
         }
       } catch (error) {
+        if (requestId !== searchRequestIdRef.current) return;
         dispatch({ type: 'SEARCH_FAILURE', payload: error });
         handleError(toError(error), ErrorTypes.SEARCH, ErrorSeverity.ERROR, '搜索失败，请重试');
       }
@@ -189,6 +191,7 @@ const useSearch = (isOnline: boolean): UseSearchResult => {
     lastLoadMoreAtRef.current = now;
 
     const nextPage = page + 1;
+    const requestId = searchRequestIdRef.current;
     dispatch({ type: 'LOAD_MORE_START' });
 
     try {
@@ -198,6 +201,7 @@ const useSearch = (isOnline: boolean): UseSearchResult => {
         SEARCH_PAGE_SIZE,
         nextPage
       )) as Track[];
+      if (requestId !== searchRequestIdRef.current) return;
       const resultsWithoutCovers = searchResults.map((track) => ({ ...track }));
 
       dispatch({
@@ -211,6 +215,7 @@ const useSearch = (isOnline: boolean): UseSearchResult => {
 
       if (resultsWithoutCovers.length === 0) toast.info('没有更多结果了');
     } catch (error) {
+      if (requestId !== searchRequestIdRef.current) return;
       dispatch({ type: 'LOAD_MORE_FAILURE', payload: error });
       handleError(toError(error), ErrorTypes.SEARCH, ErrorSeverity.ERROR, '加载更多失败，请重试');
     }

@@ -11,28 +11,65 @@ const ALLOWED_PATHS = new Set([
   `${SOURCE_PATH_PREFIX}/`,
   `${SOURCE_PATH_PREFIX}${TARGET_PATH_ACTUAL}`,
 ]);
+const ALLOWED_QUERY_KEYS = new Set([
+  'types',
+  'source',
+  'name',
+  'count',
+  'pages',
+  'id',
+  'br',
+  'size',
+]);
+const ALLOWED_TYPES = new Set(['search', 'url', 'lyric', 'pic']);
+const ALLOWED_SOURCES = new Set(['netease', 'kuwo', 'joox', 'bilibili', 'ytmusic']);
+const ALLOWED_BITRATES = new Set(['128', '192', '320', '740', '999']);
 
-// 在 Cloudflare Pages 环境变量中配置站点域名（如 https://otonei.com）以收紧 CORS；留空则反射请求 Origin
-const ALLOWED_ORIGIN = '';
-
-const getCorsHeaders = (request) => {
-  const requestOrigin = request.headers.get('origin');
-  const allowOrigin = ALLOWED_ORIGIN || requestOrigin || '*';
-  return {
-    'Access-Control-Allow-Origin': allowOrigin,
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    ...(ALLOWED_ORIGIN ? { 'Access-Control-Allow-Credentials': 'true' } : {}),
-  };
+const isIntegerInRange = (value, min, max) => {
+  if (!/^\d+$/.test(value || '')) return false;
+  const number = Number(value);
+  return Number.isSafeInteger(number) && number >= min && number <= max;
 };
 
-const jsonResponse = (body, status, request) =>
+const validateQuery = (searchParams) => {
+  for (const key of searchParams.keys()) {
+    if (!ALLOWED_QUERY_KEYS.has(key) || searchParams.getAll(key).length !== 1) {
+      return `Unsupported or repeated query parameter: ${key}`;
+    }
+  }
+
+  const type = searchParams.get('types');
+  const source = searchParams.get('source');
+  if (!ALLOWED_TYPES.has(type)) return 'Unsupported request type';
+  if (!ALLOWED_SOURCES.has(source)) return 'Unsupported music source';
+
+  if (type === 'search') {
+    const name = searchParams.get('name')?.trim() || '';
+    if (name.length < 1 || name.length > 100) return 'Invalid search query';
+    if (!isIntegerInRange(searchParams.get('count'), 1, 50)) return 'Invalid result count';
+    if (!isIntegerInRange(searchParams.get('pages'), 1, 100)) return 'Invalid page number';
+  } else {
+    const id = searchParams.get('id') || '';
+    if (id.length < 1 || id.length > 200 || /\s/.test(id)) return 'Invalid track identifier';
+  }
+
+  if (type === 'url' && !ALLOWED_BITRATES.has(searchParams.get('br'))) {
+    return 'Invalid bitrate';
+  }
+  if (type === 'pic' && !isIntegerInRange(searchParams.get('size'), 50, 2000)) {
+    return 'Invalid image size';
+  }
+
+  return null;
+};
+
+const jsonResponse = (body, status) =>
   new Response(JSON.stringify(body), {
     status,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
       'Cache-Control': 'no-store',
-      ...getCorsHeaders(request),
+      'X-Content-Type-Options': 'nosniff',
     },
   });
 
@@ -43,7 +80,7 @@ export async function onRequest(context) {
   if (request.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
-      headers: getCorsHeaders(request),
+      headers: { Allow: 'GET, OPTIONS' },
     });
   }
 
@@ -52,17 +89,17 @@ export async function onRequest(context) {
       status: 405,
       headers: {
         Allow: 'GET, OPTIONS',
-        ...getCorsHeaders(request),
       },
     });
   }
 
   if (!ALLOWED_PATHS.has(url.pathname)) {
-    return jsonResponse(
-      { error: 'Not Found', message: 'Unsupported API proxy path' },
-      404,
-      request
-    );
+    return jsonResponse({ error: 'Not Found', message: 'Unsupported API proxy path' }, 404);
+  }
+
+  const queryError = validateQuery(url.searchParams);
+  if (queryError) {
+    return jsonResponse({ error: 'Bad Request', message: queryError }, 400);
   }
 
   const targetUrlString = `${TARGET_API_BASE}${TARGET_PATH_ACTUAL}${url.search}`;
@@ -89,9 +126,8 @@ export async function onRequest(context) {
     });
 
     const responseHeaders = new Headers(response.headers);
-    Object.entries(getCorsHeaders(request)).forEach(([key, value]) =>
-      responseHeaders.set(key, value)
-    );
+    responseHeaders.delete('Access-Control-Allow-Origin');
+    responseHeaders.delete('Access-Control-Allow-Credentials');
     responseHeaders.set('Cache-Control', 'no-store');
     responseHeaders.set('X-Content-Type-Options', 'nosniff');
     responseHeaders.delete('X-Powered-By');
@@ -103,6 +139,6 @@ export async function onRequest(context) {
       headers: responseHeaders,
     });
   } catch (error) {
-    return jsonResponse({ error: 'Proxy Fetch Failed', message: error.message }, 502, request);
+    return jsonResponse({ error: 'Proxy Fetch Failed', message: error.message }, 502);
   }
 }

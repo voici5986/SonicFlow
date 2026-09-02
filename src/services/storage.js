@@ -1,5 +1,53 @@
 import localforage from 'localforage';
 import logger from '../utils/logger.js';
+import { getTrackKey, normalizeTrackIdentity } from '../utils/trackIdentity';
+
+const GUEST_SCOPE = 'guest';
+let activeDataScope = GUEST_SCOPE;
+
+const toDataScope = (userId) => (userId ? `user:${String(userId)}` : GUEST_SCOPE);
+const scopedKey = (baseKey, userId) =>
+  `${baseKey}:${userId === undefined ? activeDataScope : toDataScope(userId)}`;
+
+export const setStorageScope = (user) => {
+  activeDataScope = toDataScope(user?.uid);
+  return activeDataScope;
+};
+
+const getScopedItem = async (store, baseKey, userId) => {
+  const key = scopedKey(baseKey, userId);
+  const scopedValue = await store.getItem(key);
+  if (scopedValue != null) return scopedValue;
+
+  // Legacy unscoped data cannot safely be assigned to an authenticated account.
+  // Preserve it under the guest namespace so upgrades do not leak it across users.
+  if ((userId === undefined ? activeDataScope : toDataScope(userId)) === GUEST_SCOPE) {
+    const legacyValue = await store.getItem(baseKey);
+    if (legacyValue != null) {
+      await store.setItem(key, legacyValue);
+      await store.removeItem(baseKey);
+      return legacyValue;
+    }
+  }
+
+  return null;
+};
+
+const getScopedSyncValue = async (baseKey, userId) => {
+  const key = scopedKey(baseKey, userId);
+  const value = await syncStore.getItem(key);
+  if (value != null) return value;
+
+  if ((userId === undefined ? activeDataScope : toDataScope(userId)) === GUEST_SCOPE) {
+    const legacyValue = await syncStore.getItem(baseKey);
+    if (legacyValue != null) {
+      await syncStore.setItem(key, legacyValue);
+      await syncStore.removeItem(baseKey);
+      return legacyValue;
+    }
+  }
+  return null;
+};
 
 // 配置并创建不同数据类型的存储实例
 const favoritesStore = localforage.createInstance({
@@ -10,6 +58,11 @@ const favoritesStore = localforage.createInstance({
 const historyStore = localforage.createInstance({
   name: 'clMusicApp',
   storeName: 'history',
+});
+
+const favoriteTombstonesStore = localforage.createInstance({
+  name: 'clMusicApp',
+  storeName: 'favoriteTombstones',
 });
 
 // 添加搜索历史存储实例
@@ -146,19 +199,24 @@ export async function clearExpiredCovers(options = {}) {
 // 设置收藏上限为500条
 const MAX_FAVORITES_ITEMS = 500;
 
-export async function getFavorites() {
+export async function getFavoritesStrict(userId) {
+  const data = await getScopedItem(favoritesStore, 'items', userId);
+  return (data || []).map(normalizeTrackIdentity);
+}
+
+export async function getFavorites(userId) {
   try {
-    const data = await favoritesStore.getItem('items');
-    return data || []; // 如果没有数据，返回空数组
+    return await getFavoritesStrict(userId);
   } catch (error) {
     logger.error('Error getting favorites:', error);
     return [];
   }
 }
 
-export async function saveFavorites(favoritesArray) {
+export async function saveFavorites(favoritesArray, userId) {
   try {
-    await favoritesStore.setItem('items', favoritesArray);
+    const normalizedFavorites = favoritesArray.map(normalizeTrackIdentity);
+    await favoritesStore.setItem(scopedKey('items', userId), normalizedFavorites);
     return true;
   } catch (error) {
     logger.error('保存收藏列表失败:', error);
@@ -167,14 +225,42 @@ export async function saveFavorites(favoritesArray) {
 }
 
 // 添加或移除收藏
-export async function toggleFavorite(track) {
-  const favorites = await getFavorites();
-  const index = favorites.findIndex((item) => item.id === track.id);
+export async function getFavoriteTombstones(userId) {
+  try {
+    const tombstones = (await getScopedItem(favoriteTombstonesStore, 'items', userId)) || [];
+    return tombstones.map(normalizeTrackIdentity);
+  } catch (error) {
+    logger.error('获取收藏删除标记失败:', error);
+    throw error;
+  }
+}
+
+export async function saveFavoriteTombstones(tombstones, userId) {
+  await favoriteTombstonesStore.setItem(scopedKey('items', userId), tombstones);
+  return true;
+}
+
+export async function toggleFavorite(track, userId) {
+  const normalizedTrack = normalizeTrackIdentity(track);
+  const trackKey = getTrackKey(normalizedTrack);
+  const favorites = await getFavoritesStrict(userId);
+  const index = favorites.findIndex((item) => getTrackKey(item) === trackKey);
 
   if (index > -1) {
     // 已收藏，则移除
     favorites.splice(index, 1);
-    await saveFavorites(favorites);
+    const modifiedAt = Date.now();
+    const favoritesSaved = await saveFavorites(favorites, userId);
+    if (!favoritesSaved) throw new Error('保存收藏列表失败');
+    const tombstones = await getFavoriteTombstones(userId);
+    const remainingTombstones = tombstones.filter((item) => getTrackKey(item) !== trackKey);
+    remainingTombstones.unshift({
+      id: normalizedTrack.id,
+      source: normalizedTrack.source,
+      modifiedAt,
+      deletedAt: modifiedAt,
+    });
+    await saveFavoriteTombstones(remainingTombstones, userId);
     return { added: false, full: false };
   } else {
     // 检查是否已达到上限
@@ -183,11 +269,17 @@ export async function toggleFavorite(track) {
     }
     // 未收藏，则添加到列表开头，并添加修改时间戳
     const trackWithTimestamp = {
-      ...track,
+      ...normalizedTrack,
       modifiedAt: Date.now(), // 添加修改时间戳
     };
     favorites.unshift(trackWithTimestamp);
-    await saveFavorites(favorites);
+    const favoritesSaved = await saveFavorites(favorites, userId);
+    if (!favoritesSaved) throw new Error('保存收藏列表失败');
+    const tombstones = await getFavoriteTombstones(userId);
+    await saveFavoriteTombstones(
+      tombstones.filter((item) => getTrackKey(item) !== trackKey),
+      userId
+    );
     return { added: true, full: false };
   }
 }
@@ -279,9 +371,9 @@ const MAX_SEARCH_HISTORY_ITEMS = 20; // 搜索历史记录数量
  * @param {Object} store - 存储实例
  * @returns {Promise<Array>} - 历史记录数组
  */
-async function getHistoryGeneric(store) {
+async function getHistoryGeneric(store, userId) {
   try {
-    const data = await store.getItem('items');
+    const data = await getScopedItem(store, 'items', userId);
     return data || [];
   } catch (error) {
     logger.error('Error getting history:', error);
@@ -296,11 +388,11 @@ async function getHistoryGeneric(store) {
  * @param {number} maxItems - 最大记录数
  * @returns {Promise<boolean>} - 是否成功
  */
-async function saveHistoryGeneric(store, historyArray, maxItems) {
+async function saveHistoryGeneric(store, historyArray, maxItems, userId) {
   try {
     // 确保历史记录不超过最大数量
     const limitedHistory = historyArray.slice(0, maxItems);
-    await store.setItem('items', limitedHistory);
+    await store.setItem(scopedKey('items', userId), limitedHistory);
     return true;
   } catch (error) {
     logger.error('Error saving history:', error);
@@ -317,9 +409,9 @@ async function saveHistoryGeneric(store, historyArray, maxItems) {
  * @param {Function} createItemFn - 创建新项的函数
  * @returns {Promise<boolean>} - 是否成功
  */
-async function addToHistoryGeneric(store, item, maxItems, findExistingFn, createItemFn) {
+async function addToHistoryGeneric(store, item, maxItems, findExistingFn, createItemFn, userId) {
   try {
-    const history = await getHistoryGeneric(store);
+    const history = await getHistoryGeneric(store, userId);
 
     // 检查是否已经存在
     const existingIndex = history.findIndex(findExistingFn);
@@ -337,7 +429,7 @@ async function addToHistoryGeneric(store, item, maxItems, findExistingFn, create
       history.length = maxItems; // 直接截断数组
     }
 
-    return await saveHistoryGeneric(store, history, maxItems);
+    return await saveHistoryGeneric(store, history, maxItems, userId);
   } catch (error) {
     logger.error('Error adding to history:', error);
     return false;
@@ -349,9 +441,9 @@ async function addToHistoryGeneric(store, item, maxItems, findExistingFn, create
  * @param {Object} store - 存储实例
  * @returns {Promise<boolean>} - 是否成功
  */
-async function clearHistoryGeneric(store) {
+async function clearHistoryGeneric(store, userId) {
   try {
-    await store.setItem('items', []);
+    await store.setItem(scopedKey('items', userId), []);
     return true;
   } catch (error) {
     logger.error('Error clearing history:', error);
@@ -363,37 +455,53 @@ async function clearHistoryGeneric(store) {
  * 播放历史操作
  */
 // 获取播放历史
-export async function getHistory() {
-  return getHistoryGeneric(historyStore);
+export async function getHistory(userId) {
+  try {
+    return await getHistoryStrict(userId);
+  } catch (error) {
+    logger.error('Error getting history:', error);
+    return [];
+  }
+}
+
+export async function getHistoryStrict(userId) {
+  const data = await getScopedItem(historyStore, 'items', userId);
+  return (data || []).map((item) => ({
+    ...item,
+    song: item.song ? normalizeTrackIdentity(item.song) : item.song,
+  }));
 }
 
 // 保存播放历史
-export async function saveHistory(historyArray) {
-  return saveHistoryGeneric(historyStore, historyArray, MAX_HISTORY_ITEMS);
+export async function saveHistory(historyArray, userId) {
+  const normalizedHistory = historyArray.map((item) => ({
+    ...item,
+    song: item.song ? normalizeTrackIdentity(item.song) : item.song,
+  }));
+  return saveHistoryGeneric(historyStore, normalizedHistory, MAX_HISTORY_ITEMS, userId);
 }
 
 // 添加到播放历史
-export async function addToHistory(track) {
-  return addToHistoryGeneric(
-    historyStore,
-    track,
-    MAX_HISTORY_ITEMS,
-    (item) => {
+export async function addToHistory(track, userId) {
+  try {
+    const normalizedTrack = normalizeTrackIdentity(track);
+    const history = await getHistoryStrict(userId);
+    const existingIndex = history.findIndex((item) => {
       const song = item.song || item;
-      return (
-        String(song?.id) === String(track.id) && (song?.source || track.source) === track.source
-      );
-    },
-    (track) => ({
-      timestamp: Date.now(),
-      song: track,
-    })
-  );
+      return song && getTrackKey(song) === getTrackKey(normalizedTrack);
+    });
+    if (existingIndex !== -1) history.splice(existingIndex, 1);
+    history.unshift({ timestamp: Date.now(), song: normalizedTrack });
+    return await saveHistory(history, userId);
+  } catch (error) {
+    logger.error('Error adding to history:', error);
+    return false;
+  }
 }
 
 // 清空播放历史
-export async function clearHistory() {
-  return clearHistoryGeneric(historyStore);
+export async function clearHistory(userId) {
+  return clearHistoryGeneric(historyStore, userId);
 }
 
 /**
@@ -464,10 +572,10 @@ const CHANGES_COUNTER_KEY = 'pending_sync_changes';
 const CHANGES_TIMESTAMP_KEY = 'last_changes_timestamp';
 
 // 获取待同步变更计数
-export async function getPendingSyncChanges() {
+export async function getPendingSyncChanges(userId) {
   try {
-    const counter = await syncStore.getItem(CHANGES_COUNTER_KEY);
-    const timestamp = await syncStore.getItem(CHANGES_TIMESTAMP_KEY);
+    const counter = await getScopedSyncValue(CHANGES_COUNTER_KEY, userId);
+    const timestamp = await getScopedSyncValue(CHANGES_TIMESTAMP_KEY, userId);
     return {
       favorites: counter?.favorites || 0,
       history: counter?.history || 0,
@@ -479,11 +587,22 @@ export async function getPendingSyncChanges() {
   }
 }
 
+// 同步决策使用严格读取，避免存储故障被当作“没有待同步变更”。
+export async function getPendingSyncChangesStrict(userId) {
+  const counter = await getScopedSyncValue(CHANGES_COUNTER_KEY, userId);
+  const timestamp = await getScopedSyncValue(CHANGES_TIMESTAMP_KEY, userId);
+  return {
+    favorites: counter?.favorites || 0,
+    history: counter?.history || 0,
+    timestamp: timestamp || 0,
+  };
+}
+
 // 保存待同步变更计数
-async function savePendingSyncChanges(counter) {
+async function savePendingSyncChanges(counter, userId) {
   try {
-    await syncStore.setItem(CHANGES_COUNTER_KEY, counter);
-    await syncStore.setItem(CHANGES_TIMESTAMP_KEY, Date.now());
+    await syncStore.setItem(scopedKey(CHANGES_COUNTER_KEY, userId), counter);
+    await syncStore.setItem(scopedKey(CHANGES_TIMESTAMP_KEY, userId), Date.now());
     return true;
   } catch (error) {
     logger.error('保存待同步变更计数失败:', error);
@@ -492,15 +611,16 @@ async function savePendingSyncChanges(counter) {
 }
 
 // 增加待同步变更计数
-export async function incrementPendingChanges(type) {
+export async function incrementPendingChanges(type, userId) {
   try {
-    const counter = await getPendingSyncChanges();
+    const counter = await getPendingSyncChangesStrict(userId);
     const newCounter = {
       ...counter,
       [type]: counter[type] + 1,
     };
 
-    await savePendingSyncChanges(newCounter);
+    const saved = await savePendingSyncChanges(newCounter, userId);
+    if (!saved) throw new Error('保存待同步变更计数失败');
     return newCounter;
   } catch (error) {
     logger.error('增加待同步变更计数失败:', error);
@@ -509,10 +629,13 @@ export async function incrementPendingChanges(type) {
 }
 
 // 重置待同步变更计数
-export async function resetPendingChanges() {
+export async function resetPendingChanges(userId) {
   try {
-    await syncStore.setItem(CHANGES_COUNTER_KEY, { favorites: 0, history: 0 });
-    await syncStore.setItem(CHANGES_TIMESTAMP_KEY, Date.now());
+    await syncStore.setItem(scopedKey(CHANGES_COUNTER_KEY, userId), {
+      favorites: 0,
+      history: 0,
+    });
+    await syncStore.setItem(scopedKey(CHANGES_TIMESTAMP_KEY, userId), Date.now());
     return true;
   } catch (error) {
     logger.error('重置待同步变更计数失败:', error);

@@ -122,6 +122,63 @@ describe('useSearch pagination', () => {
     expect(result.current.activeSource).toBe('ytmusic');
   });
 
+  it('keeps the newest search results when an older request finishes last', async () => {
+    let resolveFirst;
+    searchMusic
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveFirst = resolve;
+          })
+      )
+      .mockResolvedValueOnce([{ id: 'new', name: 'New result', source: 'kuwo' }]);
+
+    const { result } = renderHook(() => useSearch(true));
+
+    let firstSearch;
+    act(() => {
+      firstSearch = result.current.handleSearch(null, 'old query', 'netease');
+    });
+    await act(async () => {
+      await result.current.handleSearch(null, 'new query', 'kuwo');
+    });
+
+    await act(async () => {
+      resolveFirst([{ id: 'old', name: 'Old result', source: 'netease' }]);
+      await firstSearch;
+    });
+
+    expect(result.current.activeQuery).toBe('new query');
+    expect(result.current.results).toEqual([{ id: 'new', name: 'New result', source: 'kuwo' }]);
+  });
+
+  it('invalidates an older request even when the newer search is rejected locally', async () => {
+    let resolveFirst;
+    searchMusic.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveFirst = resolve;
+        })
+    );
+    const { result } = renderHook(() => useSearch(true));
+
+    let firstSearch;
+    act(() => {
+      firstSearch = result.current.handleSearch(null, 'old query', 'netease');
+    });
+    validateSearchParams.mockReturnValue(false);
+    await act(async () => {
+      await result.current.handleSearch(null, '', 'netease');
+    });
+    await act(async () => {
+      resolveFirst([{ id: 'old', name: 'Old result', source: 'netease' }]);
+      await firstSearch;
+    });
+
+    expect(result.current.results).toEqual([]);
+    expect(result.current.activeQuery).toBe('');
+  });
+
   it('stops before the API when offline or when the query is invalid', async () => {
     const { result } = renderHook(() => useSearch(true));
 

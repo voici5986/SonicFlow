@@ -46,9 +46,11 @@ import {
   getLocalUser,
   getNetworkStatus,
   getPendingSyncChanges,
+  getPendingSyncChangesStrict,
   getSyncStatus,
   getSearchHistory,
   getCoverFromStorage,
+  getFavoriteTombstones,
   incrementPendingChanges,
   resetPendingChanges,
   saveHistory,
@@ -58,12 +60,14 @@ import {
   saveCoverToStorage,
   saveFavorites,
   saveSyncStatus,
+  setStorageScope,
   toggleFavorite,
 } from '../services/storage';
 
 describe('storage service', () => {
   beforeEach(() => {
     resetStores();
+    setStorageScope(null);
   });
 
   it('persists and toggles favorites with a modification timestamp', async () => {
@@ -76,6 +80,61 @@ describe('storage service', () => {
 
     await expect(toggleFavorite(track)).resolves.toMatchObject({ added: false, full: false });
     await expect(getFavorites()).resolves.toEqual([]);
+  });
+
+  it('keeps same-id tracks from different sources as separate favorites', async () => {
+    await toggleFavorite({ id: '12345', name: 'Netease song', source: 'netease' });
+    await toggleFavorite({ id: '12345', name: 'JOOX song', source: 'joox' });
+
+    await expect(getFavorites()).resolves.toEqual([
+      expect.objectContaining({ id: '12345', source: 'joox' }),
+      expect.objectContaining({ id: '12345', source: 'netease' }),
+    ]);
+  });
+
+  it('does not report a favorite toggle as successful when persistence fails', async () => {
+    const favoritesStore = getStore('favorites');
+    const originalSetItem = favoritesStore.setItem;
+    favoritesStore.setItem = async () => {
+      throw new Error('favorite write failed');
+    };
+
+    await expect(
+      toggleFavorite({ id: 'write-failure', name: 'Song', source: 'netease' })
+    ).rejects.toThrow('保存收藏列表失败');
+    favoritesStore.setItem = originalSetItem;
+  });
+
+  it('records a scoped tombstone when a favorite is removed', async () => {
+    const track = { id: 7, name: 'Song', source: 'netease' };
+    await toggleFavorite(track);
+    await toggleFavorite(track);
+
+    await expect(getFavoriteTombstones()).resolves.toEqual([
+      expect.objectContaining({
+        id: '7',
+        source: 'netease',
+        deletedAt: expect.any(Number),
+        modifiedAt: expect.any(Number),
+      }),
+    ]);
+  });
+
+  it('isolates favorites, history, and pending counters by user scope', async () => {
+    setStorageScope({ uid: 'user-a' });
+    await toggleFavorite({ id: '1', name: 'A', source: 'netease' });
+    await addToHistory({ id: '1', name: 'A', source: 'netease' });
+    await incrementPendingChanges('favorites');
+
+    setStorageScope({ uid: 'user-b' });
+    await expect(getFavorites()).resolves.toEqual([]);
+    await expect(getHistory()).resolves.toEqual([]);
+    await expect(getPendingSyncChanges()).resolves.toMatchObject({ favorites: 0, history: 0 });
+
+    setStorageScope({ uid: 'user-a' });
+    await expect(getFavorites()).resolves.toHaveLength(1);
+    await expect(getHistory()).resolves.toHaveLength(1);
+    await expect(getPendingSyncChanges()).resolves.toMatchObject({ favorites: 1, history: 0 });
   });
 
   it('deduplicates search history case-insensitively and keeps newest first', async () => {
@@ -259,11 +318,12 @@ describe('storage service', () => {
       history: 0,
       timestamp: 0,
     });
+    await expect(getPendingSyncChangesStrict()).rejects.toThrow('sync read failed');
     syncStore.setItem = async () => {
       throw new Error('sync write failed');
     };
     await expect(saveSyncStatus({ loading: false }, 'user-1')).resolves.toBe(false);
-    await expect(incrementPendingChanges('favorites')).resolves.toMatchObject({ favorites: 1 });
+    await expect(incrementPendingChanges('favorites')).resolves.toBeNull();
     await expect(resetPendingChanges()).resolves.toBe(false);
     syncStore.getItem = originalSyncGetItem;
     syncStore.setItem = originalSyncSetItem;

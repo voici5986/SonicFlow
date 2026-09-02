@@ -1,7 +1,6 @@
 import { db, isFirebaseAvailable, checkFirebaseAvailability } from './firebase';
 import {
   doc,
-  updateDoc,
   getDoc,
   setDoc,
   collection,
@@ -9,20 +8,25 @@ import {
   where,
   getDocs,
   writeBatch,
+  runTransaction,
   orderBy,
   limit,
 } from 'firebase/firestore';
 import {
-  getFavorites,
+  getFavoritesStrict,
+  getFavoriteTombstones,
   saveFavorites,
-  getHistory,
+  saveFavoriteTombstones,
+  getHistoryStrict,
   saveHistory,
   MAX_HISTORY_ITEMS,
   getNetworkStatus,
-  getPendingSyncChanges,
+  getPendingSyncChangesStrict,
   resetPendingChanges,
 } from './storage';
 import logger from '../utils/logger.js';
+import { getTrackDocumentId, getTrackKey } from '../utils/trackIdentity';
+import { getTrackArtist } from '../utils/trackFormatter';
 
 // 同步时间戳存储键
 const SYNC_TIMESTAMP_KEY = 'last_sync_timestamp';
@@ -39,11 +43,43 @@ const BATCH_SIZE = 100; // Firestore每批次最多500个操作，我们保守�
 // 定义子集合名称
 const FAVORITES_COLLECTION = 'favorites';
 const HISTORY_COLLECTION = 'history';
+const CLOUD_TRACK_SOURCES = new Set(['netease', 'kuwo', 'joox', 'bilibili', 'ytmusic', 'unknown']);
+
+const boundedText = (value, maxLength) => String(value ?? '').slice(0, maxLength);
+
+const toCloudTrack = (track) => {
+  const source = CLOUD_TRACK_SOURCES.has(track.source) ? track.source : 'unknown';
+  const album = typeof track.album === 'string' ? track.album : track.album?.name;
+  return {
+    id: boundedText(track.id, 200),
+    source,
+    name: boundedText(track.name || '未知歌曲', 300),
+    artist: boundedText(getTrackArtist(track), 300),
+    album: boundedText(album, 300),
+    pic_id: track.pic_id == null ? null : boundedText(track.pic_id, 500),
+    lyric_id: track.lyric_id == null ? null : boundedText(track.lyric_id, 500),
+  };
+};
+
+const toMillis = (value) =>
+  typeof value === 'number' ? value : typeof value?.toMillis === 'function' ? value.toMillis() : 0;
+
+const touchCloudUser = async (userRef, timestamp) =>
+  runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(userRef);
+    const currentTimestamp = snapshot.exists() ? toMillis(snapshot.data()?.lastUpdated) : 0;
+    transaction.set(
+      userRef,
+      { lastUpdated: Math.max(timestamp, currentTimestamp) },
+      { merge: true }
+    );
+  });
 
 // 定义事件类型
 export const SyncEvents = {
   SYNC_STARTED: 'sync_started',
   SYNC_COMPLETED: 'sync_completed',
+  SYNC_SKIPPED: 'sync_skipped',
   SYNC_FAILED: 'sync_failed',
   SYNC_PROGRESS: 'sync_progress',
 };
@@ -116,6 +152,7 @@ const saveLastSyncTime = async (uid, timestamp) => {
     localStorage.setItem(key, timestamp.toString());
   } catch (error) {
     logger.error('保存同步时间戳失败:', error);
+    throw error;
   }
 };
 
@@ -149,13 +186,14 @@ const getUserDocRef = (uid) => {
 /**
  * 获取自上次同步后本地变更的数据
  * @param {number} lastSyncTime 上次同步时间戳
- * @returns {Promise<{favorites: Array, history: Array}>} 本地变更数据
+ * @returns {Promise<{favorites: Array, favoriteTombstones: Array, history: Array}>} 本地变更数据
  */
-const getLocalChangesSince = async (lastSyncTime) => {
+const getLocalChangesSince = async (lastSyncTime, uid) => {
   try {
     // 获取所有本地数据
-    const allFavorites = await getFavorites();
-    const allHistory = await getHistory();
+    const allFavorites = await getFavoritesStrict(uid);
+    const allFavoriteTombstones = await getFavoriteTombstones(uid);
+    const allHistory = await getHistoryStrict(uid);
 
     // 筛选出变更的数据
     // 注意：由于当前数据结构可能没有修改时间戳，我们添加一个检测逻辑
@@ -173,14 +211,22 @@ const getLocalChangesSince = async (lastSyncTime) => {
       return item.timestamp > lastSyncTime;
     });
 
+    const changedFavoriteTombstones = allFavoriteTombstones.filter(
+      (item) => item.modifiedAt > lastSyncTime
+    );
+
     return {
       favorites: changedFavorites,
+      favoriteTombstones: changedFavoriteTombstones,
       history: changedHistory,
-      hasChanges: changedFavorites.length > 0 || changedHistory.length > 0,
+      hasChanges:
+        changedFavorites.length > 0 ||
+        changedFavoriteTombstones.length > 0 ||
+        changedHistory.length > 0,
     };
   } catch (error) {
     logger.error('获取本地变更数据失败:', error);
-    return { favorites: [], history: [], hasChanges: false };
+    throw error;
   }
 };
 
@@ -262,9 +308,9 @@ const incrementalSyncWithSubcollections = async (uid) => {
     });
 
     // 获取本地变更数据
-    const localChanges = await getLocalChangesSince(lastSyncTime);
+    const localChanges = await getLocalChangesSince(lastSyncTime, uid);
     logger.log(
-      `本地变更: 收藏=${localChanges.favorites.length}条, 历史=${localChanges.history.length}条`
+      `本地变更: 收藏=${localChanges.favorites.length}条, 删除=${localChanges.favoriteTombstones.length}条, 历史=${localChanges.history.length}条`
     );
 
     // 获取用户文档
@@ -335,15 +381,43 @@ const incrementalSyncWithSubcollections = async (uid) => {
     });
 
     // 同步收藏数据 - 本地到云端
-    if (localChanges.favorites.length > 0) {
-      logger.log(`同步${localChanges.favorites.length}条本地收藏到云端...`);
-      await saveCloudFavoritesToSubcollection(uid, localChanges.favorites);
+    const cloudFavoritesByKey = new Map();
+    cloudFavorites.forEach((item) => {
+      const itemKey = getTrackKey(item);
+      const existing = cloudFavoritesByKey.get(itemKey);
+      if (!existing || (item.modifiedAt || 0) > (existing.modifiedAt || 0)) {
+        cloudFavoritesByKey.set(itemKey, item);
+      }
+    });
+    const localFavoriteChangesToUpload = [
+      ...localChanges.favorites,
+      ...localChanges.favoriteTombstones,
+    ].filter((item) => {
+      const cloudItem = cloudFavoritesByKey.get(getTrackKey(item));
+      return !cloudItem || (item.modifiedAt || 0) > (cloudItem.modifiedAt || 0);
+    });
+
+    if (localFavoriteChangesToUpload.length > 0) {
+      logger.log(`同步${localFavoriteChangesToUpload.length}条本地收藏变更到云端...`);
+      await saveCloudFavoritesToSubcollection(uid, localFavoriteChangesToUpload);
     }
 
     // 同步历史记录 - 本地到云端
-    if (localChanges.history.length > 0) {
-      logger.log(`同步${localChanges.history.length}条本地历史记录到云端...`);
-      await saveCloudHistoryToSubcollection(uid, localChanges.history);
+    const cloudHistoryByKey = new Map();
+    cloudHistory.forEach((item) => {
+      if (!item.song) return;
+      const itemKey = getTrackKey(item.song);
+      const existing = cloudHistoryByKey.get(itemKey);
+      if (!existing || item.timestamp > existing.timestamp) cloudHistoryByKey.set(itemKey, item);
+    });
+    const localHistoryToUpload = localChanges.history.filter((item) => {
+      const cloudItem = item.song ? cloudHistoryByKey.get(getTrackKey(item.song)) : null;
+      return !cloudItem || item.timestamp > cloudItem.timestamp;
+    });
+
+    if (localHistoryToUpload.length > 0) {
+      logger.log(`同步${localHistoryToUpload.length}条本地历史记录到云端...`);
+      await saveCloudHistoryToSubcollection(uid, localHistoryToUpload);
     }
 
     // 触发同步进度事件
@@ -355,18 +429,21 @@ const incrementalSyncWithSubcollections = async (uid) => {
     });
 
     // 如果有云端数据变更，更新本地数据
-    let localDataUpdated = false;
+    let localFavoritesUpdated = false;
 
     // 处理云端收藏变更
     if (cloudFavorites.length > 0) {
       // 获取所有本地收藏
-      const allLocalFavorites = await getFavorites();
+      const allLocalFavorites = await getFavoritesStrict(uid);
+      const allLocalTombstones = await getFavoriteTombstones(uid);
       const favoritesMap = new Map();
+      const tombstonesMap = new Map();
 
       // 添加所有本地收藏到Map
       allLocalFavorites.forEach((item) => {
-        favoritesMap.set(item.id, item);
+        favoritesMap.set(getTrackKey(item), item);
       });
+      allLocalTombstones.forEach((item) => tombstonesMap.set(getTrackKey(item), item));
 
       // 更新/添加云端变更的收藏
       cloudFavorites.forEach((item) => {
@@ -374,7 +451,24 @@ const incrementalSyncWithSubcollections = async (uid) => {
         const itemData = { ...item };
         delete itemData.docId;
 
-        const existingItem = favoritesMap.get(item.id);
+        const itemKey = getTrackKey(item);
+        const existingItem = favoritesMap.get(itemKey);
+        const existingTombstone = tombstonesMap.get(itemKey);
+
+        if (item.deletedAt) {
+          if (!existingTombstone || item.modifiedAt > existingTombstone.modifiedAt) {
+            tombstonesMap.set(itemKey, itemData);
+          }
+          if (!existingItem || item.modifiedAt >= (existingItem.modifiedAt || 0)) {
+            favoritesMap.delete(itemKey);
+            localFavoritesUpdated = true;
+          }
+          return;
+        }
+
+        if (existingTombstone && existingTombstone.modifiedAt >= (item.modifiedAt || 0)) {
+          return;
+        }
 
         // 如果本地没有该项，或者云端项更新，则使用云端项
         if (
@@ -382,29 +476,33 @@ const incrementalSyncWithSubcollections = async (uid) => {
           (item.modifiedAt &&
             (!existingItem.modifiedAt || item.modifiedAt > existingItem.modifiedAt))
         ) {
-          favoritesMap.set(item.id, itemData);
-          localDataUpdated = true;
+          favoritesMap.set(itemKey, existingItem ? { ...existingItem, ...itemData } : itemData);
+          tombstonesMap.delete(itemKey);
+          localFavoritesUpdated = true;
         }
       });
 
       // 转换回数组并保存
-      if (localDataUpdated) {
+      if (localFavoritesUpdated) {
         const mergedFavorites = Array.from(favoritesMap.values());
-        await saveFavorites(mergedFavorites);
+        const favoritesSaved = await saveFavorites(mergedFavorites, uid);
+        if (!favoritesSaved) throw new Error('保存本地收藏失败');
+        await saveFavoriteTombstones(Array.from(tombstonesMap.values()), uid);
         logger.log(`已更新本地收藏数据，总数: ${mergedFavorites.length}条`);
       }
     }
 
     // 处理云端历史记录变更
     if (cloudHistory.length > 0) {
+      let localHistoryUpdated = false;
       // 获取所有本地历史记录
-      const allLocalHistory = await getHistory();
+      const allLocalHistory = await getHistoryStrict(uid);
       const historyMap = new Map();
 
       // 添加所有本地历史记录到Map，键为歌曲ID
       allLocalHistory.forEach((item) => {
         if (item.song && item.song.id) {
-          historyMap.set(item.song.id, item);
+          historyMap.set(getTrackKey(item.song), item);
         }
       });
 
@@ -415,23 +513,34 @@ const incrementalSyncWithSubcollections = async (uid) => {
         delete itemData.docId;
 
         if (item.song && item.song.id) {
-          const existingItem = historyMap.get(item.song.id);
+          const itemKey = getTrackKey(item.song);
+          const existingItem = historyMap.get(itemKey);
 
           // 如果本地没有该项，或者云端项更新，则使用云端项
           if (!existingItem || item.timestamp > existingItem.timestamp) {
-            historyMap.set(item.song.id, itemData);
-            localDataUpdated = true;
+            historyMap.set(
+              itemKey,
+              existingItem
+                ? {
+                    ...existingItem,
+                    ...itemData,
+                    song: { ...existingItem.song, ...itemData.song },
+                  }
+                : itemData
+            );
+            localHistoryUpdated = true;
           }
         }
       });
 
       // 转换回数组，按时间戳排序，并保存
-      if (localDataUpdated) {
+      if (localHistoryUpdated) {
         const mergedHistory = Array.from(historyMap.values())
           .sort((a, b) => b.timestamp - a.timestamp)
           .slice(0, MAX_HISTORY_ITEMS); // 限制数量
 
-        await saveHistory(mergedHistory);
+        const historySaved = await saveHistory(mergedHistory, uid);
+        if (!historySaved) throw new Error('保存本地历史失败');
         logger.log(`已更新本地历史记录，总数: ${mergedHistory.length}条`);
       }
     }
@@ -450,6 +559,7 @@ const incrementalSyncWithSubcollections = async (uid) => {
         cloudFavorites: cloudFavorites.length,
         cloudHistory: cloudHistory.length,
         localFavorites: localChanges.favorites.length,
+        localFavoriteDeletions: localChanges.favoriteTombstones.length,
         localHistory: localChanges.history.length,
       },
     });
@@ -459,6 +569,7 @@ const incrementalSyncWithSubcollections = async (uid) => {
       cloudFavorites: cloudFavorites.length,
       cloudHistory: cloudHistory.length,
       localFavorites: localChanges.favorites.length,
+      localFavoriteDeletions: localChanges.favoriteTombstones.length,
       localHistory: localChanges.history.length,
     };
   } catch (error) {
@@ -544,17 +655,9 @@ export const initialSync = async (uid) => {
     // 直接调用增量同步
     const result = await incrementalSyncWithSubcollections(uid);
 
-    // 如果没有变化，也算成功
+    // 增量同步已经发送完成事件，这里不再重复发送。
     if (result.unchanged) {
       logger.log('初始同步：没有变化需要同步');
-
-      // 触发同步完成事件（虽然incrementalSync中已触发，但这里再次触发，带上更多上下文）
-      triggerEvent(SyncEvents.SYNC_COMPLETED, {
-        uid,
-        timestamp: Date.now(),
-        syncType: 'initial',
-        result: { success: true, unchanged: true },
-      });
 
       return {
         success: true,
@@ -598,7 +701,7 @@ export const shouldSyncOnLogin = async (uid) => {
     const lastSyncTime = await getLastSyncTime(uid);
 
     // 获取本地变更数据
-    const localChanges = await getLocalChangesSince(lastSyncTime);
+    const localChanges = await getLocalChangesSince(lastSyncTime, uid);
     const hasLocalChanges = localChanges.hasChanges;
 
     // 检查云端是否有更新
@@ -640,11 +743,16 @@ export const shouldSyncOnLogin = async (uid) => {
  * @param {string} type 变更类型 'favorites' | 'history'
  * @returns {Promise<void>}
  */
+export const cancelDelayedSync = () => {
+  if (!delayedSyncTimer) return false;
+  clearTimeout(delayedSyncTimer);
+  delayedSyncTimer = null;
+  return true;
+};
+
 export const triggerDelayedSync = async (uid) => {
   // 如果已经有一个延迟同步定时器，取消它
-  if (delayedSyncTimer) {
-    clearTimeout(delayedSyncTimer);
-  }
+  cancelDelayedSync();
 
   logger.log('设置延迟同步定时器...');
 
@@ -668,7 +776,7 @@ export const triggerDelayedSync = async (uid) => {
       }
 
       // 获取变更计数
-      const changes = await getPendingSyncChanges();
+      const changes = await getPendingSyncChangesStrict(uid);
       logger.log('延迟同步检查变更:', changes);
 
       // 检查是否有足够的变更触发同步
@@ -695,18 +803,8 @@ export const triggerDelayedSync = async (uid) => {
         if (result.success) {
           logger.log('延迟同步成功');
           // 重置变更计数
-          await resetPendingChanges();
-
-          // 触发同步完成事件（即使是跳过的同步也显示为成功）
-          triggerEvent(SyncEvents.SYNC_COMPLETED, {
-            uid,
-            timestamp: Date.now(),
-            syncType: 'delayed',
-            result: {
-              success: true,
-              unchanged: result.unchanged || false, // 传递unchanged标志
-            },
-          });
+          const resetSucceeded = await resetPendingChanges(uid);
+          if (!resetSucceeded) throw new Error('重置待同步变更失败');
         } else {
           logger.warn('延迟同步失败:', result.error);
 
@@ -721,17 +819,11 @@ export const triggerDelayedSync = async (uid) => {
       } else {
         logger.log('变更不足，跳过延迟同步');
 
-        // 即使跳过同步，也触发一个"同步成功"事件，类似于无变化的情况
-        const currentTime = Date.now();
-        triggerEvent(SyncEvents.SYNC_COMPLETED, {
+        triggerEvent(SyncEvents.SYNC_SKIPPED, {
           uid,
-          timestamp: currentTime,
+          timestamp: Date.now(),
           syncType: 'delayed',
-          result: {
-            success: true,
-            unchanged: true,
-            reason: '变更不足，跳过同步',
-          },
+          reason: '变更不足，跳过同步',
         });
       }
     } catch (error) {
@@ -784,7 +876,7 @@ const getCloudFavoritesFromSubcollection = async (uid, lastSyncTime = 0) => {
     return favorites;
   } catch (error) {
     logger.error('从子集合获取收藏数据失败:', error);
-    return [];
+    throw error;
   }
 };
 
@@ -831,7 +923,7 @@ const getCloudHistoryFromSubcollection = async (
     return history;
   } catch (error) {
     logger.error('从子集合获取历史记录数据失败:', error);
-    return [];
+    throw error;
   }
 };
 
@@ -847,46 +939,75 @@ const saveCloudFavoritesToSubcollection = async (uid, favorites) => {
     const now = Date.now();
     let modifiedCount = 0;
 
-    // 使用批量写入提高性能
-    // Firestore每批次最多500个操作，我们分批处理
-    for (let i = 0; i < favorites.length; i += BATCH_SIZE) {
-      const batch = writeBatch(db);
-      const chunk = favorites.slice(i, i + BATCH_SIZE);
+    for (const item of favorites) {
+      const itemDocRef = doc(favoritesRef, getTrackDocumentId(item));
+      const itemData = {
+        ...toCloudTrack(item),
+        modifiedAt: item.modifiedAt || now,
+      };
+      if (item.deletedAt) itemData.deletedAt = item.deletedAt;
 
-      for (const item of chunk) {
-        // 使用歌曲ID作为文档ID，确保唯一性
-        const itemDocRef = doc(favoritesRef, item.id.toString());
-
-        // 确保数据有修改时间
-        const itemData = {
-          ...item,
-          modifiedAt: item.modifiedAt || now,
-        };
-
-        // 如果有文档ID属性，删除它，避免存储冗余数据
-        if (itemData.docId) {
-          delete itemData.docId;
+      const written = await runTransaction(db, async (transaction) => {
+        const remoteSnapshot = await transaction.get(itemDocRef);
+        const remoteData = remoteSnapshot.exists() ? remoteSnapshot.data() : null;
+        const remoteModifiedAt = remoteData?.modifiedAt || 0;
+        const shouldWrite =
+          !remoteData ||
+          itemData.modifiedAt > remoteModifiedAt ||
+          (itemData.modifiedAt === remoteModifiedAt &&
+            Boolean(itemData.deletedAt) &&
+            !remoteData.deletedAt);
+        if (!shouldWrite) {
+          return {
+            written: false,
+            conflict:
+              remoteModifiedAt > itemData.modifiedAt ||
+              Boolean(remoteData.deletedAt) !== Boolean(itemData.deletedAt),
+          };
         }
-
-        batch.set(itemDocRef, itemData);
-        modifiedCount++;
-      }
-
-      await batch.commit();
-      logger.log(
-        `保存了收藏批次 ${i / BATCH_SIZE + 1}/${Math.ceil(favorites.length / BATCH_SIZE)}`
-      );
+        transaction.set(itemDocRef, itemData);
+        return { written: true, conflict: false };
+      });
+      if (written.conflict) throw new Error('云端收藏在同步期间已更新，请重试同步');
+      if (written.written) modifiedCount++;
     }
 
     // 更新用户文档的lastUpdated字段
     const userRef = getUserDocRef(uid);
-    await updateDoc(userRef, { lastUpdated: now });
+    await touchCloudUser(userRef, now);
 
     logger.log(`成功保存${modifiedCount}条收藏数据到云端子集合`);
     return { success: true };
   } catch (error) {
     logger.error('保存收藏数据到子集合失败:', error);
-    return { success: false, error };
+    throw error;
+  }
+};
+
+const pruneCloudHistory = async (historyRef) => {
+  const snapshot = await getDocs(query(historyRef, orderBy('timestamp', 'desc')));
+  const documentsToDelete = [];
+  const retainedTrackKeys = new Set();
+  let retainedCount = 0;
+
+  snapshot.forEach((historyDoc) => {
+    const historyItem = historyDoc.data();
+    const trackKey = historyItem.song ? getTrackKey(historyItem.song) : null;
+    if (!trackKey || retainedTrackKeys.has(trackKey) || retainedCount >= MAX_HISTORY_ITEMS) {
+      documentsToDelete.push(historyDoc.id);
+      return;
+    }
+
+    retainedTrackKeys.add(trackKey);
+    retainedCount++;
+  });
+
+  for (let i = 0; i < documentsToDelete.length; i += BATCH_SIZE) {
+    const batch = writeBatch(db);
+    for (const documentId of documentsToDelete.slice(i, i + BATCH_SIZE)) {
+      batch.delete(doc(historyRef, documentId));
+    }
+    await batch.commit();
   }
 };
 
@@ -902,41 +1023,39 @@ const saveCloudHistoryToSubcollection = async (uid, history) => {
     const now = Date.now();
     let modifiedCount = 0;
 
-    // 使用批量写入提高性能
-    for (let i = 0; i < history.length; i += BATCH_SIZE) {
-      const batch = writeBatch(db);
-      const chunk = history.slice(i, i + BATCH_SIZE);
-
-      for (const item of chunk) {
-        // 使用时间戳+歌曲ID作为文档ID，确保唯一性
-        // 即使同一首歌多次播放也会有不同记录
-        const itemId = `${item.timestamp}_${item.song.id}`;
-        const itemDocRef = doc(historyRef, itemId);
-
-        // 如果有文档ID属性，删除它
-        if (item.docId) {
-          delete item.docId;
+    for (const item of history) {
+      const itemDocRef = doc(historyRef, getTrackDocumentId(item.song));
+      const itemData = {
+        timestamp: item.timestamp,
+        song: toCloudTrack(item.song),
+      };
+      const written = await runTransaction(db, async (transaction) => {
+        const remoteSnapshot = await transaction.get(itemDocRef);
+        const remoteData = remoteSnapshot.exists() ? remoteSnapshot.data() : null;
+        if (remoteData && remoteData.timestamp >= itemData.timestamp) {
+          return {
+            written: false,
+            conflict: remoteData.timestamp > itemData.timestamp,
+          };
         }
-
-        batch.set(itemDocRef, item);
-        modifiedCount++;
-      }
-
-      await batch.commit();
-      logger.log(
-        `保存了历史记录批次 ${i / BATCH_SIZE + 1}/${Math.ceil(history.length / BATCH_SIZE)}`
-      );
+        transaction.set(itemDocRef, itemData);
+        return { written: true, conflict: false };
+      });
+      if (written.conflict) throw new Error('云端历史在同步期间已更新，请重试同步');
+      if (written.written) modifiedCount++;
     }
+
+    await pruneCloudHistory(historyRef);
 
     // 更新用户文档的lastUpdated字段
     const userRef = getUserDocRef(uid);
-    await updateDoc(userRef, { lastUpdated: now });
+    await touchCloudUser(userRef, now);
 
     logger.log(`成功保存${modifiedCount}条历史记录到云端子集合`);
     return { success: true };
   } catch (error) {
     logger.error('保存历史记录到子集合失败:', error);
-    return { success: false, error };
+    throw error;
   }
 };
 

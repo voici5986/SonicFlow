@@ -226,8 +226,6 @@ const createUserDocument = async (uid, userData) => {
     if (!docSnap.exists()) {
       await setDoc(userRef, {
         ...userData,
-        favorites: [],
-        history: [],
         createdAt: new Date(),
       });
     }

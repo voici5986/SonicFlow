@@ -8,6 +8,9 @@ import audioStateManager from '../services/audioStateManager';
 import audioEngine from '../services/AudioEngine';
 import '../types';
 import logger from '../utils/logger';
+import { useAuth } from './AuthContext';
+import { incrementPendingChanges } from '../services/storage';
+import { triggerDelayedSync } from '../services/syncService';
 
 const DEFAULT_COVER = '/default_cover.svg';
 const PlayerContext = createContext();
@@ -15,6 +18,7 @@ export const usePlayer = () => useContext(PlayerContext);
 
 export const PlayerProvider = ({ children }) => {
   const { isOnline } = useNetworkStatus();
+  const { currentUser } = useAuth();
   // 状态维护
   const [currentTrack, setCurrentTrack] = useState(null);
   const [playerUrl, setPlayerUrl] = useState('');
@@ -181,7 +185,11 @@ export const PlayerProvider = ({ children }) => {
         }
 
         if (!forceRefresh) {
-          addToHistory(track);
+          const historySaved = await addToHistory(track, currentUser?.uid);
+          if (historySaved && currentUser && !currentUser.isLocal) {
+            await incrementPendingChanges('history', currentUser.uid);
+            void triggerDelayedSync(currentUser.uid);
+          }
         }
 
         // 核心流程：仅请求并补全 500 尺寸的高清封面
@@ -190,7 +198,7 @@ export const PlayerProvider = ({ children }) => {
         logger.error('[PlayerContext] handlePlay error:', error);
       }
     },
-    [isOnline, fetchCover]
+    [isOnline, fetchCover, currentUser]
   );
 
   const handleNext = useCallback(() => {

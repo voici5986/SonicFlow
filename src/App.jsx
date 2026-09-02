@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, Suspense, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 import Navigation from './components/Navigation';
 import DeviceDebugger from './components/DeviceDebugger';
 import OrientationPrompt from './components/OrientationPrompt';
@@ -17,6 +17,7 @@ import useSearch from './hooks/useSearch';
 import SearchResultItem from './components/SearchResultItem';
 import SearchService from './services/SearchService';
 import { getTrackArtist } from './utils/trackFormatter';
+import { getTrackKey } from './utils/trackIdentity';
 // 导入样式文件
 // 已移除旧的 Header.css 引用，样式现在由 Header 组件内部管理
 import './styles/AudioPlayer.css';
@@ -120,16 +121,7 @@ const AppContent = () => {
   const qualities = useMemo(() => [128, 192, 320, 740, 999], []);
 
   // 从PlayerContext获取封面相关方法
-  const { setCurrentPlaylist, handlePlay: playTrack } = usePlayer();
-
-  // 仅当用户主动触发一次新搜索时，才把搜索结果设为播放列表。
-  // 避免从收藏/历史进入播放后，后台 search 结果刷新覆盖了用户当前播放列表（NZ-3）。
-  const searchPlaylistSyncRef = useRef(false);
-  useEffect(() => {
-    if (searchPlaylistSyncRef.current && results && results.length > 0) {
-      setCurrentPlaylist(results);
-    }
-  }, [results, setCurrentPlaylist]);
+  const { handlePlay: playTrack } = usePlayer();
 
   const deviceInfo = useDevice();
 
@@ -203,7 +195,6 @@ const AppContent = () => {
       setQuery(item.rawQuery);
       setSource(item.rawSource);
       setSuggestionsOpen(false);
-      searchPlaylistSyncRef.current = true; // 标记为主动搜索，允许同步播放列表（NZ-3）
       handleSearch(null, item.rawQuery, item.rawSource);
       return;
     }
@@ -283,7 +274,6 @@ const AppContent = () => {
 
   const handleSearchAction = useCallback(
     (e) => {
-      searchPlaylistSyncRef.current = true; // 主动搜索，允许同步播放列表（NZ-3）
       handleSearch(e);
       setSuggestionsOpen(false);
       setSelectedIndex(-1);
@@ -423,7 +413,7 @@ const AppContent = () => {
           <div className={isDesktop ? 'home-results' : ''}>
             <div className={`row g-3 ${isDesktop ? 'home-results-row' : ''}`}>
               {results.map((track) => (
-                <div key={track.id} className="col-12 col-md-6 col-lg-4">
+                <div key={getTrackKey(track)} className="col-12 col-md-6 col-lg-4">
                   <SearchResultItem track={track} searchResults={results} quality={quality} />
                 </div>
               ))}

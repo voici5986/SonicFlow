@@ -92,6 +92,8 @@ pnpm run serve
 
 ## 部署
 
+Cloudflare Pages 是 OTONEI 的主部署目标，安全头、Pages Function 参数校验和 PWA 验收均以该环境为准。Vercel 与 Docker 配置仅作辅助部署入口，不代表 Cloudflare 平台限频或 Pages Function 防护已自动复制过去。
+
 ### Cloudflare Pages
 
 推荐部署到 Cloudflare Pages。项目已包含：
@@ -134,7 +136,15 @@ REACT_APP_API_BASE=/api-v1/api.php
 ### Docker
 
 ```bash
-docker build -t otonei .
+docker build \
+  --build-arg VITE_FIREBASE_API_KEY="$VITE_FIREBASE_API_KEY" \
+  --build-arg VITE_FIREBASE_AUTH_DOMAIN="$VITE_FIREBASE_AUTH_DOMAIN" \
+  --build-arg VITE_FIREBASE_PROJECT_ID="$VITE_FIREBASE_PROJECT_ID" \
+  --build-arg VITE_FIREBASE_STORAGE_BUCKET="$VITE_FIREBASE_STORAGE_BUCKET" \
+  --build-arg VITE_FIREBASE_MESSAGING_SENDER_ID="$VITE_FIREBASE_MESSAGING_SENDER_ID" \
+  --build-arg VITE_FIREBASE_APP_ID="$VITE_FIREBASE_APP_ID" \
+  --build-arg VITE_FIREBASE_MEASUREMENT_ID="$VITE_FIREBASE_MEASUREMENT_ID" \
+  -t otonei .
 docker run -d -p 80:80 --name otonei --restart always otonei
 ```
 
@@ -175,4 +185,10 @@ Oxlint/Oxfmt 现在是正式质量门禁；ESLint/Prettier 配置和依赖已移
 
 ## 许可证
 
-MIT
+OTONEI 自有代码使用 MIT 许可证。
+
+### 第三方资源与服务
+
+- 字体：界面内置使用 MiSans，字体版权归小米科技有限责任公司及相关权利人所有，使用受 [MiSans 字体知识产权许可协议](https://hyperos.mi.com/font-download/MiSans%E5%AD%97%E4%BD%93%E7%9F%A5%E8%AF%86%E4%BA%A7%E6%9D%83%E8%AE%B8%E5%8F%AF%E5%8D%8F%E8%AE%AE.pdf) 约束。
+- 音乐数据：搜索、音频地址、封面和歌词由 [GD 音乐台](https://music.gdstudio.xyz/) API 提供。该服务及音乐内容不属于 OTONEI 的 MIT 许可范围，仅应在对方条款和音乐版权允许的范围内使用。请支持正版音乐。
+- 浏览器内的请求计数只用于正常客户端节流，不是服务端防滥用边界。公开部署应在 Cloudflare WAF / Rate Limiting 中另行为 `/api-v1*` 配置限频。

@@ -1,5 +1,6 @@
 import { getFavorites, getHistory } from './storage';
 import logger from '../utils/logger.js';
+import { getTrackKey } from '../utils/trackIdentity';
 
 /**
  * 本地搜索服务
@@ -33,7 +34,7 @@ const SearchService = {
       const uniqueHistoryMap = new Map();
       historyTracks.forEach((track) => {
         if (!track || !track.id) return;
-        const uniqueKey = `${track.source || 'unknown'}_${track.id}`;
+        const uniqueKey = getTrackKey(track);
         if (!uniqueHistoryMap.has(uniqueKey)) {
           uniqueHistoryMap.set(uniqueKey, track);
         }

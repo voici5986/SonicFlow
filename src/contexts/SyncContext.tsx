@@ -125,11 +125,13 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const lastSync = await getLastSyncTime(currentUser.uid);
-      const localChanges = (await getLocalChangesSince(lastSync)) as {
+      const localChanges = (await getLocalChangesSince(lastSync, currentUser.uid)) as {
         favorites: unknown[];
         history: unknown[];
       };
-      const pendingCounter = (await getPendingSyncChanges()) as PendingChanges | null;
+      const pendingCounter = (await getPendingSyncChanges(
+        currentUser.uid
+      )) as PendingChanges | null;
 
       setPendingChanges({
         favorites: pendingCounter?.favorites ?? localChanges.favorites.length,
@@ -152,7 +154,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       await updateSyncStatus(newStatus);
 
       if (success) {
-        await resetPendingChanges();
+        await resetPendingChanges(currentUser?.uid);
         setPendingChanges({ favorites: 0, history: 0 });
 
         if (currentUser) {
@@ -177,7 +179,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
         const status = (await getSyncStatus(currentUser.uid)) as SyncStatus;
         setSyncStatus(status);
 
-        const changes = (await getPendingSyncChanges()) as PendingChanges | null;
+        const changes = (await getPendingSyncChanges(currentUser.uid)) as PendingChanges | null;
         if (changes) {
           setPendingChanges({ favorites: changes.favorites, history: changes.history });
         }
@@ -208,6 +210,13 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       window.dispatchEvent(new CustomEvent('sync:data_refreshed'));
     };
 
+    const handleSyncSkipped = (value: unknown) => {
+      const data = readSyncEvent(value);
+      if (data.uid !== currentUser?.uid) return;
+      setIsSyncing(false);
+      void updatePendingChanges();
+    };
+
     const handleSyncFailed = (value: unknown) => {
       const data = readSyncEvent(value);
       if (data.uid === currentUser?.uid) void handleSyncComplete(false, data.error || '同步失败');
@@ -216,6 +225,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     if (currentUser && !currentUser.isLocal) {
       addSyncListener(SyncEvents.SYNC_STARTED, handleSyncStarted);
       addSyncListener(SyncEvents.SYNC_COMPLETED, handleSyncCompleted);
+      addSyncListener(SyncEvents.SYNC_SKIPPED, handleSyncSkipped);
       addSyncListener(SyncEvents.SYNC_FAILED, handleSyncFailed);
     }
 
@@ -223,6 +233,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       if (currentUser && !currentUser.isLocal) {
         removeSyncListener(SyncEvents.SYNC_STARTED, handleSyncStarted);
         removeSyncListener(SyncEvents.SYNC_COMPLETED, handleSyncCompleted);
+        removeSyncListener(SyncEvents.SYNC_SKIPPED, handleSyncSkipped);
         removeSyncListener(SyncEvents.SYNC_FAILED, handleSyncFailed);
       }
     };

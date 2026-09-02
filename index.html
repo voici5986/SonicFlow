@@ -17,13 +17,6 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="OTONEI" />
-    <!-- 添加Google Fonts的Montserrat字体 -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
     <title>OTONEI - 跨平台音乐播放器</title>
 
     <!-- PWA启动屏幕样式 -->
@@ -74,28 +67,13 @@
     <div id="splash-screen">
       <div class="splash-container">
         <img src="/logo.svg" class="splash-logo" alt="OTONEI" />
-        <h2
-          style="color: #000000; font-family: 'Montserrat', sans-serif; margin: 0; font-weight: 600"
-        >
+        <h2 style="color: #000000; font-family: 'MiSans', sans-serif; margin: 0; font-weight: 600">
           OTONEI
         </h2>
       </div>
     </div>
 
-    <script>
-      // 隐藏splash屏幕
-      window.addEventListener('load', function () {
-        setTimeout(function () {
-          var splash = document.getElementById('splash-screen');
-          if (splash) {
-            splash.style.opacity = '0';
-            setTimeout(function () {
-              splash.style.display = 'none';
-            }, 300);
-          }
-        }, 1000);
-      });
-    </script>
+    <script src="/splash.js" defer></script>
 
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>

@@ -85,14 +85,15 @@ export default defineConfig({
               },
             },
           },
-          // Google Fonts：重新验证
+          // MiSans 完整可变字体较大，首次使用后再运行时缓存，避免阻塞 PWA 安装。
           {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'StaleWhileRevalidate',
+            urlPattern: ({ url }) =>
+              url.origin === self.location.origin && url.pathname === '/MiSansVF.woff2',
+            handler: 'CacheFirst',
             options: {
-              cacheName: 'google-fonts-cache',
+              cacheName: 'misans-font-cache',
               expiration: {
-                maxEntries: 10,
+                maxEntries: 1,
                 maxAgeSeconds: 60 * 60 * 24 * 365, // 1年
               },
             },

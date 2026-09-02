@@ -27,45 +27,19 @@
 3. 启用以下登录方式：
    - 电子邮件/密码（基本方式）
    - Google（社交登录）
-   - GitHub（社交登录）
 4. 对于Google登录，需要配置OAuth同意屏幕
-5. 对于GitHub登录，需要在GitHub开发者设置中创建OAuth应用
 
 ### 4. 设置Firestore数据库
 
 1. 在左侧导航栏选择"构建 > Firestore Database"
 2. 点击"创建数据库"
-3. 选择"生产模式"或"测试模式"（推荐开发时使用测试模式）
+3. 选择"生产模式"。本地开发需要宽松数据时，请使用 Firebase Emulator，不要在公开项目上部署测试规则。
 4. 选择最近的服务器位置
 5. 点击"启用"
 
 ### 5. 配置数据库规则
 
-在Firestore数据库的"规则"标签页，设置适当的安全规则。例如：
-
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{userId} {
-      // 允许用户读写自己的文档
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-
-      // 允许用户读写自己的收藏子集合
-      match /favorites/{favoriteId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-
-      // 允许用户读写自己的历史记录子集合
-      match /history/{historyId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-    }
-  }
-}
-```
-
-这条规则确保用户只能访问自己的数据。
+将仓库根目录的 `firestore.rules` 部署到 Firestore。该规则同时校验 UID 归属、用户文档字段、收藏/tombstone 结构和历史记录结构。修改同步数据结构时，必须同步更新和验证该规则。
 
 ### 6. 设置环境变量
 
@@ -93,7 +67,7 @@ VITE_FIREBASE_APP_ID=your-app-id
 
 该功能允许用户：
 
-1. **创建账号/登录**：通过邮箱密码注册或使用Google/GitHub账号快速登录
+1. **创建账号/登录**：通过邮箱密码注册或使用 Google 账号快速登录
 2. **数据自动同步**：登录后会自动合并本地和云端的收藏和历史记录
 3. **手动同步控制**：
    - 上传：将本地数据发送到云端
@@ -123,32 +97,25 @@ OTONEI 现在使用增量同步机制，这种方式可以显著减少数据传�
 Firebase存储结构设计：
 
 ```
-/users/{userId}/
+/users/{userId}
   - email: string
   - displayName: string
   - createdAt: timestamp
-  - lastUpdated: timestamp  // 新增：文档最后更新时间
-  - favorites: array of track objects [
-    {
-      id: string,
-      name: string,
-      artist: string,
-      album: string,
-      cover: string,
-      modifiedAt: timestamp  // 新增：项目修改时间
-    }
-  ]
-  - history: array of history items [
-    {
-      song: {
-        id: string,
-        name: string,
-        // 其他歌曲信息
-      },
-      timestamp: number  // 播放时间戳
-    }
-  ]
+  - lastUpdated: timestamp | number
+
+/users/{userId}/favorites/{encodeURIComponent(source:id)}
+  - id: string
+  - source: string
+  - modifiedAt: number
+  - deletedAt: number  // 仅删除 tombstone 存在
+  - ...track fields     // 活动收藏的歌曲字段
+
+/users/{userId}/history/{encodeURIComponent(source:id)}
+  - song: track
+  - timestamp: number
 ```
+
+同一歌曲的历史文档会更新播放时间，而不是每次播放新建文档。收藏删除通过 tombstone 在多设备之间传播。
 
 ## 故障排除
 
@@ -190,6 +157,6 @@ Firebase存储结构设计：
 
 开发过程中，建议：
 
-1. 使用Firestore测试模式，简化权限管理
+1. 使用 Firebase Emulator 测试规则与同步，不要放宽线上规则
 2. 添加多个测试账号测试同步功能
-3. 使用Firebase模拟器进行本地测试
+3. 公开部署可进一步启用 Firebase App Check；这需要先在 Firebase Console 注册 Web 应用和验证提供商，仅修改仓库代码不能完成该步骤。

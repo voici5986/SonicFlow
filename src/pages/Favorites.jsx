@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import MusicCardActions from '../components/MusicCardActions';
 import { getFavorites } from '../services/storage';
 import { toast } from 'react-toastify';
@@ -6,6 +6,7 @@ import { usePlayer } from '../contexts/PlayerContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useDownload } from '../contexts/DownloadContext';
 import logger from '../utils/logger.js';
+import { getTrackKey } from '../utils/trackIdentity';
 import { getTrackArtist } from '../utils/trackFormatter';
 
 const Favorites = ({ globalSearchQuery, onTabChange }) => {
@@ -68,6 +69,8 @@ const Favorites = ({ globalSearchQuery, onTabChange }) => {
 
   // 从AuthContext获取用户状态
   const { currentUser } = useAuth();
+  const activeUserIdRef = useRef(currentUser?.uid);
+  activeUserIdRef.current = currentUser?.uid;
 
   // 从DownloadContext获取下载状态和方法
   const { isTrackDownloading, handleDownload } = useDownload();
@@ -79,21 +82,25 @@ const Favorites = ({ globalSearchQuery, onTabChange }) => {
 
   // 定义loadFavorites函数在useEffect之前
   const loadFavorites = useCallback(async () => {
+    const requestedUserId = currentUser?.uid;
     setLoading(true);
     try {
-      const favItems = await getFavorites();
+      const favItems = await getFavorites(requestedUserId);
+      if (activeUserIdRef.current !== requestedUserId) return;
       setFavorites(favItems);
       setFilteredFavorites(favItems); // 初始化过滤结果
     } catch (error) {
       logger.error('加载收藏失败:', error);
       toast.error('加载收藏失败，请重试', { icon: '⚠️' });
     } finally {
-      setLoading(false);
+      if (activeUserIdRef.current === requestedUserId) setLoading(false);
     }
-  }, []);
+  }, [currentUser?.uid]);
 
   useEffect(() => {
-    loadFavorites();
+    setFavorites([]);
+    setFilteredFavorites([]);
+    void loadFavorites();
   }, [loadFavorites]);
 
   useEffect(() => {
@@ -244,7 +251,9 @@ const Favorites = ({ globalSearchQuery, onTabChange }) => {
   const handleTrackPlay = (track) => {
     logger.log('从收藏播放曲目:', track.id, track.name);
     // 使用当前收藏列表作为播放列表，并找到当前曲目的索引
-    const trackIndex = filteredFavorites.findIndex((item) => item.id === track.id);
+    const trackIndex = filteredFavorites.findIndex(
+      (item) => getTrackKey(item) === getTrackKey(track)
+    );
     handlePlay(track, trackIndex >= 0 ? trackIndex : -1, filteredFavorites);
   };
 
@@ -272,10 +281,10 @@ const Favorites = ({ globalSearchQuery, onTabChange }) => {
         </div>
       ) : (
         <div className="favorites-grid row g-3">
-          {filteredFavorites.map((track, index) => (
-            <div key={`${track.id}-${track.source}-${index}`} className="col-12 col-md-6">
+          {filteredFavorites.map((track) => (
+            <div key={getTrackKey(track)} className="col-12 col-md-6">
               <div
-                className={`music-card ${currentTrack?.id === track.id ? 'is-active' : ''}`}
+                className={`music-card ${currentTrack && getTrackKey(currentTrack) === getTrackKey(track) ? 'is-active' : ''}`}
                 onClick={() => handleTrackPlay(track)}
               >
                 <div className="music-card-row">
@@ -286,7 +295,7 @@ const Favorites = ({ globalSearchQuery, onTabChange }) => {
 
                   <MusicCardActions
                     track={track}
-                    isDownloading={isTrackDownloading(track.id)}
+                    isDownloading={isTrackDownloading(track)}
                     onDownload={handleDownload}
                   />
                 </div>

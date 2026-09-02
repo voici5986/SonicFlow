@@ -5,6 +5,7 @@ import MusicCardActions from './MusicCardActions';
 import logger from '../utils/logger.js';
 import { getTrackArtist } from '../utils/trackFormatter';
 import type { Track } from '../types';
+import { getTrackKey } from '../utils/trackIdentity';
 
 interface SearchPlayerContext {
   handlePlay: (
@@ -37,7 +38,9 @@ const SearchResultItem = ({ track, searchResults, quality }: SearchResultItemPro
 
   const handleTrackPlay = (selectedTrack: Track) => {
     logger.log('从搜索结果播放曲目:', selectedTrack.id, selectedTrack.name, '音质:', activeQuality);
-    const trackIndex = searchResults.findIndex((item) => item.id === selectedTrack.id);
+    const trackIndex = searchResults.findIndex(
+      (item) => getTrackKey(item) === getTrackKey(selectedTrack)
+    );
     void handlePlay(selectedTrack, trackIndex >= 0 ? trackIndex : -1, searchResults, activeQuality);
   };
 
@@ -47,7 +50,7 @@ const SearchResultItem = ({ track, searchResults, quality }: SearchResultItemPro
 
   return (
     <div
-      className={`music-card ${currentTrack?.id === track.id ? 'is-active' : ''}`}
+      className={`music-card ${currentTrack && getTrackKey(currentTrack) === getTrackKey(track) ? 'is-active' : ''}`}
       onClick={() => handleTrackPlay(track)}
     >
       <div className="music-card-row">
@@ -57,7 +60,7 @@ const SearchResultItem = ({ track, searchResults, quality }: SearchResultItemPro
         </div>
         <TypedMusicCardActions
           track={track}
-          isDownloading={isTrackDownloading(track.id)}
+          isDownloading={isTrackDownloading(track)}
           onDownload={onDownloadClick}
         />
       </div>

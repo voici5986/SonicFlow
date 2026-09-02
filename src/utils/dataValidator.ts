@@ -1,4 +1,4 @@
-import type { Track, TrackArtist, TrackId } from '../types';
+import type { Track, TrackArtist } from '../types';
 import { isRecord } from '../types';
 
 const isTrackArtist = (value: unknown): value is TrackArtist => {
@@ -6,10 +6,13 @@ const isTrackArtist = (value: unknown): value is TrackArtist => {
   return Array.isArray(value) && value.every((item) => typeof item === 'string' || isRecord(item));
 };
 
-function normalizeTrackId(value: unknown, fallback: TrackId): TrackId;
-function normalizeTrackId(value: unknown, fallback: null): TrackId | null;
-function normalizeTrackId(value: unknown, fallback: TrackId | null): TrackId | null {
-  return typeof value === 'string' || typeof value === 'number' ? value : fallback;
+function normalizeTrackId(value: unknown, fallback: null): string | null;
+function normalizeTrackId(value: unknown, fallback: null): string | null {
+  return typeof value === 'string' || typeof value === 'number'
+    ? String(value)
+    : fallback == null
+      ? null
+      : fallback;
 }
 
 const normalizeTrackArtist = (value: unknown): TrackArtist =>
@@ -23,12 +26,13 @@ const normalizeAlbum = (value: unknown): string | Record<string, unknown> => {
 const validateTrack = (track: unknown): Track | null => {
   if (!isRecord(track)) return null;
 
-  const fallbackId = `unknown-${Date.now()}-${Math.random()}`;
+  const id = normalizeTrackId(track.id, null);
+  if (!id || !id.trim()) return null;
   const rawName = track.name;
 
   return {
     ...track,
-    id: normalizeTrackId(track.id, fallbackId),
+    id,
     name: typeof rawName === 'string' ? rawName : rawName == null ? '未知歌曲' : String(rawName),
     artist: normalizeTrackArtist(track.artist),
     album: normalizeAlbum(track.album),

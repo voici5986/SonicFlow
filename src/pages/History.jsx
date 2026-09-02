@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getHistory } from '../services/storage';
 import { toast } from 'react-toastify';
 import MusicCardActions from '../components/MusicCardActions';
@@ -7,6 +7,7 @@ import { downloadTrack } from '../services/downloadService';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useAuth } from '../contexts/AuthContext';
 import logger from '../utils/logger.js';
+import { getTrackKey } from '../utils/trackIdentity';
 import { getTrackArtist } from '../utils/trackFormatter';
 
 const getHistoryTrack = (item) => item?.song || item;
@@ -57,33 +58,39 @@ const History = ({ globalSearchQuery, onTabChange }) => {
 
   // 从AuthContext获取用户状态
   const { currentUser } = useAuth();
+  const activeUserIdRef = useRef(currentUser?.uid);
+  activeUserIdRef.current = currentUser?.uid;
 
   // 添加单独的播放处理函数
   const handleTrackPlay = (track) => {
     logger.log('从历史记录播放曲目:', track.id, track.name);
     // 创建纯歌曲列表作为播放列表
     const songsList = filteredHistory.map(getHistoryTrack);
-    const trackIndex = songsList.findIndex((item) => item.id === track.id);
+    const trackIndex = songsList.findIndex((item) => getTrackKey(item) === getTrackKey(track));
     handlePlay(track, trackIndex >= 0 ? trackIndex : -1, songsList);
   };
 
   // 定义loadHistory函数在useEffect之前
   const loadHistory = useCallback(async () => {
+    const requestedUserId = currentUser?.uid;
     setLoading(true);
     try {
-      const historyItems = await getHistory();
+      const historyItems = await getHistory(requestedUserId);
+      if (activeUserIdRef.current !== requestedUserId) return;
       setHistory(historyItems);
       setFilteredHistory(historyItems);
     } catch (error) {
       logger.error('加载历史记录失败:', error);
       toast.error('加载历史记录失败，请重试', { icon: '⚠️' });
     } finally {
-      setLoading(false);
+      if (activeUserIdRef.current === requestedUserId) setLoading(false);
     }
-  }, []);
+  }, [currentUser?.uid]);
 
   useEffect(() => {
-    loadHistory();
+    setHistory([]);
+    setFilteredHistory([]);
+    void loadHistory();
   }, [loadHistory]);
 
   useEffect(() => {
@@ -187,12 +194,12 @@ const History = ({ globalSearchQuery, onTabChange }) => {
         </div>
       ) : (
         <div className="history-grid row g-3">
-          {filteredHistory.map((item, index) => {
+          {filteredHistory.map((item) => {
             const track = getHistoryTrack(item);
             return (
-              <div key={`${track.id}-${index}`} className="col-12 col-md-6">
+              <div key={getTrackKey(track)} className="col-12 col-md-6">
                 <div
-                  className={`music-card ${currentTrack?.id === track.id ? 'is-active' : ''}`}
+                  className={`music-card ${currentTrack && getTrackKey(currentTrack) === getTrackKey(track) ? 'is-active' : ''}`}
                   onClick={() => handleTrackPlay(track)}
                 >
                   <div className="music-card-row">
@@ -208,7 +215,11 @@ const History = ({ globalSearchQuery, onTabChange }) => {
 
                     <MusicCardActions
                       track={track}
-                      isDownloading={downloading && currentDownloadingTrack?.id === track.id}
+                      isDownloading={
+                        downloading &&
+                        currentDownloadingTrack &&
+                        getTrackKey(currentDownloadingTrack) === getTrackKey(track)
+                      }
                       onDownload={handleDownload}
                     />
                   </div>

@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 import { downloadTrack } from '../services/downloadService';
-import type { Track, TrackId } from '../types';
+import type { Track } from '../types';
+import { getTrackKey } from '../utils/trackIdentity';
 import {
   handleError,
   ErrorTypes,
@@ -21,7 +22,7 @@ export interface DownloadContextValue {
   downloading: boolean;
   currentDownloadingTrack: Track | null;
   handleDownload: (track: Track, quality?: number) => Promise<void>;
-  isTrackDownloading: (trackId: TrackId) => boolean;
+  isTrackDownloading: (track: Track) => boolean;
 }
 
 const DownloadContext = createContext<DownloadContextValue | undefined>(undefined);
@@ -60,7 +61,10 @@ export const DownloadProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const isTrackDownloading = useCallback(
-    (trackId: TrackId): boolean => downloading && currentDownloadingTrack?.id === trackId,
+    (track: Track): boolean =>
+      downloading &&
+      currentDownloadingTrack !== null &&
+      getTrackKey(currentDownloadingTrack) === getTrackKey(track),
     [downloading, currentDownloadingTrack]
   );
 

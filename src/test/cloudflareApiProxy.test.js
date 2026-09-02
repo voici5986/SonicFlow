@@ -20,15 +20,17 @@ describe('Cloudflare API proxy', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const response = await onRequest({
-      request: createRequest('/api-v1/api.php?types=search&source=netease'),
+      request: createRequest(
+        '/api-v1/api.php?types=search&source=netease&name=test&count=20&pages=1'
+      ),
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0][0]).toBe(
-      'https://music-api.gdstudio.xyz/api.php?types=search&source=netease'
+      'https://music-api.gdstudio.xyz/api.php?types=search&source=netease&name=test&count=20&pages=1'
     );
     expect(response.status).toBe(200);
-    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
+    expect(response.headers.has('Access-Control-Allow-Origin')).toBe(false);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(response.headers.has('Server')).toBe(false);
   });
@@ -38,11 +40,11 @@ describe('Cloudflare API proxy', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     await onRequest({
-      request: createRequest('/api-v1?types=url&id=1'),
+      request: createRequest('/api-v1?types=url&source=netease&id=1&br=320'),
     });
 
     expect(fetchMock.mock.calls[0][0]).toBe(
-      'https://music-api.gdstudio.xyz/api.php?types=url&id=1'
+      'https://music-api.gdstudio.xyz/api.php?types=url&source=netease&id=1&br=320'
     );
   });
 
@@ -55,6 +57,24 @@ describe('Cloudflare API proxy', () => {
     });
 
     expect(response.status).toBe(404);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects unsupported query shapes before contacting the upstream API', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const invalidType = await onRequest({
+      request: createRequest('/api-v1/api.php?types=admin&source=netease'),
+    });
+    const oversizedPage = await onRequest({
+      request: createRequest(
+        '/api-v1/api.php?types=search&source=netease&name=test&count=20&pages=9999'
+      ),
+    });
+
+    expect(invalidType.status).toBe(400);
+    expect(oversizedPage.status).toBe(400);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

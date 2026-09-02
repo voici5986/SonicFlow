@@ -18,7 +18,7 @@ const DesktopNavbar = ({
 
   // OTONEI标志样式 - 调整更紧凑
   const logoStyle = {
-    fontFamily: "'Montserrat', sans-serif",
+    fontFamily: 'var(--font-family-base)',
     fontWeight: 800,
     fontSize: isSidebar ? '1.4rem' : '1.6rem',
     color: 'var(--color-text-primary)',

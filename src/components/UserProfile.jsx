@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getFavorites, getHistory, saveFavorites } from '../services/storage';
+import {
+  getFavorites,
+  getHistory,
+  incrementPendingChanges,
+  saveFavorites,
+} from '../services/storage';
 import {
   FaHeart,
   FaHistory,
@@ -16,7 +21,7 @@ import {
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { useSync } from '../contexts/SyncContext';
-import { initialSync } from '../services/syncService';
+import { initialSync, triggerDelayedSync } from '../services/syncService';
 import { searchMusic } from '../services/musicApiService';
 import ClearDataButton from './ClearDataButton';
 import AvatarImage from './AvatarImage';
@@ -24,6 +29,7 @@ import '../styles/User.mobile.css';
 import logger from '../utils/logger.js';
 import { env } from '../config/env';
 import { getTrackArtist } from '../utils/trackFormatter';
+import { getTrackKey } from '../utils/trackIdentity';
 
 const UserProfile = ({ onTabChange }) => {
   const { currentUser, signOut } = useAuth();
@@ -41,17 +47,23 @@ const UserProfile = ({ onTabChange }) => {
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = React.useRef(null);
   const syncCooldownTimerRef = React.useRef(null);
+  const activeUserIdRef = React.useRef(currentUser?.uid);
+  activeUserIdRef.current = currentUser?.uid;
 
   // 使用同步上下文
   const { syncStatus, startSync, handleSyncComplete, updatePendingChanges } = useSync();
 
   // 加载收藏和历史记录计数
   const loadCounts = useCallback(async () => {
-    const favorites = await getFavorites();
-    const history = await getHistory();
+    const requestedUserId = currentUser?.uid;
+    const [favorites, history] = await Promise.all([
+      getFavorites(requestedUserId),
+      getHistory(requestedUserId),
+    ]);
+    if (activeUserIdRef.current !== requestedUserId) return;
     setFavoritesCount(favorites.length);
     setHistoryCount(history.length);
-  }, []);
+  }, [currentUser?.uid]);
 
   // 组件挂载时加载数据并监听相关事件
   useEffect(() => {
@@ -290,8 +302,10 @@ const UserProfile = ({ onTabChange }) => {
   const startImport = async () => {
     if (!importData || !importData.favorites || isImporting) return;
     setIsImporting(true);
+    const importUser = currentUser;
+    const importUserId = importUser?.uid;
 
-    const currentFavorites = await getFavorites();
+    const currentFavorites = await getFavorites(importUserId);
     const newFavorites = [...currentFavorites];
     const newStatus = [...importStatus];
     let importedCount = 0;
@@ -302,7 +316,7 @@ const UserProfile = ({ onTabChange }) => {
 
       try {
         const existingByIdIndex = currentFavorites.findIndex(
-          (item) => item.id === track.id && item.source === track.source
+          (item) => getTrackKey(item) === getTrackKey(track)
         );
         if (existingByIdIndex >= 0) {
           newStatus[i] = { status: 'exists', message: '已存在' };
@@ -336,10 +350,10 @@ const UserProfile = ({ onTabChange }) => {
 
         if (matchedTrack) {
           const isDuplicate = newFavorites.some(
-            (item) => item.id === matchedTrack.id && item.source === matchedTrack.source
+            (item) => getTrackKey(item) === getTrackKey(matchedTrack)
           );
           if (!isDuplicate) {
-            newFavorites.unshift(matchedTrack);
+            newFavorites.unshift({ ...matchedTrack, modifiedAt: Date.now() });
             importedCount++;
             newStatus[i] = { status: 'success', message: `匹配: ${matchedTrack.source}` };
           } else {
@@ -356,7 +370,25 @@ const UserProfile = ({ onTabChange }) => {
     }
 
     if (importedCount > 0) {
-      await saveFavorites(newFavorites);
+      if (activeUserIdRef.current !== importUserId) {
+        toast.warning('账号已切换，本次导入未保存');
+        setIsImporting(false);
+        return;
+      }
+      const saved = await saveFavorites(newFavorites, importUserId);
+      if (!saved) {
+        toast.error('保存导入收藏失败，请重试');
+        setIsImporting(false);
+        return;
+      }
+      if (importUserId && !importUser.isLocal) {
+        const pending = await incrementPendingChanges('favorites', importUserId);
+        if (pending) {
+          await triggerDelayedSync(importUserId);
+        } else {
+          toast.warning('收藏已导入本地，但云端同步状态保存失败，请稍后手动同步');
+        }
+      }
       loadCounts();
       window.dispatchEvent(new Event('favorites_changed'));
       toast.success(`成功导入 ${importedCount} 首歌曲`);
