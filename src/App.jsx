@@ -125,6 +125,11 @@ const AppContent = () => {
 
   const deviceInfo = useDevice();
 
+  // React 首次渲染完成后通知 splash 立即消失（splash.js 保留 3s 兜底）
+  useEffect(() => {
+    window.dispatchEvent(new Event('otonei:ready'));
+  }, []);
+
   useEffect(() => {
     const trimmedQuery = query.trim();
     if (!trimmedQuery) {
