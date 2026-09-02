@@ -85,7 +85,6 @@ dev-dist/
 .cache/
 .firebase/
 .netlify/
-.vercel/
 .npm
 .stylelintcache
 

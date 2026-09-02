@@ -390,7 +390,7 @@ try {
 
     Write-Host ""
     Write-Host "=== 正式版本 v$($releaseResult.Version) 发布完成 ===" -ForegroundColor Cyan
-    Write-Host "发布提交和标签已推送到远程仓库。GitHub Actions 将构建多架构 Docker 镜像并推送到 GHCR，Cloudflare Pages 与 Vercel 也会自动触发部署。"
+    Write-Host "发布提交和标签已推送到远程仓库。GitHub Actions 将构建多架构 Docker 镜像并推送到 GHCR，Cloudflare Pages 也会自动触发部署。"
 }
 catch {
     Write-Host ""

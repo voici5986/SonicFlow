@@ -88,11 +88,11 @@ pnpm run serve
 2. semantic-release dry-run 预演并计算下一个版本
 3. 二次确认后更新 `package.json` 与 `CHANGELOG.md`、创建 Git 提交和 Docker 兼容的 `vX.Y.Z`（可带预发布标识、不含 `+build` 元数据）标签并推送
 
-前置要求：PowerShell 7.6+、`main` 分支、Git 工作区干净、自上一标签起存在 `fix`/`feat` 或破坏性变更提交。标签推送后，GitHub Actions 自动构建多架构 Docker 镜像推送到 GHCR，Cloudflare Pages 与 Vercel 自动触发部署。
+前置要求：PowerShell 7.6+、`main` 分支、Git 工作区干净、自上一标签起存在 `fix`/`feat` 或破坏性变更提交。标签推送后，GitHub Actions 自动构建多架构 Docker 镜像推送到 GHCR，Cloudflare Pages 自动触发部署。
 
 ## 部署
 
-Cloudflare Pages 是 OTONEI 的主部署目标，安全头、Pages Function 参数校验和 PWA 验收均以该环境为准。Vercel 与 Docker 配置仅作辅助部署入口，不代表 Cloudflare 平台限频或 Pages Function 防护已自动复制过去。
+Cloudflare Pages 是 OTONEI 的主部署目标，安全头、Pages Function 参数校验和 PWA 验收均以该环境为准。Docker/nginx 配置为自托管部署入口，需自行保证与 Cloudflare 一致的平台限频与函数防护。
 
 ### Cloudflare Pages
 
@@ -124,14 +124,6 @@ PNPM_VERSION=11
 VITE_API_BASE=/api-v1/api.php
 REACT_APP_API_BASE=/api-v1/api.php
 ```
-
-### Vercel
-
-`vercel.json` 已配置：
-
-- `/api-v1` -> `https://music-api.gdstudio.xyz/api.php`
-- `/api-v1/api.php` -> `https://music-api.gdstudio.xyz/api.php`
-- 其他路径回退到 SPA 入口
 
 ### Docker
 

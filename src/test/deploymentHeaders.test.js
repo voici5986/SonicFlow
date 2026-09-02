@@ -5,18 +5,13 @@ import { describe, expect, it } from 'vitest';
 const readRepoFile = (filePath) => readFileSync(resolve(process.cwd(), filePath), 'utf8');
 
 describe('deployment security headers', () => {
-  it('keeps the same CSP on Cloudflare, Vercel, and Nginx', () => {
+  it('keeps the same CSP on Cloudflare and Nginx', () => {
     const cloudflare = readRepoFile('public/_headers').match(/Content-Security-Policy: (.+)/)?.[1];
-    const vercelConfig = JSON.parse(readRepoFile('vercel.json'));
-    const vercel = vercelConfig.headers[0].headers.find(
-      ({ key }) => key === 'Content-Security-Policy'
-    )?.value;
     const nginx = readRepoFile('conf/security-headers.conf').match(
       /add_header Content-Security-Policy "(.+)" always;/
     )?.[1];
 
     expect(cloudflare).toBeTruthy();
-    expect(vercel).toBe(cloudflare);
     expect(nginx).toBe(cloudflare);
   });
 

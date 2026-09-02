@@ -24,7 +24,7 @@ OTONEI 当前主要技术栈：
 - Firebase
 - LocalForage / IndexedDB
 - vite-plugin-pwa
-- Cloudflare Pages / Vercel / Docker 多种部署方式
+- Cloudflare Pages / Docker 两种部署方式
 
 当前质量链大致为：
 
@@ -777,7 +777,6 @@ Firebase
 vite-plugin-pwa
 
 Cloudflare Pages
-Vercel
 Docker / GHCR
 ```
 
