@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import envCompatible from 'vite-plugin-env-compatible';
-import svgr from 'vite-plugin-svgr';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
@@ -17,7 +16,6 @@ export default defineConfig({
       // 仅为兼容旧部署变量保留；业务代码统一通过 src/config/env.ts 读取。
       prefix: 'REACT_APP_',
     }),
-    svgr(),
     VitePWA({
       injectRegister: false,
       registerType: 'prompt', // 使用提示更新策略，避免自动刷新打断用户
