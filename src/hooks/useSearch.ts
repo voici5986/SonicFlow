@@ -131,6 +131,15 @@ const useSearch = (isOnline: boolean): UseSearchResult => {
     state;
   const lastLoadMoreAtRef = useRef(0);
   const searchRequestIdRef = useRef(0);
+  const searchAbortControllerRef = useRef<AbortController | null>(null);
+
+  // 组件卸载时取消在途请求并递增序号，避免卸载后仍 dispatch
+  useEffect(() => {
+    return () => {
+      searchAbortControllerRef.current?.abort();
+      searchRequestIdRef.current += 1;
+    };
+  }, []);
 
   const handleSearch = useCallback(
     async (event?: { preventDefault(): void } | null, nextQuery?: string, nextSource?: string) => {
@@ -138,10 +147,16 @@ const useSearch = (isOnline: boolean): UseSearchResult => {
 
       const searchQuery = (nextQuery ?? query).trim();
       const searchSource = nextSource ?? source;
-      const requestId = ++searchRequestIdRef.current;
 
       if (!checkNetworkStatus(isOnline, '搜索音乐')) return;
       if (!validateSearchParams(searchQuery)) return;
+
+      // 校验通过后才递增请求序号：本地拒绝的“搜索”不应顶掉在途请求（否则 loading 卡死）
+      const requestId = ++searchRequestIdRef.current;
+      // 真正发起新搜索时取消旧 HTTP 请求，及时释放连接并节省 API 配额
+      searchAbortControllerRef.current?.abort();
+      const controller = new AbortController();
+      searchAbortControllerRef.current = controller;
 
       dispatch({ type: 'SEARCH_START' });
       try {
@@ -149,7 +164,8 @@ const useSearch = (isOnline: boolean): UseSearchResult => {
           searchQuery,
           searchSource,
           SEARCH_PAGE_SIZE,
-          1
+          1,
+          controller.signal
         )) as Track[];
         if (requestId !== searchRequestIdRef.current) return;
         const resultsWithoutCovers = searchResults.map((track) => ({ ...track }));
@@ -192,6 +208,10 @@ const useSearch = (isOnline: boolean): UseSearchResult => {
 
     const nextPage = page + 1;
     const requestId = searchRequestIdRef.current;
+    // 复用当前搜索批次的取消信号，被新搜索取代时“加载更多”随之取消
+    const signal = searchAbortControllerRef.current
+      ? searchAbortControllerRef.current.signal
+      : new AbortController().signal;
     dispatch({ type: 'LOAD_MORE_START' });
 
     try {
@@ -199,7 +219,8 @@ const useSearch = (isOnline: boolean): UseSearchResult => {
         activeQuery,
         activeSource,
         SEARCH_PAGE_SIZE,
-        nextPage
+        nextPage,
+        signal
       )) as Track[];
       if (requestId !== searchRequestIdRef.current) return;
       const resultsWithoutCovers = searchResults.map((track) => ({ ...track }));

@@ -43,7 +43,7 @@ const createTracks = (start, count) =>
 
 describe('useSearch pagination', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     checkNetworkStatus.mockReturnValue(true);
     validateSearchParams.mockReturnValue(true);
   });
@@ -63,7 +63,7 @@ describe('useSearch pagination', () => {
       await result.current.handleSearch({ preventDefault: vi.fn() });
     });
 
-    expect(searchMusic).toHaveBeenCalledWith('周杰伦', 'netease', 20, 1);
+    expect(searchMusic).toHaveBeenCalledWith('周杰伦', 'netease', 20, 1, expect.any(AbortSignal));
     expect(result.current.results).toHaveLength(20);
     expect(result.current.hasMore).toBe(true);
 
@@ -71,7 +71,13 @@ describe('useSearch pagination', () => {
       await result.current.handleLoadMore();
     });
 
-    expect(searchMusic).toHaveBeenLastCalledWith('周杰伦', 'netease', 20, 2);
+    expect(searchMusic).toHaveBeenLastCalledWith(
+      '周杰伦',
+      'netease',
+      20,
+      2,
+      expect.any(AbortSignal)
+    );
     expect(result.current.results).toHaveLength(23);
     expect(result.current.hasMore).toBe(false);
     expect(result.current.page).toBe(2);
@@ -117,7 +123,7 @@ describe('useSearch pagination', () => {
       await result.current.handleSearch(null, '  直接搜索  ', 'ytmusic');
     });
 
-    expect(searchMusic).toHaveBeenCalledWith('直接搜索', 'ytmusic', 20, 1);
+    expect(searchMusic).toHaveBeenCalledWith('直接搜索', 'ytmusic', 20, 1, expect.any(AbortSignal));
     expect(result.current.activeQuery).toBe('直接搜索');
     expect(result.current.activeSource).toBe('ytmusic');
   });
@@ -152,7 +158,7 @@ describe('useSearch pagination', () => {
     expect(result.current.results).toEqual([{ id: 'new', name: 'New result', source: 'kuwo' }]);
   });
 
-  it('invalidates an older request even when the newer search is rejected locally', async () => {
+  it('keeps an in-flight search result when a newer search is rejected locally', async () => {
     let resolveFirst;
     searchMusic.mockImplementationOnce(
       () =>
@@ -175,8 +181,32 @@ describe('useSearch pagination', () => {
       await firstSearch;
     });
 
-    expect(result.current.results).toEqual([]);
-    expect(result.current.activeQuery).toBe('');
+    // 本地拒绝的“搜索”不应顶掉在途请求：旧结果照常落地，loading 不卡死
+    expect(result.current.activeQuery).toBe('old query');
+    expect(result.current.results).toEqual([{ id: 'old', name: 'Old result', source: 'netease' }]);
+    expect(result.current.loading).toBe(false);
+  });
+
+  it('passes an abort signal and cancels a superseded search request', async () => {
+    searchMusic.mockResolvedValue([]);
+
+    const { result } = renderHook(() => useSearch(true));
+
+    await act(async () => {
+      await result.current.handleSearch(null, 'query A', 'netease');
+    });
+
+    const firstSignal = searchMusic.mock.calls[0]?.[4];
+    expect(firstSignal).toBeInstanceOf(AbortSignal);
+
+    await act(async () => {
+      await result.current.handleSearch(null, 'query B', 'netease');
+    });
+
+    // 新搜索会 abort 上一个批次的信号
+    expect(firstSignal.aborted).toBe(true);
+    expect(searchMusic.mock.calls[1]?.[4]).toBeInstanceOf(AbortSignal);
+    expect(searchMusic.mock.calls[1]?.[4]).not.toBe(firstSignal);
   });
 
   it('stops before the API when offline or when the query is invalid', async () => {

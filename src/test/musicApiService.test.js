@@ -110,4 +110,32 @@ describe('music API service', () => {
     apiGet.mockRejectedValueOnce(new Error('offline'));
     await expect(forceGetCoverImage('netease', 'missing', 500)).resolves.toBe('default_cover.svg');
   });
+
+  it('rejects when an external abort signal fires', async () => {
+    const controller = new AbortController();
+    apiGet.mockImplementationOnce(
+      (_url, config) =>
+        new Promise((_resolve, reject) => {
+          config?.signal?.addEventListener('abort', () => {
+            const error = new Error('Aborted');
+            error.name = 'AbortError';
+            reject(error);
+          });
+        })
+    );
+
+    const request = searchMusic('song', 'netease', 20, 1, controller.signal);
+    controller.abort();
+    await expect(request).rejects.toThrow('搜索请求超时，请稍后重试');
+  });
+
+  it('does not hang when the external signal is already aborted', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    apiGet.mockRejectedValueOnce(Object.assign(new Error('Aborted'), { name: 'AbortError' }));
+
+    await expect(searchMusic('song', 'netease', 20, 1, controller.signal)).rejects.toThrow(
+      '搜索请求超时，请稍后重试'
+    );
+  });
 });

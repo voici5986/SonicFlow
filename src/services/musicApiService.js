@@ -47,9 +47,10 @@ const releaseCoverSlot = () => {
  * @param {string} source - 音乐源
  * @param {number} count - 结果数量
  * @param {number} page - 页码
+ * @param {AbortSignal} [signal] - 可选的外部取消信号（如新的搜索取代旧搜索）
  * @returns {Promise<Object>} - 搜索结果
  */
-export const searchMusic = async (query, source, count = 20, page = 1) => {
+export const searchMusic = async (query, source, count = 20, page = 1, signal) => {
   try {
     // 生成缓存键
     const cacheKey = `${query}_${source}_${count}_${page}`;
@@ -66,6 +67,14 @@ export const searchMusic = async (query, source, count = 20, page = 1) => {
     // 创建可取消的请求
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒超时
+    // 支持调用方主动取消（新搜索取代旧搜索时），外部 abort 会同步中止内部请求
+    if (signal) {
+      if (signal.aborted) {
+        controller.abort();
+      } else {
+        signal.addEventListener('abort', () => controller.abort(), { once: true });
+      }
+    }
 
     const response = await withRateLimit(() =>
       apiClient.get('', {
