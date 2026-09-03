@@ -21,7 +21,7 @@ import {
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { useSync } from '../contexts/SyncContext';
-import { initialSync, triggerDelayedSync } from '../services/syncService';
+import { triggerDelayedSync, triggerImmediateSync } from '../services/syncService';
 import { searchMusic } from '../services/musicApiService';
 import ClearDataButton from './ClearDataButton';
 import AvatarImage from './AvatarImage';
@@ -136,8 +136,8 @@ const UserProfile = ({ onTabChange }) => {
       // 开始同步
       startSync();
 
-      // 执行同步
-      const result = await initialSync(currentUser.uid);
+      // 执行同步：先取消待触发的延迟同步，再走统一入口
+      const result = await triggerImmediateSync(currentUser.uid, 'manual');
 
       // 处理同步结果（事件监听器将会自动更新UI）
       if (!result.success) {
@@ -384,7 +384,7 @@ const UserProfile = ({ onTabChange }) => {
       if (importUserId && !importUser.isLocal) {
         const pending = await incrementPendingChanges('favorites', importUserId);
         if (pending) {
-          await triggerDelayedSync(importUserId);
+          await triggerDelayedSync(importUserId, 'favorites');
         } else {
           toast.warning('收藏已导入本地，但云端同步状态保存失败，请稍后手动同步');
         }

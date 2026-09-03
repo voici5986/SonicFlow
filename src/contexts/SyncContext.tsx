@@ -4,23 +4,20 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
   type Dispatch,
   type ReactNode,
   type SetStateAction,
 } from 'react';
 import { useAuth } from './AuthContext';
-import {
-  getPendingSyncChanges,
-  resetPendingChanges,
-  getSyncStatus,
-  saveSyncStatus,
-} from '../services/storage';
+import { getPendingSyncChanges, getSyncStatus, saveSyncStatus } from '../services/storage';
 import {
   getLastSyncTime,
   getLocalChangesSince,
   addSyncListener,
   removeSyncListener,
   SyncEvents,
+  triggerImmediateSync,
 } from '../services/syncService';
 import logger from '../utils/logger.js';
 import type { AppUser } from '../types';
@@ -60,6 +57,9 @@ export interface SyncContextValue {
   getTotalPendingChanges: () => number;
 }
 
+// 回前台 / 网络恢复共用的节流窗口，避免事件连发造成重复同步
+const IMMEDIATE_SYNC_THROTTLE = 2000;
+
 const SyncContext = createContext<SyncContextValue | undefined>(undefined);
 
 export const useSync = (): SyncContextValue => {
@@ -87,6 +87,7 @@ const readSyncEvent = (value: unknown): SyncEventPayload => {
 
 export const SyncProvider = ({ children }: { children: ReactNode }) => {
   const { currentUser } = useAuth() as { currentUser?: AppUser | null };
+  const lastImmediateSyncRef = useRef(0);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [pendingChanges, setPendingChanges] = useState<PendingChanges>({
     favorites: 0,
@@ -133,9 +134,11 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
         currentUser.uid
       )) as PendingChanges | null;
 
+      // 计数器只是界面状态：同步运行期间的新变化可能已被计入旧计数又被成功重置，
+      // 但仍能通过 lastSyncTime 检出，所以取两者的较大值。
       setPendingChanges({
-        favorites: pendingCounter?.favorites ?? localChanges.favorites.length,
-        history: pendingCounter?.history ?? localChanges.history.length,
+        favorites: Math.max(pendingCounter?.favorites ?? 0, localChanges.favorites.length),
+        history: Math.max(pendingCounter?.history ?? 0, localChanges.history.length),
       });
     } catch (error) {
       logger.error('更新待同步数据失败:', error);
@@ -153,19 +156,17 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
 
       await updateSyncStatus(newStatus);
 
-      if (success) {
-        await resetPendingChanges(currentUser?.uid);
-        setPendingChanges({ favorites: 0, history: 0 });
-
-        if (currentUser) {
-          const lastSync = await getLastSyncTime(currentUser.uid);
-          if (lastSync) setLastSyncTime(new Date(Number.parseInt(String(lastSync), 10)));
-        }
+      if (success && currentUser) {
+        const lastSync = await getLastSyncTime(currentUser.uid);
+        if (lastSync) setLastSyncTime(new Date(Number.parseInt(String(lastSync), 10)));
       }
 
+      // pending 的清理由 syncService 统一负责，这里只重新读取并展示，
+      // 避免成为第二个 reset 来源。
+      void updatePendingChanges();
       setIsSyncing(false);
     },
-    [currentUser, updateSyncStatus]
+    [currentUser, updateSyncStatus, updatePendingChanges]
   );
 
   useEffect(() => {
@@ -206,7 +207,6 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       } else {
         void handleSyncComplete(true, '同步完成');
       }
-      void updatePendingChanges();
       window.dispatchEvent(new CustomEvent('sync:data_refreshed'));
     };
 
@@ -238,6 +238,36 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       }
     };
   }, [currentUser, startSync, handleSyncComplete, updatePendingChanges]);
+
+  // 回前台 / 网络恢复时立即同步。
+  // 网络恢复依赖项目统一的 networkStatusChange 事件，不额外注册 online/offline。
+  useEffect(() => {
+    if (!currentUser || currentUser.isLocal) return;
+
+    const runImmediateSync = (reason: string) => {
+      const now = Date.now();
+      if (now - lastImmediateSyncRef.current < IMMEDIATE_SYNC_THROTTLE) return;
+      lastImmediateSyncRef.current = now;
+      void triggerImmediateSync(currentUser.uid, reason);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') runImmediateSync('foreground');
+    };
+
+    const handleNetworkStatusChange = (event: Event) => {
+      const detail = (event as CustomEvent<{ online?: boolean }>).detail;
+      if (detail?.online) runImmediateSync('online');
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('networkStatusChange', handleNetworkStatusChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('networkStatusChange', handleNetworkStatusChange);
+    };
+  }, [currentUser]);
 
   const getTotalPendingChanges = useCallback(
     () => pendingChanges.favorites + pendingChanges.history,

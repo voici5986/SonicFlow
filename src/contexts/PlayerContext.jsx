@@ -188,7 +188,7 @@ export const PlayerProvider = ({ children }) => {
           const historySaved = await addToHistory(track, currentUser?.uid);
           if (historySaved && currentUser && !currentUser.isLocal) {
             await incrementPendingChanges('history', currentUser.uid);
-            void triggerDelayedSync(currentUser.uid);
+            void triggerDelayedSync(currentUser.uid, 'history');
           }
         }
 

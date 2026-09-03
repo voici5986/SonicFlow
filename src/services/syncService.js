@@ -7,6 +7,7 @@ import {
   query,
   where,
   getDocs,
+  getCountFromServer,
   writeBatch,
   runTransaction,
   orderBy,
@@ -21,7 +22,6 @@ import {
   saveHistory,
   MAX_HISTORY_ITEMS,
   getNetworkStatus,
-  getPendingSyncChangesStrict,
   resetPendingChanges,
 } from './storage';
 import logger from '../utils/logger.js';
@@ -30,13 +30,36 @@ import { getTrackArtist } from '../utils/trackFormatter';
 
 // 同步时间戳存储键
 const SYNC_TIMESTAMP_KEY = 'last_sync_timestamp';
-// 延迟同步定时器
-let delayedSyncTimer = null;
-// 延迟同步配置
-const DELAYED_SYNC_CONFIG = {
-  delayTime: 30000, // 30秒
-  historyThreshold: 5, // 历史记录变更阈值
+
+// 延迟同步定时器：收藏与历史各自独立，互不取消
+const syncTimers = {
+  favorites: null,
+  history: null,
 };
+
+const SYNC_TYPES = ['favorites', 'history'];
+
+const SYNC_DELAYS = {
+  favorites: 5000, // trailing debounce：最后一次收藏操作后 5 秒同步
+  history: 15000, // batch window：首个变化起 15 秒成批同步，期间不重置
+};
+
+// 离线兜底重试：全局只保留一个，且只重排一次。
+// 正常恢复依赖 networkStatusChange 事件，这里只是事件丢失时的保险。
+const OFFLINE_RETRY_DELAY = 60000;
+let offlineRetryTimer = null;
+let offlineRetryUsed = false;
+
+// 慢速看门狗：只告警，不释放锁。Firestore 的 Promise 无法真正 abort，
+// 强行解锁只会让两轮同步并发写入。
+const SYNC_WATCHDOG_DELAY = 30000;
+let syncWatchdogTimer = null;
+
+// 同步调度状态：任何时刻最多一轮在跑 + 一轮补跑
+let syncInFlight = null;
+let queuedRerun = false;
+let queuedRerunUid = null;
+
 // 批量操作限制
 const BATCH_SIZE = 100; // Firestore每批次最多500个操作，我们保守使用100
 
@@ -293,6 +316,11 @@ const incrementalSyncWithSubcollections = async (uid) => {
 
       return { success: false, error: '用户未登录' };
     }
+
+    // 一次性遗留清理：正常同步开始前先清掉旧 docId 重复项，
+    // 否则新设备首次全量拉取可能因 limit(100) 挤出最旧的唯一歌曲。
+    // 内部自带错误隔离，不影响本轮同步结果。
+    await ensureHistoryLegacyCleanup(uid);
 
     // 获取上次同步时间
     const lastSyncTime = await getLastSyncTime(uid);
@@ -737,110 +765,190 @@ export const shouldSyncOnLogin = async (uid) => {
 };
 
 /**
- * 触发延迟同步
- * 当收藏或历史记录变更时调用此函数
- * @param {string} uid 用户ID
- * @param {string} type 变更类型 'favorites' | 'history'
- * @returns {Promise<void>}
+ * 清除所有延迟同步定时器
+ * @returns {boolean} 是否清除了定时器
  */
-export const cancelDelayedSync = () => {
-  if (!delayedSyncTimer) return false;
-  clearTimeout(delayedSyncTimer);
-  delayedSyncTimer = null;
-  return true;
+const clearSyncTimers = () => {
+  let cleared = false;
+
+  for (const type of SYNC_TYPES) {
+    if (!syncTimers[type]) continue;
+    clearTimeout(syncTimers[type]);
+    syncTimers[type] = null;
+    cleared = true;
+  }
+
+  return cleared;
 };
 
-export const triggerDelayedSync = async (uid) => {
-  // 如果已经有一个延迟同步定时器，取消它
-  cancelDelayedSync();
+const clearOfflineRetry = () => {
+  if (!offlineRetryTimer) return;
+  clearTimeout(offlineRetryTimer);
+  offlineRetryTimer = null;
+};
 
-  logger.log('设置延迟同步定时器...');
+/**
+ * 取消所有待触发的延迟同步（登出、切换账号、手动同步时调用）
+ * @returns {boolean} 是否取消了延迟同步
+ */
+export const cancelDelayedSync = () => {
+  const cleared = clearSyncTimers();
+  clearOfflineRetry();
+  return cleared;
+};
 
-  // 设置新的延迟同步定时器
-  delayedSyncTimer = setTimeout(async () => {
+/**
+ * 重置同步调度器
+ * 除了取消定时器，还要丢弃补跑请求，
+ * 避免旧 UID 的同步结束后又为新账号补跑一轮。
+ */
+export const resetSyncScheduler = () => {
+  const cleared = cancelDelayedSync();
+  queuedRerun = false;
+  queuedRerunUid = null;
+  return cleared;
+};
+
+/**
+ * 离线时安排一次兜底重试，之后不再继续排队
+ * 正常恢复依赖 networkStatusChange 事件，这里只是事件丢失时的保险。
+ */
+const scheduleOfflineRetry = (uid) => {
+  if (offlineRetryTimer || offlineRetryUsed) return;
+
+  offlineRetryUsed = true;
+  offlineRetryTimer = setTimeout(() => {
+    offlineRetryTimer = null;
+    void requestSync(uid, 'offline-retry');
+  }, OFFLINE_RETRY_DELAY);
+};
+
+const clearSyncWatchdog = () => {
+  if (!syncWatchdogTimer) return;
+  clearTimeout(syncWatchdogTimer);
+  syncWatchdogTimer = null;
+};
+
+const startSyncWatchdog = (uid) => {
+  clearSyncWatchdog();
+  syncWatchdogTimer = setTimeout(() => {
+    logger.warn(
+      `同步已运行超过 ${SYNC_WATCHDOG_DELAY / 1000} 秒仍未结束 (uid: ${uid})，` +
+        '继续等待 Firestore 返回，不会强制中断。'
+    );
+  }, SYNC_WATCHDOG_DELAY);
+};
+
+/**
+ * 统一的同步入口
+ *
+ * 收藏 timer、历史 timer、回前台、网络恢复、手动同步都走这里，保证任何时刻
+ * 最多只有一轮同步在执行，外加一轮补跑。
+ *
+ * 定时器在同步「开始」时清除而不是结束时清除：同步期间产生的新变化会各自
+ * 重新创建定时器，因此必然被下一轮带走，不会因为并发时序而被漏掉。
+ *
+ * @param {string} uid 用户ID
+ * @param {string} reason 触发原因，仅用于日志
+ * @returns {Promise<{success: boolean, error?: any, unchanged?: boolean}>}
+ */
+export const requestSync = async (uid, reason = 'unknown') => {
+  if (!uid) return { success: false, error: '用户未登录' };
+
+  // 立即同步视为把当前所有 delayed batch 提前 flush
+  clearSyncTimers();
+
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    const error = '网络离线，暂不同步';
+
+    triggerEvent(SyncEvents.SYNC_SKIPPED, {
+      uid,
+      timestamp: Date.now(),
+      syncType: 'delayed',
+      reason: error,
+    });
+
+    scheduleOfflineRetry(uid);
+    return { success: false, error };
+  }
+
+  clearOfflineRetry();
+  offlineRetryUsed = false;
+
+  if (syncInFlight) {
+    queuedRerun = true;
+    queuedRerunUid = uid;
+    return syncInFlight;
+  }
+
+  logger.log(`请求同步 (${reason})`);
+  startSyncWatchdog(uid);
+
+  syncInFlight = (async () => {
     try {
-      // 检查同步可用性
-      const { canSync, error } = await checkSyncAvailability();
-      if (!canSync) {
-        logger.warn(`延迟同步取消: ${error}`);
+      const result = await incrementalSync(uid);
 
-        // 触发同步失败事件
-        triggerEvent(SyncEvents.SYNC_FAILED, {
-          uid,
-          error: error,
-          timestamp: Date.now(),
-          syncType: 'delayed',
-        });
-
-        return;
+      // pending 只是界面状态，成功（含 unchanged）后由同步服务统一清理
+      if (result && result.success) {
+        const resetSucceeded = await resetPendingChanges(uid);
+        if (!resetSucceeded) logger.warn('重置待同步变更计数失败，仅影响界面展示');
       }
 
-      // 获取变更计数
-      const changes = await getPendingSyncChangesStrict(uid);
-      logger.log('延迟同步检查变更:', changes);
-
-      // 检查是否有足够的变更触发同步
-      const shouldSync =
-        changes.favorites > 0 || changes.history >= DELAYED_SYNC_CONFIG.historyThreshold;
-
-      if (shouldSync) {
-        logger.log('延迟同步开始执行...');
-
-        // 触发同步开始事件
-        triggerEvent(SyncEvents.SYNC_STARTED, {
-          uid,
-          timestamp: Date.now(),
-          syncType: 'delayed',
-          trigger: {
-            favorites: changes.favorites,
-            history: changes.history,
-          },
-        });
-
-        // 执行增量同步
-        const result = await incrementalSync(uid);
-
-        if (result.success) {
-          logger.log('延迟同步成功');
-          // 重置变更计数
-          const resetSucceeded = await resetPendingChanges(uid);
-          if (!resetSucceeded) throw new Error('重置待同步变更失败');
-        } else {
-          logger.warn('延迟同步失败:', result.error);
-
-          // 触发同步失败事件
-          triggerEvent(SyncEvents.SYNC_FAILED, {
-            uid,
-            error: result.error,
-            timestamp: Date.now(),
-            syncType: 'delayed',
-          });
-        }
-      } else {
-        logger.log('变更不足，跳过延迟同步');
-
-        triggerEvent(SyncEvents.SYNC_SKIPPED, {
-          uid,
-          timestamp: Date.now(),
-          syncType: 'delayed',
-          reason: '变更不足，跳过同步',
-        });
-      }
-    } catch (error) {
-      logger.error('延迟同步失败:', error);
-
-      // 触发同步失败事件
-      triggerEvent(SyncEvents.SYNC_FAILED, {
-        uid,
-        error: error.message || '未知错误',
-        timestamp: Date.now(),
-        syncType: 'delayed',
-      });
+      return result;
     } finally {
-      // 清除定时器引用
-      delayedSyncTimer = null;
+      clearSyncWatchdog();
+      syncInFlight = null;
+
+      if (queuedRerun) {
+        const nextUid = queuedRerunUid;
+        queuedRerun = false;
+        queuedRerunUid = null;
+        if (nextUid) void requestSync(nextUid, 'queued');
+      }
     }
-  }, DELAYED_SYNC_CONFIG.delayTime);
+  })();
+
+  return syncInFlight;
+};
+
+/**
+ * 立即同步：先取消待触发的延迟同步，再走统一入口
+ * 用于手动同步、回前台、网络恢复。
+ */
+export const triggerImmediateSync = (uid, reason = 'manual') => {
+  cancelDelayedSync();
+  return requestSync(uid, reason);
+};
+
+/**
+ * 触发延迟同步
+ *
+ * favorites 使用 trailing debounce：每次变化都重置 5 秒窗口，取最后一次操作。
+ * history 使用 batch window：首个变化启动 15 秒窗口，后续变化不重置，
+ * 否则连续播放时定时器会被无限推后，反而几小时都不上传。
+ *
+ * @param {string} uid 用户ID
+ * @param {'favorites'|'history'} type 变更类型
+ */
+export const triggerDelayedSync = async (uid, type = 'favorites') => {
+  if (!uid) return;
+
+  if (!SYNC_DELAYS[type]) {
+    logger.warn(`未知的延迟同步类型: ${type}，已按 favorites 处理`);
+    type = 'favorites';
+  }
+
+  if (type === 'favorites' && syncTimers.favorites) {
+    clearTimeout(syncTimers.favorites);
+    syncTimers.favorites = null;
+  }
+
+  if (syncTimers[type]) return;
+
+  syncTimers[type] = setTimeout(() => {
+    syncTimers[type] = null;
+    void requestSync(uid, `delayed:${type}`);
+  }, SYNC_DELAYS[type]);
 };
 
 /**
@@ -984,30 +1092,131 @@ const saveCloudFavoritesToSubcollection = async (uid, favorites) => {
   }
 };
 
+// 云端历史裁剪阈值：只有总数溢出到缓冲区之后才裁剪。
+// 保留 MAX_HISTORY_ITEMS 条，缓冲区用于吸收并发写入，避免频繁触发裁剪。
+const HISTORY_PRUNE_BUFFER = 20;
+const HISTORY_PRUNE_THRESHOLD = MAX_HISTORY_ITEMS + HISTORY_PRUNE_BUFFER;
+
+// 一次性遗留清理标记前缀：旧客户端用不稳定 docId（如 `5_1`）写过历史，
+// 升级后需要清理一次。键按迁移版本命名，将来若需 v2 清理用新前缀即可。
+const HISTORY_LEGACY_CLEANUP_KEY = 'history_legacy_cleanup_v1_';
+
+/**
+ * 一次性历史遗留清理
+ *
+ * 旧客户端写历史时使用过非稳定的 docId，会与现在的稳定 docId
+ * （encodeURIComponent(`${source}:${id}`)）并存，产生同一歌曲的重复记录。
+ * 重复项若不清除，新设备首次全量拉取（limit 100）时可能只取到大量重复，
+ * 把最旧的一批唯一歌曲挤出结果。
+ *
+ * 每个设备、每个 uid 最多运行一次：count <= 100 直接标记完成；
+ * count > 100 时执行旧版「按 trackKey 去重 + 保留最新 MAX_HISTORY_ITEMS 条」。
+ * 清理失败不标记完成，下次同步自动重试，且绝不影响正常同步结果。
+ *
+ * @param {string} uid 用户ID
+ * @returns {Promise<boolean>} 是否已处于完成状态
+ */
+export const ensureHistoryLegacyCleanup = async (uid) => {
+  if (!uid) return true;
+
+  const flagKey = `${HISTORY_LEGACY_CLEANUP_KEY}${uid}`;
+
+  try {
+    if (localStorage.getItem(flagKey)) return true;
+
+    const historyRef = getHistoryCollectionRef(uid);
+    const totalSnapshot = await getCountFromServer(historyRef);
+    const total = totalSnapshot.data().count;
+
+    // 数量在保留上限内，不会因 limit(100) 挤掉唯一歌曲，无需扫描去重
+    if (total <= MAX_HISTORY_ITEMS) {
+      markLegacyCleanupDone(uid, flagKey);
+      return true;
+    }
+
+    // 与旧版 prune 一致的逻辑：倒序扫描、按 trackKey 去重、保留最新、裁到上限
+    const snapshot = await getDocs(query(historyRef, orderBy('timestamp', 'desc')));
+    const documentsToDelete = [];
+    const retainedTrackKeys = new Set();
+    let retainedCount = 0;
+
+    snapshot.forEach((historyDoc) => {
+      const historyItem = historyDoc.data();
+      const trackKey = historyItem.song ? getTrackKey(historyItem.song) : null;
+      if (!trackKey || retainedTrackKeys.has(trackKey) || retainedCount >= MAX_HISTORY_ITEMS) {
+        documentsToDelete.push(historyDoc.id);
+        return;
+      }
+      retainedTrackKeys.add(trackKey);
+      retainedCount++;
+    });
+
+    for (let i = 0; i < documentsToDelete.length; i += BATCH_SIZE) {
+      const batch = writeBatch(db);
+      for (const documentId of documentsToDelete.slice(i, i + BATCH_SIZE)) {
+        batch.delete(doc(historyRef, documentId));
+      }
+      await batch.commit();
+    }
+
+    markLegacyCleanupDone(uid, flagKey);
+    logger.log(`历史遗留记录清理完成: uid=${uid}，删除 ${documentsToDelete.length} 条`);
+    return true;
+  } catch (error) {
+    logger.warn('历史遗留记录清理失败，将在下次同步重试:', error);
+    return false;
+  }
+};
+
+const markLegacyCleanupDone = (uid, flagKey) => {
+  try {
+    localStorage.setItem(flagKey, 'done');
+  } catch (error) {
+    // 隐私模式下 localStorage 可能不可用：本次会话内每次同步会重新尝试，
+    // count <= 100 时不产生扫描开销，可接受。
+    logger.warn(`写入历史遗留清理标记失败 (uid: ${uid}):`, error);
+  }
+};
+
+/**
+ * 日常裁剪云端历史记录
+ *
+ * 只处理容量溢出，不再承担去重职责（去重由 ensureHistoryLegacyCleanup
+ * 一次性完成）。只在总数超过 HISTORY_PRUNE_THRESHOLD 时才读取并删除最旧的
+ * 溢出部分，避免每轮历史同步都把整个 history 子集合读一遍。
+ * 裁剪失败只记录日志，不能把已经成功的历史同步判成失败。
+ *
+ * @param {CollectionReference} historyRef 历史子集合引用
+ * @returns {Promise<number>} 删除的文档数
+ */
 const pruneCloudHistory = async (historyRef) => {
-  const snapshot = await getDocs(query(historyRef, orderBy('timestamp', 'desc')));
-  const documentsToDelete = [];
-  const retainedTrackKeys = new Set();
-  let retainedCount = 0;
+  try {
+    const totalSnapshot = await getCountFromServer(historyRef);
+    const total = totalSnapshot.data().count;
 
-  snapshot.forEach((historyDoc) => {
-    const historyItem = historyDoc.data();
-    const trackKey = historyItem.song ? getTrackKey(historyItem.song) : null;
-    if (!trackKey || retainedTrackKeys.has(trackKey) || retainedCount >= MAX_HISTORY_ITEMS) {
-      documentsToDelete.push(historyDoc.id);
-      return;
+    if (total <= HISTORY_PRUNE_THRESHOLD) return 0;
+
+    const overflow = total - MAX_HISTORY_ITEMS;
+    const oldestSnapshot = await getDocs(
+      query(historyRef, orderBy('timestamp', 'asc'), limit(overflow))
+    );
+
+    const documentIds = [];
+    oldestSnapshot.forEach((historyDoc) => documentIds.push(historyDoc.id));
+
+    for (let i = 0; i < documentIds.length; i += BATCH_SIZE) {
+      const batch = writeBatch(db);
+      for (const documentId of documentIds.slice(i, i + BATCH_SIZE)) {
+        batch.delete(doc(historyRef, documentId));
+      }
+      await batch.commit();
     }
 
-    retainedTrackKeys.add(trackKey);
-    retainedCount++;
-  });
-
-  for (let i = 0; i < documentsToDelete.length; i += BATCH_SIZE) {
-    const batch = writeBatch(db);
-    for (const documentId of documentsToDelete.slice(i, i + BATCH_SIZE)) {
-      batch.delete(doc(historyRef, documentId));
-    }
-    await batch.commit();
+    logger.log(`云端历史记录已裁剪 ${documentIds.length} 条，保留 ${MAX_HISTORY_ITEMS} 条`);
+    return documentIds.length;
+  } catch (error) {
+    logger.warn('裁剪云端历史记录失败，不影响本次同步结果:', error);
+    return 0;
   }
 };
 
@@ -1045,7 +1254,10 @@ const saveCloudHistoryToSubcollection = async (uid, history) => {
       if (written.written) modifiedCount++;
     }
 
-    await pruneCloudHistory(historyRef);
+    // 只有本轮确实写入了历史才做容量维护，避免无谓的 Firestore 读取
+    if (modifiedCount > 0) {
+      await pruneCloudHistory(historyRef);
+    }
 
     // 更新用户文档的lastUpdated字段
     const userRef = getUserDocRef(uid);

@@ -118,7 +118,7 @@ export const FavoritesProvider = ({ children }: { children: ReactNode }) => {
             const pending = await incrementPendingChanges('favorites', currentUser.uid);
             if (!pending) throw new Error('保存待同步收藏计数失败');
             void updatePendingChanges();
-            triggerDelayedSync(currentUser.uid);
+            triggerDelayedSync(currentUser.uid, 'favorites');
           } catch (error) {
             logger.error('更新待同步计数失败:', error);
           }

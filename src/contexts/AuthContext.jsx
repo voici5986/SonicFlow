@@ -10,7 +10,7 @@ import {
 } from '../services/firebase';
 import {
   SyncEvents,
-  cancelDelayedSync,
+  resetSyncScheduler,
   triggerEvent,
   shouldSyncOnLogin,
   initialSync,
@@ -191,7 +191,7 @@ export const AuthProvider = ({ children }) => {
 
   // 退出登录
   const signOut = async () => {
-    cancelDelayedSync();
+    resetSyncScheduler();
     // 如果是本地用户，直接清除
     if (currentUser?.isLocal) {
       setStorageScope(null);
@@ -327,7 +327,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      cancelDelayedSync();
+      resetSyncScheduler();
       setStorageScope(user);
       setCurrentUser(user);
       setLoading(false);
