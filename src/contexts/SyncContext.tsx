@@ -128,6 +128,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       const lastSync = await getLastSyncTime(currentUser.uid);
       const localChanges = (await getLocalChangesSince(lastSync, currentUser.uid)) as {
         favorites: unknown[];
+        favoriteTombstones: unknown[];
         history: unknown[];
       };
       const pendingCounter = (await getPendingSyncChanges(
@@ -136,8 +137,13 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
 
       // 计数器只是界面状态：同步运行期间的新变化可能已被计入旧计数又被成功重置，
       // 但仍能通过 lastSyncTime 检出，所以取两者的较大值。
+      // 取消收藏同样产生待同步变更，tombstones 需要一并计入，否则极端竞态下
+      // “未同步的取消收藏”可能显示为 0。
       setPendingChanges({
-        favorites: Math.max(pendingCounter?.favorites ?? 0, localChanges.favorites.length),
+        favorites: Math.max(
+          pendingCounter?.favorites ?? 0,
+          localChanges.favorites.length + localChanges.favoriteTombstones.length
+        ),
         history: Math.max(pendingCounter?.history ?? 0, localChanges.history.length),
       });
     } catch (error) {

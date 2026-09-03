@@ -117,6 +117,9 @@ describe('sync service safeguards', () => {
     // 默认视为已完成遗留清理，避免常规同步用例被清理逻辑干扰；
     // 需要验证清理本身的用例会先移除该标记。
     localStorage.setItem('history_legacy_cleanup_v1_user-1', 'done');
+    // 复位模块级调度状态，避免前一个用例的离线重试/定时器状态泄漏到本用例
+    resetSyncScheduler();
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true });
     firebaseState.available = false;
     checkFirebaseAvailability.mockReset();
     firestoreGetCount.mockReset();
@@ -355,6 +358,21 @@ describe('sync service safeguards', () => {
     expect(resetPendingChanges).not.toHaveBeenCalled();
   });
 
+  it('clears stale pending counters after a successful login sync', async () => {
+    firebaseState.available = true;
+    checkFirebaseAvailability.mockResolvedValue(true);
+    // lastSyncTime 已是最新且本地无变更 → 走 unchanged 成功出口
+    localStorage.setItem('last_sync_timestamp_user-1', String(Number.MAX_SAFE_INTEGER));
+    firestoreGetDoc.mockResolvedValue({ exists: () => true, data: () => ({ lastUpdated: 0 }) });
+    firestoreGetDocs.mockResolvedValue({ forEach: vi.fn() });
+
+    // initialSync 包装层会剥掉 unchanged 字段，只断言成功与清理行为
+    await expect(initialSync('user-1')).resolves.toMatchObject({ success: true });
+
+    // 登录同步直接走 initialSync、绕过 requestSync，成功收尾也必须清理陈旧计数
+    expect(resetPendingChanges).toHaveBeenCalledWith('user-1');
+  });
+
   it('skips sync while offline and schedules at most one fallback retry', async () => {
     vi.useFakeTimers();
     firebaseState.available = true;
@@ -381,6 +399,33 @@ describe('sync service safeguards', () => {
     Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true });
     removeSyncListener(SyncEvents.SYNC_SKIPPED, skipped);
     removeSyncListener(SyncEvents.SYNC_FAILED, failed);
+    vi.useRealTimers();
+  });
+
+  it('keeps the offline fallback retry when a foreground sync fires while still offline', async () => {
+    vi.useFakeTimers();
+    firebaseState.available = true;
+    checkFirebaseAvailability.mockResolvedValue(true);
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false });
+
+    const skipped = vi.fn();
+    addSyncListener(SyncEvents.SYNC_SKIPPED, skipped);
+
+    // 第一次离线同步：安排 60s 兜底重试
+    await triggerImmediateSync('user-1', 'online');
+    expect(skipped).toHaveBeenCalledTimes(1);
+
+    // 20 秒后回前台仍离线：前台 flush 不应消耗掉已排好的兜底
+    await vi.advanceTimersByTimeAsync(20000);
+    await triggerImmediateSync('user-1', 'foreground');
+    expect(skipped).toHaveBeenCalledTimes(2);
+
+    // 60s 兜底仍按原计划触发（而不是被前台同步提前取消）
+    await vi.advanceTimersByTimeAsync(40000);
+    expect(skipped).toHaveBeenCalledTimes(3);
+
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true });
+    removeSyncListener(SyncEvents.SYNC_SKIPPED, skipped);
     vi.useRealTimers();
   });
 
@@ -735,7 +780,6 @@ describe('sync service safeguards', () => {
   describe('legacy history cleanup', () => {
     it('deduplicates legacy doc ids once and records the migration flag', async () => {
       localStorage.removeItem('history_legacy_cleanup_v1_user-1');
-      firestoreGetCount.mockResolvedValue({ data: () => ({ count: 121 }) });
       firestoreGetDocs.mockResolvedValue({
         forEach: (callback) => {
           callback({
@@ -766,13 +810,63 @@ describe('sync service safeguards', () => {
       expect(localStorage.getItem('history_legacy_cleanup_v1_user-1')).toBe('done');
     });
 
-    it('marks the migration complete without scanning when count is within limits', async () => {
+    it('migrates the newest legacy doc onto the canonical doc id', async () => {
       localStorage.removeItem('history_legacy_cleanup_v1_user-1');
-      firestoreGetCount.mockResolvedValue({ data: () => ({ count: 60 }) });
+      // 旧 docId 更新时间更晚、canonical 更旧 → 必须把最新数据迁写到 canonical，
+      // 再删除旧 docId，否则新客户端会再次写出 canonical 造成新的重复。
+      firestoreGetDocs.mockResolvedValue({
+        forEach: (callback) => {
+          callback({
+            id: '5_1',
+            data: () => ({ timestamp: 200, song: { id: '1', source: 'netease', name: 'Song' } }),
+          });
+          callback({
+            id: 'netease%3A1',
+            data: () => ({ timestamp: 100, song: { id: '1', source: 'netease', name: 'Song' } }),
+          });
+        },
+      });
+      const transactionSet = vi.fn();
+      firestoreRunTransaction.mockImplementation(async (_db, callback) =>
+        callback({
+          get: vi.fn().mockResolvedValue({
+            exists: () => true,
+            data: () => ({ timestamp: 100, song: { id: '1', source: 'netease', name: 'Song' } }),
+          }),
+          set: transactionSet,
+        })
+      );
+      const batches = [];
+      firestoreWriteBatch.mockImplementation(() => {
+        const batch = {
+          set: vi.fn(),
+          delete: vi.fn(),
+          commit: vi.fn().mockResolvedValue(undefined),
+        };
+        batches.push(batch);
+        return batch;
+      });
 
       await expect(ensureHistoryLegacyCleanup('user-1')).resolves.toBe(true);
 
-      expect(firestoreGetDocs).not.toHaveBeenCalled();
+      // canonical doc 被覆盖为最新数据
+      expect(transactionSet).toHaveBeenCalledTimes(1);
+      expect(transactionSet.mock.calls[0][0]).toContain('netease%3A1');
+      expect(transactionSet.mock.calls[0][1]).toEqual(expect.objectContaining({ timestamp: 200 }));
+      // 旧 docId 被删除
+      expect(batches[0].delete).toHaveBeenCalledTimes(1);
+      expect(batches[0].delete.mock.calls[0][0]).toContain('5_1');
+      expect(localStorage.getItem('history_legacy_cleanup_v1_user-1')).toBe('done');
+    });
+
+    it('scans once and marks migration complete when the collection is small and clean', async () => {
+      localStorage.removeItem('history_legacy_cleanup_v1_user-1');
+      firestoreGetDocs.mockResolvedValue({ forEach: vi.fn() });
+
+      await expect(ensureHistoryLegacyCleanup('user-1')).resolves.toBe(true);
+
+      expect(firestoreGetDocs).toHaveBeenCalledTimes(1);
+      expect(firestoreWriteBatch).not.toHaveBeenCalled();
       expect(localStorage.getItem('history_legacy_cleanup_v1_user-1')).toBe('done');
     });
 
@@ -786,7 +880,7 @@ describe('sync service safeguards', () => {
 
     it('does not record the flag when cleanup fails so it retries next sync', async () => {
       localStorage.removeItem('history_legacy_cleanup_v1_user-1');
-      firestoreGetCount.mockRejectedValue(new Error('aggregate query failed'));
+      firestoreGetDocs.mockRejectedValue(new Error('firestore read failed'));
 
       await expect(ensureHistoryLegacyCleanup('user-1')).resolves.toBe(false);
       expect(localStorage.getItem('history_legacy_cleanup_v1_user-1')).toBeNull();
@@ -799,7 +893,6 @@ describe('sync service safeguards', () => {
       firestoreGetDoc.mockResolvedValue({ exists: () => true, data: () => ({ lastUpdated: 0 }) });
       getFavorites.mockResolvedValue([]);
       getHistory.mockResolvedValue([]);
-      firestoreGetCount.mockResolvedValue({ data: () => ({ count: 121 }) });
       // 61 首歌，每首新旧两个 docId（稳定 id 先出现、时间更新）
       firestoreGetDocs
         .mockResolvedValueOnce({

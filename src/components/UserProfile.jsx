@@ -110,19 +110,9 @@ const UserProfile = ({ onTabChange }) => {
       return;
     }
 
-    // 检查是否在短时间内（1分钟）已经同步过
-    if (syncStatus.timestamp) {
-      const lastSyncTime = new Date(syncStatus.timestamp).getTime();
-      const now = Date.now();
-      const timeDiff = now - lastSyncTime;
-
-      // 如果在1分钟内已同步，提示并返回
-      if (timeDiff < 60000) {
-        // 60000毫秒 = 1分钟
-        toast.info('刚刚已同步，无需再次同步');
-        return;
-      }
-    }
+    // 自动同步已足够频繁（收藏 5s / 历史 15s），原先“1 分钟内同步过则禁止
+    // 手动同步”的判断会让手动立即同步基本失效；这里只保留按钮 cooldown，
+    // 防抖交给 single-flight 处理。
 
     // 设置冷却状态
     setSyncCooldown(true);

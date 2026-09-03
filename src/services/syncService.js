@@ -282,6 +282,18 @@ const checkSyncAvailability = async () => {
 };
 
 /**
+ * 同步成功后的统一收尾：pending 只是界面状态，成功（含 unchanged）后清理。
+ * 放在 incrementalSync 的成功出口，覆盖 requestSync / initialSync / merge
+ * 等所有同步入口，避免任何入口漏清导致 UI 一直显示有变更待同步。
+ * @param {string} uid 用户ID
+ */
+const clearPendingSyncCounter = async (uid) => {
+  if (!uid) return;
+  const resetSucceeded = await resetPendingChanges(uid);
+  if (!resetSucceeded) logger.warn('重置待同步变更计数失败，仅影响界面展示');
+};
+
+/**
  * 增量同步函数 - 使用子集合架构
  * @param {string} uid 用户ID
  * @returns {Promise<{success: boolean, data?: any, error?: any, unchanged?: boolean}>}
@@ -366,6 +378,9 @@ const incrementalSyncWithSubcollections = async (uid) => {
 
       // 更新同步时间戳为当前时间，即使没有实际同步
       await saveLastSyncTime(uid, now);
+
+      // unchanged 表示本地已无待同步变更，可清理陈旧计数
+      await clearPendingSyncCounter(uid);
 
       // 触发同步完成事件
       triggerEvent(SyncEvents.SYNC_COMPLETED, {
@@ -576,6 +591,9 @@ const incrementalSyncWithSubcollections = async (uid) => {
     // 更新同步时间戳
     await saveLastSyncTime(uid, now);
     logger.log(`同步完成，新的同步时间: ${new Date(now).toLocaleString()}`);
+
+    // 同步成功（含 unchanged）后由同步服务统一清理 pending 计数
+    await clearPendingSyncCounter(uid);
 
     // 触发同步完成事件
     triggerEvent(SyncEvents.SYNC_COMPLETED, {
@@ -788,22 +806,28 @@ const clearOfflineRetry = () => {
 };
 
 /**
- * 取消所有待触发的延迟同步（登出、切换账号、手动同步时调用）
+ * 取消收藏/历史的延迟同步定时器（手动同步、回前台 flush 时调用）。
+ *
+ * 不触碰离线 retry timer：用户切后台/回前台不应消耗掉唯一一次离线兜底。
+ * 离线兜底的完整清理只发生在 resetSyncScheduler（登出/切账号）或
+ * requestSync 真正恢复在线时。
+ *
  * @returns {boolean} 是否取消了延迟同步
  */
-export const cancelDelayedSync = () => {
-  const cleared = clearSyncTimers();
-  clearOfflineRetry();
-  return cleared;
-};
+export const cancelDelayedSync = () => clearSyncTimers();
 
 /**
- * 重置同步调度器
- * 除了取消定时器，还要丢弃补跑请求，
- * 避免旧 UID 的同步结束后又为新账号补跑一轮。
+ * 重置同步调度器（登出、切换账号时调用）
+ *
+ * 清空全部待触发状态：延迟 timer、离线 retry timer、offlineRetryUsed，
+ * 以及补跑请求，避免旧 UID 的同步结束后又为新账号补跑一轮。
+ *
+ * @returns {boolean} 是否取消了延迟同步
  */
 export const resetSyncScheduler = () => {
   const cleared = cancelDelayedSync();
+  clearOfflineRetry();
+  offlineRetryUsed = false;
   queuedRerun = false;
   queuedRerunUid = null;
   return cleared;
@@ -886,15 +910,8 @@ export const requestSync = async (uid, reason = 'unknown') => {
 
   syncInFlight = (async () => {
     try {
-      const result = await incrementalSync(uid);
-
-      // pending 只是界面状态，成功（含 unchanged）后由同步服务统一清理
-      if (result && result.success) {
-        const resetSucceeded = await resetPendingChanges(uid);
-        if (!resetSucceeded) logger.warn('重置待同步变更计数失败，仅影响界面展示');
-      }
-
-      return result;
+      // pending 清理统一在 incrementalSync 的成功出口完成
+      return await incrementalSync(uid);
     } finally {
       clearSyncWatchdog();
       syncInFlight = null;
@@ -1109,8 +1126,13 @@ const HISTORY_LEGACY_CLEANUP_KEY = 'history_legacy_cleanup_v1_';
  * 重复项若不清除，新设备首次全量拉取（limit 100）时可能只取到大量重复，
  * 把最旧的一批唯一歌曲挤出结果。
  *
- * 每个设备、每个 uid 最多运行一次：count <= 100 直接标记完成；
- * count > 100 时执行旧版「按 trackKey 去重 + 保留最新 MAX_HISTORY_ITEMS 条」。
+ * 迁移每个设备、每个 uid 只运行一次，且必须保证最终留下的文档落在
+ * canonical 稳定 docId 上——仅“保留最新 docId”不够：若最新数据在旧 docId
+ * 上（旧客户端后来写入），直接保留它会让新客户端再次写出 canonical，
+ * 云端又重新出现一对重复。
+ *
+ * 不设置 count 捷径：数量在上限内就跳过扫描，会把遗留重复永久留在云端，
+ * 之后再无法靠日常 prune（只按数量裁剪）去重。
  * 清理失败不标记完成，下次同步自动重试，且绝不影响正常同步结果。
  *
  * @param {string} uid 用户ID
@@ -1125,46 +1147,99 @@ export const ensureHistoryLegacyCleanup = async (uid) => {
     if (localStorage.getItem(flagKey)) return true;
 
     const historyRef = getHistoryCollectionRef(uid);
-    const totalSnapshot = await getCountFromServer(historyRef);
-    const total = totalSnapshot.data().count;
-
-    // 数量在保留上限内，不会因 limit(100) 挤掉唯一歌曲，无需扫描去重
-    if (total <= MAX_HISTORY_ITEMS) {
-      markLegacyCleanupDone(uid, flagKey);
-      return true;
-    }
-
-    // 与旧版 prune 一致的逻辑：倒序扫描、按 trackKey 去重、保留最新、裁到上限
     const snapshot = await getDocs(query(historyRef, orderBy('timestamp', 'desc')));
-    const documentsToDelete = [];
-    const retainedTrackKeys = new Set();
-    let retainedCount = 0;
+
+    // 第一遍：desc 顺序下每组首个即最新，最多保留 MAX_HISTORY_ITEMS 个
+    // 不同 trackKey（超出容量的整组丢弃，等价旧 prune 的容量裁剪）。
+    const docs = [];
+    const retainedByKey = new Map(); // trackKey -> { id, item }
 
     snapshot.forEach((historyDoc) => {
-      const historyItem = historyDoc.data();
-      const trackKey = historyItem.song ? getTrackKey(historyItem.song) : null;
-      if (!trackKey || retainedTrackKeys.has(trackKey) || retainedCount >= MAX_HISTORY_ITEMS) {
-        documentsToDelete.push(historyDoc.id);
-        return;
-      }
-      retainedTrackKeys.add(trackKey);
-      retainedCount++;
+      const item = historyDoc.data();
+      const trackKey = item.song ? getTrackKey(item.song) : null;
+      docs.push({ id: historyDoc.id, item, trackKey });
     });
 
-    for (let i = 0; i < documentsToDelete.length; i += BATCH_SIZE) {
+    for (const doc of docs) {
+      if (!doc.trackKey || retainedByKey.has(doc.trackKey)) continue;
+      if (retainedByKey.size >= MAX_HISTORY_ITEMS) continue;
+      retainedByKey.set(doc.trackKey, { id: doc.id, item: doc.item });
+    }
+
+    // 第二遍：canonicalize。组内 canonical doc 保留（必要时被最新数据覆盖），
+    // 其余一律删除；若组内最新数据落在非 canonical docId 上，先把它迁写到
+    // canonical docId 再删除，保证迁移后同一首歌只存在稳定的那一个文档。
+    const documentsToDelete = new Set();
+    const canonicalWrites = new Map(); // canonicalId -> 最新 item
+
+    for (const doc of docs) {
+      if (!doc.trackKey) {
+        documentsToDelete.add(doc.id);
+        continue;
+      }
+      const rep = retainedByKey.get(doc.trackKey);
+      if (!rep) {
+        documentsToDelete.add(doc.id); // 超出容量保留范围的整组
+        continue;
+      }
+      const canonicalId = getTrackDocumentId(rep.item.song);
+      if (doc.id === canonicalId) continue;
+      if (doc.id === rep.id) canonicalWrites.set(canonicalId, rep.item);
+      documentsToDelete.add(doc.id);
+    }
+
+    // 先迁写 canonical（带 CAS，避免覆盖清理期间的新写入），再批量删除
+    for (const [canonicalId, item] of canonicalWrites) {
+      documentsToDelete.delete(canonicalId);
+      await writeCanonicalHistoryDoc(historyRef, canonicalId, item);
+    }
+
+    const deleteList = [...documentsToDelete];
+    for (let i = 0; i < deleteList.length; i += BATCH_SIZE) {
       const batch = writeBatch(db);
-      for (const documentId of documentsToDelete.slice(i, i + BATCH_SIZE)) {
+      for (const documentId of deleteList.slice(i, i + BATCH_SIZE)) {
         batch.delete(doc(historyRef, documentId));
       }
       await batch.commit();
     }
 
     markLegacyCleanupDone(uid, flagKey);
-    logger.log(`历史遗留记录清理完成: uid=${uid}，删除 ${documentsToDelete.length} 条`);
+    logger.log(
+      `历史遗留记录清理完成: uid=${uid}，删除 ${deleteList.length} 条，` +
+        `迁写 canonical ${canonicalWrites.size} 条`
+    );
     return true;
   } catch (error) {
     logger.warn('历史遗留记录清理失败，将在下次同步重试:', error);
     return false;
+  }
+};
+
+/**
+ * 把历史记录写入 canonical docId，带时间戳 CAS，避免覆盖清理期间的并发写入
+ * @param {CollectionReference} historyRef 历史子集合引用
+ * @param {string} documentId canonical docId
+ * @param {{ timestamp: number, song: Object }} item 历史记录数据
+ */
+const writeCanonicalHistoryDoc = async (historyRef, documentId, item) => {
+  const itemDocRef = doc(historyRef, documentId);
+  const itemData = {
+    timestamp: item.timestamp,
+    song: toCloudTrack(item.song),
+  };
+
+  const written = await runTransaction(db, async (transaction) => {
+    const remoteSnapshot = await transaction.get(itemDocRef);
+    const remoteData = remoteSnapshot.exists() ? remoteSnapshot.data() : null;
+    if (remoteData && remoteData.timestamp >= itemData.timestamp) {
+      return { written: false };
+    }
+    transaction.set(itemDocRef, itemData);
+    return { written: true };
+  });
+
+  if (!written.written) {
+    logger.log(`canonical 文档已存在更新的数据，跳过迁写: ${documentId}`);
   }
 };
 
@@ -1173,7 +1248,7 @@ const markLegacyCleanupDone = (uid, flagKey) => {
     localStorage.setItem(flagKey, 'done');
   } catch (error) {
     // 隐私模式下 localStorage 可能不可用：本次会话内每次同步会重新尝试，
-    // count <= 100 时不产生扫描开销，可接受。
+    // 全量扫描的成本只在标记真正写入前发生。
     logger.warn(`写入历史遗留清理标记失败 (uid: ${uid}):`, error);
   }
 };
