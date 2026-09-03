@@ -1,3 +1,16 @@
+## [1.7.2](https://github.com/voici5986/OTONEI/compare/v1.7.1...v1.7.2) (2026-09-03)
+
+### Bug Fixes
+
+- **pwa:** 修正服务工作线程更新提示逻辑及安全策略配置 ([b8d2da0](https://github.com/voici5986/OTONEI/commit/b8d2da0d73fec9b388d3f8db4a66f8e1962f759e))
+- **search:** 完善搜索请求取消，修复 loading 卡死 ([21901fb](https://github.com/voici5986/OTONEI/commit/21901fb216ebd1f50c8c02878dfa3e136fb680e7))
+- **security:** 修复内容安全策略中缺失的form-action指令 ([93e657c](https://github.com/voici5986/OTONEI/commit/93e657ca3c88591c632c82fb5065905caf603aaf))
+- **sync:** 重构同步一致性并修复账号隔离缺陷 ([4606045](https://github.com/voici5986/OTONEI/commit/4606045cc6f125956670911b2f9cca7881d3f3e2))
+
+### Performance Improvements
+
+- **ui:** 应用首帧就绪后立即隐藏启动屏，保留 3 秒兜底 ([ea92b8b](https://github.com/voici5986/OTONEI/commit/ea92b8b5d3682114d63c72fbe7a20a498529bfb8))
+
 ## [1.7.1](https://github.com/voici5986/OTONEI/compare/v1.7.0...v1.7.1) (2026-08-27)
 
 ### Bug Fixes
