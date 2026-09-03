@@ -51,7 +51,7 @@ const UserProfile = ({ onTabChange }) => {
   activeUserIdRef.current = currentUser?.uid;
 
   // 使用同步上下文
-  const { syncStatus, startSync, handleSyncComplete, updatePendingChanges } = useSync();
+  const { syncStatus, handleSyncComplete, updatePendingChanges } = useSync();
 
   // 加载收藏和历史记录计数
   const loadCounts = useCallback(async () => {
@@ -123,9 +123,8 @@ const UserProfile = ({ onTabChange }) => {
     }, 8000); // 8秒冷却期
 
     try {
-      // 开始同步
-      startSync();
-
+      // 不再手动 startSync：loading 状态完全由 syncService 的 SYNC_STARTED 驱动。
+      // 离线时 requestSync 直接 SKIPPED，不会先错误进入“正在同步”卡住。
       // 执行同步：先取消待触发的延迟同步，再走统一入口
       const result = await triggerImmediateSync(currentUser.uid, 'manual');
 
@@ -373,11 +372,11 @@ const UserProfile = ({ onTabChange }) => {
       }
       if (importUserId && !importUser.isLocal) {
         const pending = await incrementPendingChanges('favorites', importUserId);
-        if (pending) {
-          await triggerDelayedSync(importUserId, 'favorites');
-        } else {
-          toast.warning('收藏已导入本地，但云端同步状态保存失败，请稍后手动同步');
+        if (!pending) {
+          logger.warn('收藏已导入本地，但同步计数保存失败，仅影响界面展示');
         }
+        // 同步 timer 永远安排：计数失败不能阻断 5 秒同步
+        await triggerDelayedSync(importUserId, 'favorites');
       }
       loadCounts();
       window.dispatchEvent(new Event('favorites_changed'));

@@ -294,11 +294,11 @@ const clearPendingSyncCounter = async (uid) => {
 };
 
 /**
- * 增量同步函数 - 使用子集合架构
+ * 增量同步核心实现 - 使用子集合架构
  * @param {string} uid 用户ID
  * @returns {Promise<{success: boolean, data?: any, error?: any, unchanged?: boolean}>}
  */
-const incrementalSyncWithSubcollections = async (uid) => {
+const executeIncrementalSync = async (uid) => {
   try {
     logger.log('开始子集合增量同步...');
 
@@ -633,8 +633,32 @@ const incrementalSyncWithSubcollections = async (uid) => {
   }
 };
 
+// 同步执行串行链：所有入口（requestSync / initialSync / merge）最终都汇聚到
+// executeIncrementalSync。登录同步直接调 incrementalSyncWithSubcollections、
+// 绕过 requestSync 的 single-flight 锁，因此真正的锁必须放在执行核心上，
+// 否则登录同步仍可能与前台/网络恢复/手动同步并发。
+let syncExecutionChain = Promise.resolve();
+
+const runSerializedSync = (syncFn) => {
+  const run = syncExecutionChain.then(syncFn, syncFn);
+  // 链上吞掉失败，避免某一次同步抛错中断后续排队的同步
+  syncExecutionChain = run.then(
+    () => undefined,
+    () => undefined
+  );
+  return run;
+};
+
 /**
- * 增量同步函数
+ * 增量同步函数 - 串行化执行，任意时刻至多一个同步在跑
+ * @param {string} uid 用户ID
+ * @returns {Promise<{success: boolean, data?: any, error?: any, unchanged?: boolean}>}
+ */
+const incrementalSyncWithSubcollections = (uid) =>
+  runSerializedSync(() => executeIncrementalSync(uid));
+
+/**
+ * 增量同步别名
  * @param {string} uid 用户ID
  * @returns {Promise<{success: boolean, data?: any, error?: any, unchanged?: boolean}>}
  */

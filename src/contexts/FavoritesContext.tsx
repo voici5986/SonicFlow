@@ -113,15 +113,20 @@ export const FavoritesProvider = ({ children }: { children: ReactNode }) => {
         }
 
         if (currentUser && !currentUser.isLocal) {
+          // pending 只是 UI 信号：计数保存失败只降级界面展示，
+          // 不能阻断 5 秒延迟同步 —— 收藏本身已保存成功。
           try {
             const { incrementPendingChanges } = await import('../services/storage');
             const pending = await incrementPendingChanges('favorites', currentUser.uid);
-            if (!pending) throw new Error('保存待同步收藏计数失败');
-            void updatePendingChanges();
-            triggerDelayedSync(currentUser.uid, 'favorites');
+            if (pending) {
+              void updatePendingChanges();
+            } else {
+              logger.warn('更新待同步收藏计数失败，仅影响界面展示');
+            }
           } catch (error) {
-            logger.error('更新待同步计数失败:', error);
+            logger.warn('更新待同步收藏计数失败，仅影响界面展示:', error);
           }
+          triggerDelayedSync(currentUser.uid, 'favorites');
         }
 
         return result;

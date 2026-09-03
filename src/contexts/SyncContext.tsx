@@ -87,7 +87,9 @@ const readSyncEvent = (value: unknown): SyncEventPayload => {
 
 export const SyncProvider = ({ children }: { children: ReactNode }) => {
   const { currentUser } = useAuth() as { currentUser?: AppUser | null };
-  const lastImmediateSyncRef = useRef(0);
+  // 按触发原因分别节流：foreground 与 online 各有一个窗口。
+  // 否则回前台时仍离线（SKIPPED）会占用共享窗口，把 500ms 后的网络恢复同步吞掉。
+  const lastImmediateSyncRef = useRef<Record<string, number>>({});
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [pendingChanges, setPendingChanges] = useState<PendingChanges>({
     favorites: 0,
@@ -252,8 +254,8 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
 
     const runImmediateSync = (reason: string) => {
       const now = Date.now();
-      if (now - lastImmediateSyncRef.current < IMMEDIATE_SYNC_THROTTLE) return;
-      lastImmediateSyncRef.current = now;
+      if (now - (lastImmediateSyncRef.current[reason] || 0) < IMMEDIATE_SYNC_THROTTLE) return;
+      lastImmediateSyncRef.current[reason] = now;
       void triggerImmediateSync(currentUser.uid, reason);
     };
 
@@ -263,7 +265,12 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
 
     const handleNetworkStatusChange = (event: Event) => {
       const detail = (event as CustomEvent<{ online?: boolean }>).detail;
-      if (detail?.online) runImmediateSync('online');
+      if (detail?.online) {
+        runImmediateSync('online');
+        return;
+      }
+      // 离线事件后恢复在线应视为一次新的恢复，不被此前 online 的节流窗口挡住
+      lastImmediateSyncRef.current.online = 0;
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);

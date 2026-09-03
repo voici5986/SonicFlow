@@ -345,6 +345,30 @@ describe('sync service safeguards', () => {
     expect(firestoreGetDoc).toHaveBeenCalledTimes(1);
   });
 
+  it('serializes login and immediate syncs so sync execution never overlaps', async () => {
+    firebaseState.available = true;
+    checkFirebaseAvailability.mockResolvedValue(true);
+    firestoreGetDocs.mockResolvedValue({ forEach: vi.fn() });
+
+    const calls = [];
+    firestoreGetDoc.mockImplementation(async () => {
+      calls.push('start');
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      calls.push('end');
+      return { exists: () => true, data: () => ({ lastUpdated: 0 }) };
+    });
+
+    // 登录同步直接走 initialSync，绕过 requestSync 的 single-flight；
+    // 登录同步在跑的同时，前台又触发一轮普通同步。
+    const login = initialSync('user-1');
+    const immediate = triggerImmediateSync('user-1', 'foreground');
+
+    await Promise.all([login, immediate]);
+
+    // 两轮同步的执行核心严格串行，不允许 start…end 交错
+    expect(calls).toEqual(['start', 'end', 'start', 'end']);
+  });
+
   it('keeps pending changes when a sync fails', async () => {
     firebaseState.available = true;
     checkFirebaseAvailability.mockResolvedValue(true);
