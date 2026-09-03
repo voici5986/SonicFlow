@@ -104,24 +104,16 @@ export async function onRequest(context) {
 
   const targetUrlString = `${TARGET_API_BASE}${TARGET_PATH_ACTUAL}${url.search}`;
 
-  const newHeaders = new Headers(request.headers);
-  newHeaders.set('Host', new URL(TARGET_API_BASE).host);
-  newHeaders.set(
-    'User-Agent',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-  );
-  newHeaders.delete('cf-connecting-ip');
-  newHeaders.delete('cf-ipcountry');
-  newHeaders.delete('cf-ray');
-  newHeaders.delete('x-forwarded-proto');
-  newHeaders.delete('x-real-ip');
-  newHeaders.delete('cookie');
-  newHeaders.delete('authorization');
+  // 临时实验：不复制任何浏览器 headers、不设 Host / User-Agent，
+  // 验证上游是否因转发的请求头（如 Host 或 cf-* 等）而拒绝。
+  const upstreamHeaders = new Headers({
+    Accept: 'application/json',
+  });
 
   try {
     const response = await fetch(targetUrlString, {
-      method: request.method,
-      headers: newHeaders,
+      method: 'GET',
+      headers: upstreamHeaders,
       redirect: 'follow',
     });
 
