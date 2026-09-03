@@ -125,6 +125,16 @@ export async function onRequest(context) {
       redirect: 'follow',
     });
 
+    // 临时诊断日志：定位 upstream 返回与 /api-v1 可访问性问题，随后移除
+    console.log('[API proxy] upstream response', {
+      status: response.status,
+      statusText: response.statusText,
+      server: response.headers.get('server'),
+      cfRay: response.headers.get('cf-ray'),
+      contentType: response.headers.get('content-type'),
+      contentLength: response.headers.get('content-length'),
+    });
+
     const responseHeaders = new Headers(response.headers);
     responseHeaders.delete('Access-Control-Allow-Origin');
     responseHeaders.delete('Access-Control-Allow-Credentials');
@@ -139,6 +149,8 @@ export async function onRequest(context) {
       headers: responseHeaders,
     });
   } catch (error) {
+    // 临时诊断日志：定位 fetch 失败原因，随后移除
+    console.error('[API proxy] fetch failed', error);
     return jsonResponse({ error: 'Proxy Fetch Failed', message: error.message }, 502);
   }
 }
