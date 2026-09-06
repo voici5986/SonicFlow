@@ -23,7 +23,7 @@ ENV VITE_FIREBASE_APP_ID=${VITE_FIREBASE_APP_ID}
 ENV VITE_FIREBASE_MEASUREMENT_ID=${VITE_FIREBASE_MEASUREMENT_ID}
 ENV HUSKY=0
 
-RUN npm install --global pnpm@11 \
+RUN npm install --global pnpm@12 \
     && pnpm config set store-dir /pnpm/store
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./

@@ -508,12 +508,12 @@ pnpm 使用范围约束：
 ```json
 {
   "engines": {
-    "pnpm": ">=11 <12"
+    "pnpm": ">=12 <13"
   },
   "devEngines": {
     "packageManager": {
       "name": "pnpm",
-      "version": ">=11.0.0 <12.0.0",
+      "version": ">=12 <13",
       "onFail": "warn"
     }
   }

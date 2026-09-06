@@ -27,7 +27,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
         with:
-          version: '>=11 <12'
+          version: '>=12 <13'
           install: false
 
       - name: Setup Node.js

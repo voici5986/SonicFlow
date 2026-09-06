@@ -23,7 +23,7 @@ Root directory: 留空
 
 ```text
 NODE_VERSION=26
-PNPM_VERSION=11
+PNPM_VERSION=12
 VITE_API_BASE=/api-v1/api.php
 REACT_APP_API_BASE=/api-v1/api.php
 ```
